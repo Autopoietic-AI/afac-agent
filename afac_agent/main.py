@@ -33,6 +33,11 @@ def _run_adapter(argv: list[str]) -> None:
     parser.add_argument("--candidate_oof_npz", default="")
     parser.add_argument("--audit_report", default="")
     parser.add_argument("--current_champion_csv", default="")
+    parser.add_argument("--v46a1_base_csv", default="")
+    parser.add_argument("--v53q1_patch_source", default="")
+    parser.add_argument("--v49a_report", default="")
+    parser.add_argument("--v49a_config", default="")
+    parser.add_argument("--v49a_fold_results", default="")
     parser.add_argument("--adapter_output_root", default="")
     args = parser.parse_args(argv)
 
@@ -45,19 +50,25 @@ def _run_adapter(argv: list[str]) -> None:
         tool.output_policy["output_root"] = str(
             resolver.adapter_output_root(args.adapter_output_root)
         )
+    if args.tool == "A1_V49A_EDGE_UTILITY_AUDIT":
+        v49a_oof_meta_csv = resolver.a1_v49a_edge_oof_meta_csv(args.v49a_oof_meta_csv)
+        v49a_test_meta_csv = resolver.a1_v49a_edge_test_meta_csv(args.v49a_test_meta_csv)
+    else:
+        v49a_oof_meta_csv = resolver.a1_v49a_oof_meta_csv(args.v49a_oof_meta_csv)
+        v49a_test_meta_csv = resolver.a1_v49a_test_meta_csv(args.v49a_test_meta_csv)
     variables = {
         "python": sys.executable,
         "root": str(root),
         "anchor_csv": str(resolver.a1_anchor_csv(args.anchor_csv)),
         "v53q1_base_csv": str(resolver.a1_v53q1_base_csv(args.v53q1_base_csv) or ""),
-        "v49a_oof_meta_csv": str(
-            resolver.a1_v49a_oof_meta_csv(args.v49a_oof_meta_csv) or ""
-        ),
-        "v49a_test_meta_csv": str(
-            resolver.a1_v49a_test_meta_csv(args.v49a_test_meta_csv) or ""
-        ),
+        "v49a_oof_meta_csv": str(v49a_oof_meta_csv or ""),
+        "v49a_test_meta_csv": str(v49a_test_meta_csv or ""),
         "v53q1_audit_md": str(resolver.a1_v53q1_audit_md(args.v53q1_audit_md)),
         "v53q1_patch_py": str(resolver.a1_v53q1_patch_py(args.v53q1_patch_py)),
+        "v53q1_patch_source": str(
+            resolver.resolve(args.v53q1_patch_source)
+            or resolver.a1_v53q1_patch_py(args.v53q1_patch_py)
+        ),
         "a1_npz": str(resolver.a1_npz(args.a1_npz) or ""),
         "candidate_csv": str(resolver.a1_v46a1_candidate_csv(args.candidate_csv) or ""),
         "parent_csv": str(resolver.a1_v46a1_parent_csv(args.parent_csv) or ""),
@@ -69,6 +80,14 @@ def _run_adapter(argv: list[str]) -> None:
             resolver.a1_current_champion_csv(args.current_champion_csv)
             if args.current_champion_csv
             else ""
+        ),
+        "v46a1_base_csv": str(
+            resolver.a1_v49a_v46a1_base_csv(args.v46a1_base_csv) or ""
+        ),
+        "v49a_report": str(resolver.a1_v49a_report(args.v49a_report) or ""),
+        "v49a_config": str(resolver.a1_v49a_config(args.v49a_config) or ""),
+        "v49a_fold_results": str(
+            resolver.a1_v49a_fold_results(args.v49a_fold_results) or ""
         ),
     }
     result = AdapterRunner(project_root=root).run(

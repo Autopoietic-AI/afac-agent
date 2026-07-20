@@ -140,14 +140,14 @@ class PathResolver:
             "",
         )
 
-    def a1_v49a_oof_meta_csv(self, override: str = "") -> Path | None:
+    def a1_v49a_edge_oof_meta_csv(self, override: str = "") -> Path | None:
         return self.resolve(override) or self.get(
             "a1_v53q1_patch_audit",
             "oof_meta_csv",
             "",
         )
 
-    def a1_v49a_test_meta_csv(self, override: str = "") -> Path | None:
+    def a1_v49a_edge_test_meta_csv(self, override: str = "") -> Path | None:
         return self.resolve(override) or self.get(
             "a1_v53q1_patch_audit",
             "test_meta_csv",
@@ -198,3 +198,45 @@ class PathResolver:
 
     def a1_current_champion_csv(self, override: str = "") -> Path:
         return self.a1_anchor_csv(override)
+
+    def a1_v49a_oof_meta_csv(self, override: str = "") -> Path | None:
+        return self.resolve(override) or self.get(
+            "a1_v49a_edge_utility_audit",
+            "oof_meta_csv",
+            "",
+        )
+
+    def a1_v49a_test_meta_csv(self, override: str = "") -> Path | None:
+        return self.resolve(override) or self.get(
+            "a1_v49a_edge_utility_audit",
+            "test_meta_csv",
+            "",
+        )
+
+    def a1_v49a_v46a1_base_csv(self, override: str = "") -> Path | None:
+        return self.resolve(override) or self.get(
+            "a1_v49a_edge_utility_audit",
+            "v46a1_base_csv",
+            "",
+        )
+
+    def a1_v49a_report(self, override: str = "") -> Path | None:
+        return self.resolve(override) or self.get(
+            "a1_v49a_edge_utility_audit",
+            "report",
+            "",
+        )
+
+    def a1_v49a_config(self, override: str = "") -> Path | None:
+        return self.resolve(override) or self.get(
+            "a1_v49a_edge_utility_audit",
+            "config",
+            "",
+        )
+
+    def a1_v49a_fold_results(self, override: str = "") -> Path | None:
+        return self.resolve(override) or self.get(
+            "a1_v49a_edge_utility_audit",
+            "fold_results",
+            "",
+        )

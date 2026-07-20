@@ -20,6 +20,7 @@ from afac_agent.schemas import ToolSpec
 ALLOWED_ADAPTER_ENTRYPOINTS = {
     "afac_agent.adapters.a1_v53q1_patch_audit:Adapter",
     "afac_agent.adapters.a1_v46a1_isolated_audit:Adapter",
+    "afac_agent.adapters.a1_v49a_edge_utility_audit:Adapter",
 }
 OPTIONAL_ADAPTER_INPUT_KEYS_BY_TOOL = {
     "A1_V53Q1_PATCH_AUDIT": {
@@ -30,6 +31,15 @@ OPTIONAL_ADAPTER_INPUT_KEYS_BY_TOOL = {
         "candidate_oof_npz",
         "audit_report",
         "current_champion_csv",
+    },
+    "A1_V49A_EDGE_UTILITY_AUDIT": {
+        "v46a1_base_csv",
+        "current_champion_csv",
+        "v53q1_audit_md",
+        "v53q1_patch_source",
+        "v49a_report",
+        "v49a_config",
+        "v49a_fold_results",
     },
 }
 ENTRYPOINT_PATTERN = re.compile(

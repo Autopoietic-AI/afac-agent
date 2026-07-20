@@ -27,3 +27,10 @@ a1_v46a1_isolated_audit:
   parent_csv: ""
   candidate_oof_npz: ""
   audit_report: ""
+a1_v49a_edge_utility_audit:
+  oof_meta_csv: ""
+  test_meta_csv: ""
+  v46a1_base_csv: ""
+  report: ""
+  config: ""
+  fold_results: ""

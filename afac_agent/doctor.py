@@ -124,6 +124,18 @@ def build_report(
                 resolver.a1_v46a1_candidate_oof_npz() or ""
             ),
             "v46a1_audit_report": str(resolver.a1_v46a1_audit_report() or ""),
+            "v49a_edge_oof_meta_csv": str(
+                resolver.a1_v49a_edge_oof_meta_csv() or ""
+            ),
+            "v49a_edge_test_meta_csv": str(
+                resolver.a1_v49a_edge_test_meta_csv() or ""
+            ),
+            "v49a_v46a1_base_csv": str(
+                resolver.a1_v49a_v46a1_base_csv() or ""
+            ),
+            "v49a_report": str(resolver.a1_v49a_report() or ""),
+            "v49a_config": str(resolver.a1_v49a_config() or ""),
+            "v49a_fold_results": str(resolver.a1_v49a_fold_results() or ""),
         },
     }
     schema_path = root / "schemas" / "adapter_execution_result.schema.json"
@@ -212,6 +224,27 @@ def build_report(
             registry_errors.append("A1_V46A1_ISOLATED_AUDIT must not mutate project state")
         if v46_audit.get("command_template") != []:
             registry_errors.append("A1_V46A1_ISOLATED_AUDIT command_template must stay empty")
+    v49_audit = next(
+        (item for item in adapter_tools if item.get("name") == "A1_V49A_EDGE_UTILITY_AUDIT"),
+        None,
+    )
+    if v49_audit is None:
+        registry_errors.append("A1_V49A_EDGE_UTILITY_AUDIT is not registered")
+    else:
+        if v49_audit.get("adapter_entrypoint") != (
+            "afac_agent.adapters.a1_v49a_edge_utility_audit:Adapter"
+        ):
+            registry_errors.append("A1_V49A_EDGE_UTILITY_AUDIT entrypoint is invalid")
+        if v49_audit.get("read_only") is not True:
+            registry_errors.append("A1_V49A_EDGE_UTILITY_AUDIT must be read_only")
+        if v49_audit.get("counts_as_experiment_round") is not False:
+            registry_errors.append("A1_V49A_EDGE_UTILITY_AUDIT must not consume rounds")
+        if v49_audit.get("mutates_predictions") is not False:
+            registry_errors.append("A1_V49A_EDGE_UTILITY_AUDIT must not mutate predictions")
+        if v49_audit.get("mutates_project_state") is not False:
+            registry_errors.append("A1_V49A_EDGE_UTILITY_AUDIT must not mutate project state")
+        if v49_audit.get("command_template") != []:
+            registry_errors.append("A1_V49A_EDGE_UTILITY_AUDIT command_template must stay empty")
     checks["adapter_registry_bindings"] = {
         "name": "adapter_registry_bindings",
         "passed": not registry_errors,
@@ -221,6 +254,7 @@ def build_report(
             "adapter_count": len(adapter_tools),
             "has_A1_V53Q1_PATCH_AUDIT": patch_audit is not None,
             "has_A1_V46A1_ISOLATED_AUDIT": v46_audit is not None,
+            "has_A1_V49A_EDGE_UTILITY_AUDIT": v49_audit is not None,
         },
     }
 
@@ -276,6 +310,26 @@ def build_report(
         "passed": True,
         "errors": [],
         "warnings": v46_warnings,
+        "details": {},
+    }
+    v49_warnings: list[str] = []
+    for key, value in {
+        "oof_meta_csv": resolver.a1_v49a_edge_oof_meta_csv(),
+        "test_meta_csv": resolver.a1_v49a_edge_test_meta_csv(),
+        "v46a1_base_csv": resolver.a1_v49a_v46a1_base_csv(),
+        "report": resolver.a1_v49a_report(),
+        "config": resolver.a1_v49a_config(),
+        "fold_results": resolver.a1_v49a_fold_results(),
+    }.items():
+        if not value:
+            v49_warnings.append(f"{key}: not configured; adapter may wait or mark optional audit unavailable")
+        elif not value.exists():
+            v49_warnings.append(f"{key}: configured path does not exist")
+    checks["A1_V49A_EDGE_UTILITY_AUDIT_config"] = {
+        "name": "A1_V49A_EDGE_UTILITY_AUDIT_config",
+        "passed": True,
+        "errors": [],
+        "warnings": v49_warnings,
         "details": {},
     }
     checks["writable"] = {
