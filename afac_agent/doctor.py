@@ -13,6 +13,7 @@ import sys
 from pathlib import Path
 from typing import Any
 
+from .feedback.normalizers import NORMALIZER_REGISTRY
 from .paths import PathResolver
 from .validation import (
     reports_to_checks,
@@ -295,6 +296,68 @@ def build_report(
             "path": str(output_root),
             "exists": output_root.exists(),
             "parent_exists": output_root.parent.exists(),
+        },
+    }
+    feedback_schema_errors: list[str] = []
+    feedback_schema_path = root / "schemas" / "experiment_feedback.schema.json"
+    try:
+        feedback_schema = json.loads(feedback_schema_path.read_text(encoding="utf-8"))
+    except Exception as exc:
+        feedback_schema = {}
+        feedback_schema_errors.append(f"experiment feedback schema unreadable: {exc}")
+    if isinstance(feedback_schema, dict):
+        required = set(feedback_schema.get("required", []))
+        for key in [
+            "feedback_id",
+            "feedback_kind",
+            "evaluation_tier",
+            "execution_result_hash",
+            "recommendation",
+        ]:
+            if key not in required:
+                feedback_schema_errors.append(f"experiment feedback schema missing {key}")
+    checks["experiment_feedback_schema"] = {
+        "name": "experiment_feedback_schema",
+        "passed": not feedback_schema_errors,
+        "errors": feedback_schema_errors,
+        "warnings": [],
+        "details": {"path": str(feedback_schema_path)},
+    }
+    expected_normalizers = {
+        "A1_V46A1_ISOLATED_AUDIT",
+        "A1_V49A_EDGE_UTILITY_AUDIT",
+        "A1_V53Q1_PATCH_REPLAY_SAFE",
+    }
+    normalizer_errors = [
+        f"missing normalizer: {name}"
+        for name in sorted(expected_normalizers - set(NORMALIZER_REGISTRY))
+    ]
+    checks["feedback_normalizer_registry"] = {
+        "name": "feedback_normalizer_registry",
+        "passed": not normalizer_errors,
+        "errors": normalizer_errors,
+        "warnings": [],
+        "details": {
+            "registered": sorted(NORMALIZER_REGISTRY),
+        },
+    }
+    feedback_root = root / "artifacts" / "feedback_runs"
+    feedback_warnings = []
+    if not feedback_root.exists():
+        feedback_warnings.append("feedback_runs artifact root does not exist yet")
+    checks["feedback_output_root"] = {
+        "name": "feedback_output_root",
+        "passed": feedback_root.resolve() != champion_csv.resolve(),
+        "errors": (
+            ["feedback output root must not equal champion csv"]
+            if feedback_root.resolve() == champion_csv.resolve()
+            else []
+        ),
+        "warnings": feedback_warnings,
+        "details": {
+            "path": str(feedback_root),
+            "exists": feedback_root.exists(),
+            "parent_exists": feedback_root.parent.exists(),
         },
     }
 

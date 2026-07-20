@@ -1,0 +1,88 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "AFAC Agent Experiment Feedback",
+  "type": "object",
+  "required": [
+    "feedback_version",
+    "feedback_id",
+    "feedback_kind",
+    "evaluation_tier",
+    "task",
+    "tool_name",
+    "adapter_id",
+    "adapter_version",
+    "execution_identity_hash",
+    "execution_result_ref",
+    "execution_result_hash",
+    "status",
+    "validity",
+    "evidence",
+    "metrics",
+    "class_metrics",
+    "bucket_metrics",
+    "candidate_changes",
+    "overlap_conflict",
+    "runtime",
+    "resource_usage",
+    "safety",
+    "limitations",
+    "warnings",
+    "recommendation"
+  ],
+  "properties": {
+    "feedback_version": {"type": "string"},
+    "feedback_id": {"type": "string"},
+    "feedback_kind": {
+      "enum": [
+        "artifact_audit",
+        "expert_scope_audit",
+        "signal_audit",
+        "candidate_replay",
+        "model_experiment"
+      ]
+    },
+    "evaluation_tier": {
+      "enum": [
+        "artifact_integrity",
+        "structure_only",
+        "expert_scope",
+        "signal_evidence",
+        "candidate_replay",
+        "oof_comparison",
+        "full_experiment"
+      ]
+    },
+    "status": {
+      "enum": [
+        "completed",
+        "partial",
+        "unavailable",
+        "failed",
+        "blocked"
+      ]
+    },
+    "recommendation": {
+      "enum": [
+        "accept_as_reference",
+        "proceed_to_oof_evaluation",
+        "proceed_to_candidate_generation",
+        "proceed_to_training",
+        "informational_only",
+        "reject",
+        "blocked"
+      ]
+    },
+    "validity": {"type": "object"},
+    "evidence": {"type": "object"},
+    "metrics": {"type": "object"},
+    "class_metrics": {"type": "object"},
+    "bucket_metrics": {"type": "object"},
+    "candidate_changes": {"type": "object"},
+    "overlap_conflict": {"type": "object"},
+    "runtime": {"type": "object"},
+    "resource_usage": {"type": "object"},
+    "safety": {"type": "object"},
+    "limitations": {"type": "array"},
+    "warnings": {"type": "array"}
+  }
+}
