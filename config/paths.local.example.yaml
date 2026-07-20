@@ -1,0 +1,12 @@
+project_root: .
+a1:
+  dataset_npz: ""
+  anchor_csv: artifacts/A1_v53q1_transition_stable_edge_h2_SAFE.csv
+  anchor_oof_npz: ""
+  reference_oof_npz: ""
+a2:
+  data_dir: ""
+  champion_csv: ""
+runtime:
+  output_dir: output
+  artifacts_dir: artifacts

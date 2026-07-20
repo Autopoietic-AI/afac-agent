@@ -1,0 +1,88 @@
+You are the build-time coding agent for the AFAC2026 automated-research system.
+
+Work inside the repository I provide. Read these files first, in this order:
+
+1. `AGENTS.md`
+2. `PROJECT_STATE.md`
+3. `AFAC_AGENT_CODEX_MASTER_EXECUTION_SPEC.md`
+4. `AGENT_ARCHITECTURE_V1.md`
+5. `RUN_GUIDE.md`
+6. `config/project_state.json`
+7. `config/tool_registry.json`
+
+Current confirmed facts:
+
+- A1 online champion is `v53Q-1`, score `0.7800`.
+- The champion stack is:
+  - Graph-visible: v43C
+  - Isolated: v46A-1 Balanced Seed Consensus
+  - Micro patch: transition-stable Edge-H2
+- Existing-signal Isolated repair branches are closed.
+- Build-time Codex edits the codebase.
+- Run-time AFAC Agent selects and executes only registered tools.
+- The run-time Agent must not rewrite source code.
+
+Your current task is ONLY:
+
+`M0 + M1 Stabilization`
+
+Do not implement model retraining, LLM planning, A2 integration, B-list training, or new research models yet.
+
+Required work:
+
+1. Audit the repository before editing.
+2. Remove hard-coded project paths from scripts.
+3. Make packaged assets use project-root-relative paths.
+4. Add a local path configuration mechanism for external data/checkpoints.
+5. Add `python -m afac_agent.doctor`.
+6. Add JSON Schema or equivalent validation for:
+   - project state
+   - tool registry
+   - experiment memory
+   - trajectory
+   - online anchor manifest
+7. Ensure missing input returns `waiting_for_input`, not model failure.
+8. Ensure failed actions do not consume a successful experiment round.
+9. Ensure history import is idempotent.
+10. Ensure online anchor registration is idempotent.
+11. Add unit and integration tests.
+12. Test on Windows-safe paths, including Chinese characters and spaces.
+13. Update README, RUN_GUIDE and PROJECT_STATE.
+14. Do not change the champion, OOF definitions, gates, closed branches or online score.
+
+Specific reproduced bug:
+
+The repository was launched from:
+
+`C:\Users\李天皓\agent比赛\agent\AFAC_AGENT_V1_HISTORY_PROFILE\afac_agent_v1`
+
+History import succeeded, but anchor registration tried to read:
+
+`C:\Users\李天皓\agent比赛\model_pro\a1\new-a1\A1_v53q1_transition_stable_edge_h2_SAFE.csv`
+
+and failed with FileNotFoundError.
+
+The packaged anchor should resolve from:
+
+`<project_root>\artifacts\A1_v53q1_transition_stable_edge_h2_SAFE.csv`
+
+unless explicitly overridden by a local paths config or CLI argument.
+
+Development protocol:
+
+- First report the audit and proposed file changes.
+- Then write tests.
+- Then implement.
+- Run syntax checks, unit tests and integration smoke tests.
+- Do not hide command output.
+- Do not delete historical artifacts.
+- Do not write secrets.
+- Do not claim success unless tests actually pass.
+
+Completion report must include:
+
+- files changed;
+- exact test commands;
+- test results;
+- any remaining risks;
+- next recommended milestone, which should be M2 Data Profiler only after M0+M1 pass.

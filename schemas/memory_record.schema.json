@@ -1,0 +1,18 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "AFAC Agent Experiment Memory Record",
+  "type": "object",
+  "required": [
+    "version",
+    "layer",
+    "status",
+    "metrics",
+    "diagnosis",
+    "lesson",
+    "decision"
+  ],
+  "properties": {
+    "version": {"type": "string"},
+    "metrics": {"type": "object"}
+  }
+}

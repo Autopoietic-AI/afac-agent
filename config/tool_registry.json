@@ -1,0 +1,191 @@
+{
+  "tools": [
+    {
+      "name": "IMPORT_CONFIRMED_HISTORY",
+      "task": "A1",
+      "layer": "memory",
+      "description": "把v43C至v53Q-1已经确认的实验、结论、关闭分支和保留信号导入追加式Agent Memory",
+      "action_type": "system",
+      "expected_runtime_seconds": 30,
+      "prediction_changing": false,
+      "submission_creating": false,
+      "required_state": {
+        "history_imported": false
+      },
+      "required_inputs": {},
+      "forbidden_closed_branches": [],
+      "command_template": [
+        "{python}",
+        "{root}/tools/import_confirmed_history.py",
+        "--history_json",
+        "{root}/history/confirmed_experiments_a1.json",
+        "--memory_jsonl",
+        "{root}/memory/experiment_memory_a1.jsonl"
+      ]
+    },
+    {
+      "name": "PROFILE_A1_DATASET",
+      "task": "A1",
+      "layer": "data",
+      "description": "读取新A1/B1 NPZ并自动分析方向性、互惠率、同质率、Isolated、度桶、类别分布、特征稀疏度与Train/Test Shift",
+      "action_type": "audit",
+      "expected_runtime_seconds": 300,
+      "prediction_changing": false,
+      "submission_creating": false,
+      "required_state": {
+        "data_profile_ready": false
+      },
+      "required_inputs": {
+        "npz_path": {
+          "kind": "file"
+        }
+      },
+      "forbidden_closed_branches": [],
+      "command_template": [
+        "{python}",
+        "{root}/tools/profile_a1_dataset.py",
+        "--npz_path",
+        "{npz_path}",
+        "--out_dir",
+        "{root}/artifacts/data_profile"
+      ]
+    },
+    {
+      "name": "REGISTER_ONLINE_ANCHOR",
+      "task": "A1",
+      "layer": "anchor",
+      "description": "登记并审计当前v53Q-1线上冠军CSV、Hash、行数、类别范围与提交安全，不重新训练",
+      "action_type": "system",
+      "expected_runtime_seconds": 60,
+      "prediction_changing": false,
+      "submission_creating": false,
+      "required_state": {
+        "anchor_registered": false
+      },
+      "required_inputs": {
+        "anchor_csv": {
+          "kind": "file"
+        }
+      },
+      "forbidden_closed_branches": [],
+      "command_template": [
+        "{python}",
+        "{root}/tools/register_online_anchor.py",
+        "--a1_csv",
+        "{anchor_csv}",
+        "--version",
+        "v53Q-1",
+        "--online_score",
+        "0.7800",
+        "--expected_rows",
+        "2751",
+        "--num_classes",
+        "10",
+        "--out_dir",
+        "{root}/artifacts/online_anchor"
+      ]
+    },
+    {
+      "name": "ANALYZE_ANCHOR_OOF",
+      "task": "A1",
+      "layer": "feedback",
+      "description": "把Anchor OOF统一解析为Overall、5 Fold、Class、Graph-visible、Isolated、Degree Bucket、Rescue和Oracle",
+      "action_type": "audit",
+      "expected_runtime_seconds": 300,
+      "prediction_changing": false,
+      "submission_creating": false,
+      "required_state": {
+        "anchor_oof_analyzed": false
+      },
+      "required_inputs": {
+        "npz_path": {
+          "kind": "file"
+        },
+        "anchor_oof_npz": {
+          "kind": "file"
+        }
+      },
+      "forbidden_closed_branches": [],
+      "command_template": [
+        "{python}",
+        "{root}/tools/analyze_a1_oof.py",
+        "--npz_path",
+        "{npz_path}",
+        "--oof_npz",
+        "{anchor_oof_npz}",
+        "--reference_oof_npz",
+        "{reference_oof_npz}",
+        "--out_dir",
+        "{root}/artifacts/anchor_oof"
+      ]
+    },
+    {
+      "name": "AUDIT_NEW_ISOLATED_SIGNAL",
+      "task": "A1",
+      "layer": "new_signal",
+      "description": "只审计真正新增的Isolated信息源：同源公开数据、特征来源恢复或Graph-aligned Raw Representation；禁止继续使用相同属性和概率换分类器",
+      "action_type": "research",
+      "expected_runtime_seconds": 900,
+      "prediction_changing": false,
+      "submission_creating": false,
+      "required_state": {
+        "history_imported": true,
+        "anchor_registered": true,
+        "anchor_oof_analyzed": true
+      },
+      "required_inputs": {},
+      "forbidden_closed_branches": [
+        "isolated_pairwise_existing_signal"
+      ],
+      "command_template": []
+    },
+    {
+      "name": "AUDIT_EXPERT_COMPLEMENTARITY",
+      "task": "A1",
+      "layer": "oracle",
+      "description": "对新专家先计算Unique Rescue、Damage、Oracle和目标Bucket上限，再决定是否训练Router",
+      "action_type": "audit",
+      "expected_runtime_seconds": 300,
+      "prediction_changing": false,
+      "submission_creating": false,
+      "required_state": {
+        "history_imported": true,
+        "anchor_registered": true
+      },
+      "required_inputs": {},
+      "forbidden_closed_branches": [],
+      "command_template": []
+    },
+    {
+      "name": "FINALIZE_CURRENT_CHAMPION",
+      "task": "A1",
+      "layer": "final",
+      "description": "冻结当前冠军、审计Hash与提交格式并生成真实Trajectory",
+      "action_type": "finalize",
+      "expected_runtime_seconds": 60,
+      "prediction_changing": false,
+      "submission_creating": true,
+      "required_state": {
+        "history_imported": true,
+        "anchor_registered": true
+      },
+      "required_inputs": {},
+      "forbidden_closed_branches": [],
+      "command_template": []
+    },
+    {
+      "name": "REVIEW_AND_REPLAN",
+      "task": "A1",
+      "layer": "decision",
+      "description": "复盘状态与最近反馈，重新定位主要矛盾和下一缺失能力",
+      "action_type": "analysis",
+      "expected_runtime_seconds": 30,
+      "prediction_changing": false,
+      "submission_creating": false,
+      "required_state": {},
+      "required_inputs": {},
+      "forbidden_closed_branches": [],
+      "command_template": []
+    }
+  ]
+}

@@ -1,0 +1,33 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "AFAC Agent Tool Registry",
+  "type": "object",
+  "required": ["tools"],
+  "properties": {
+    "tools": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": [
+          "name",
+          "task",
+          "layer",
+          "description",
+          "action_type",
+          "expected_runtime_seconds",
+          "prediction_changing",
+          "submission_creating",
+          "required_state",
+          "required_inputs",
+          "forbidden_closed_branches",
+          "command_template"
+        ],
+        "properties": {
+          "task": {"enum": ["A1", "A2"]},
+          "prediction_changing": {"type": "boolean"},
+          "submission_creating": {"type": "boolean"}
+        }
+      }
+    }
+  }
+}

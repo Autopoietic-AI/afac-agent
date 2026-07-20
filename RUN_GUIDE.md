@@ -1,0 +1,188 @@
+# AFAC Agent v1.1 运行指南
+
+## 0. 项目根目录
+
+所有命令都从实际代码根目录运行，也就是包含 `afac_agent/`、`config/`、`tools/` 的目录。
+
+如果解压包外面还有一层目录，请进入内层：
+
+```bash
+cd "<AFAC_AGENT_V1_1_CODEX_READY>/afac_agent_v1"
+```
+
+不要把项目内部资产写成旧机器绝对路径。当前 A1 champion 默认从这里读取：
+
+```text
+artifacts/A1_v53q1_transition_stable_edge_h2_SAFE.csv
+```
+
+外部数据、OOF、Checkpoint 放在本机路径配置中：
+
+```text
+config/paths.local.yaml
+```
+
+可从示例复制：
+
+```bash
+cp config/paths.local.example.yaml config/paths.local.yaml
+```
+
+Windows CMD 可手工复制该文件。`paths.local.yaml` 不提交、不写密钥。
+
+## 1. Doctor 预检
+
+```bash
+python -m afac_agent.doctor --project_root .
+```
+
+JSON 输出：
+
+```bash
+python -m afac_agent.doctor --project_root . --json
+```
+
+Doctor 检查：
+
+- Python 与依赖可用性；
+- ProjectState；
+- Tool Registry；
+- confirmed history memory records；
+- Trajectory 状态；
+- packaged champion CSV；
+- 本地路径配置；
+- 基本可写目录。
+
+## 2. Dry Run
+
+不加 `--execute` 时只做决策和安全检查：
+
+```bash
+python -m afac_agent.main --project_root .
+```
+
+初始状态应选择：
+
+```text
+IMPORT_CONFIRMED_HISTORY
+```
+
+结果状态应为：
+
+```text
+dry_run
+```
+
+## 3. 执行历史导入
+
+```bash
+python -m afac_agent.main --project_root . --execute
+```
+
+生成：
+
+```text
+memory/experiment_memory_a1.jsonl
+output/trajectory_A1.json
+```
+
+成功后状态前进到：
+
+```text
+history_imported = true
+next_required_capability = register_anchor
+```
+
+历史导入按 `version` 幂等去重；重复执行不会重复写入 19 条 confirmed history。
+
+## 4. 登记线上冠军
+
+再次运行：
+
+```bash
+python -m afac_agent.main --project_root . --execute
+```
+
+默认使用：
+
+```text
+artifacts/A1_v53q1_transition_stable_edge_h2_SAFE.csv
+```
+
+生成或复核：
+
+```text
+artifacts/online_anchor/online_anchor_manifest.json
+```
+
+Champion 登记按版本、线上分、CSV hash、行数和类别数幂等；重复执行不会修改 champion CSV。
+
+## 5. 到达缺失输入时停止
+
+当前 M0/M1 不训练模型，也不实现 M2 之后功能。走到需要 NPZ、OOF 或尚未绑定工具时，Agent 会返回：
+
+```text
+waiting_for_input
+```
+
+这不是实验失败，也不会消耗成功实验轮次。
+
+## 6. Bootstrap
+
+Windows:
+
+```text
+bootstrap_agent.bat
+```
+
+Git Bash:
+
+```bash
+bash bootstrap_agent.sh
+```
+
+如果 Python 不在 `PATH`，先设置：
+
+```bash
+export AFAC_PYTHON="/path/to/python"
+```
+
+Windows CMD:
+
+```bat
+set AFAC_PYTHON=C:\path\to\python.exe
+```
+
+Bootstrap 会先运行 Doctor，再串行执行已注册、已绑定、输入满足的工具，直到等待输入或工具未绑定。
+
+## 7. 测试
+
+```bash
+python -m pytest -vv
+```
+
+M0/M1 测试覆盖：
+
+- champion CSV hash 和格式不变；
+- 历史导入幂等；
+- champion 登记幂等；
+- 缺失文件返回 `waiting_for_input`；
+- 空 command template 返回 `waiting_for_input`；
+- 工具失败不消耗成功轮次；
+- ProjectState / Tool Registry / Memory / Anchor Manifest 校验；
+- Doctor smoke；
+- Windows 中文和空格路径。
+
+## 8. 禁止事项
+
+M0/M1 阶段禁止：
+
+- 训练模型；
+- 接入 LLM；
+- 接入 A2；
+- 修改 Test 预测；
+- 修改 champion CSV；
+- 修改当前线上分；
+- 修改 Fold、Gate 或 OOF 定义；
+- 删除历史文件；
+- 自动推进 M2 之后功能。

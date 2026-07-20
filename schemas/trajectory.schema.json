@@ -1,0 +1,17 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "AFAC Agent Trajectory",
+  "type": "array",
+  "items": {
+    "type": "object",
+    "required": [
+      "round",
+      "timestamp",
+      "state_before",
+      "current_experiment_config",
+      "feedback",
+      "agent_decision",
+      "state_after"
+    ]
+  }
+}

@@ -1,0 +1,15 @@
+[project]
+name = "afac-agent"
+version = "0.1.0"
+description = "Bounded, auditable automated research agent for AFAC2026 Task 3"
+requires-python = ">=3.10"
+dependencies = [
+  "numpy",
+  "pandas",
+  "scipy",
+  "scikit-learn",
+]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+pythonpath = ["."]

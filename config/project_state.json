@@ -1,0 +1,64 @@
+{
+  "project": "AFAC2026_Task3",
+  "task": "A1",
+  "mode": "agent_development_replay",
+  "dataset_id": "A1_A_CONFIRMED",
+  "online_score": 0.78,
+  "online_version": "v53Q-1",
+  "history_imported": false,
+  "data_profile_ready": true,
+  "anchor_registered": false,
+  "anchor_oof_analyzed": false,
+  "main_contradiction": "Graph-visible存在弱专家互补但缺少可靠节点级选择；Isolated现有属性与已有专家概率已被证明缺少安全新信息",
+  "active_layer": "L0-L3_agent_integration",
+  "active_experts": [
+    "v43C_graph_visible",
+    "v46A1_isolated",
+    "v53Q1_transition_stable_edge_h2"
+  ],
+  "closed_branches": [
+    "ScaleNet",
+    "MagNet",
+    "uniform_multiscale_residual",
+    "fixed_pair_rules",
+    "discrete_reliability_atlas",
+    "generic_confidence_router",
+    "hard_edge_filter",
+    "soft_edge_model_route",
+    "ModernNCA_current_route",
+    "global_semantic_knn",
+    "class_conditional_semantic_topology",
+    "isolated_ovr",
+    "isolated_pairwise_existing_signal"
+  ],
+  "retained_signals": [
+    "EdgeUtility_graph_visible_reliability",
+    "H2GCN_unique_rescue_oracle",
+    "class2_pairwise_weak_auxiliary_only"
+  ],
+  "current_error_buckets": {
+    "full_oof_errors": 2471,
+    "isolated_errors_approx": 1281,
+    "graph_visible_errors_approx": 1190,
+    "largest_class_errors": {
+      "1": 547,
+      "8": 511,
+      "4": 504
+    },
+    "highest_error_rate_classes": {
+      "6": 0.4756,
+      "3": 0.4018,
+      "0": 0.3209,
+      "1": 0.3193,
+      "9": 0.3133
+    }
+  },
+  "next_required_capability": "import_history",
+  "budget": {
+    "total_seconds": 7200,
+    "used_seconds": 0.0,
+    "safety_margin_seconds": 300,
+    "rounds_used": 0,
+    "max_rounds": 12
+  }
+}

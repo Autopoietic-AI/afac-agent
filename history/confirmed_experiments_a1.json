@@ -1,0 +1,258 @@
+{
+  "experiments": [
+    {
+      "version": "v43C",
+      "layer": "graph_anchor",
+      "status": "effective",
+      "metrics": {
+        "overall_oof": 0.7713844,
+        "graph_visible": 0.8645881,
+        "isolated": 0.4012653
+      },
+      "diagnosis": "当前Graph-visible主锚点；Isolated明显较弱。",
+      "lesson": "按Graph-visible与Isolated分治。",
+      "decision": "KEEP_MAINLINE"
+    },
+    {
+      "version": "v44X_friend_mixture",
+      "layer": "fusion",
+      "status": "invalid",
+      "metrics": {
+        "overall_oof": 0.7713844
+      },
+      "diagnosis": "无总收益且有泄漏风险。",
+      "lesson": "不使用Friend Mixture。",
+      "decision": "CLOSE_BRANCH"
+    },
+    {
+      "version": "v44X_directed_residual",
+      "layer": "router_diagnostic",
+      "status": "risk_only",
+      "metrics": {
+        "graph_visible_changes": 99,
+        "rescue": 53,
+        "damage": 35,
+        "net": 18
+      },
+      "diagnosis": "存在互补，但Level-2 OOF未完全Nested。",
+      "lesson": "仅保留Router诊断，不部署。",
+      "decision": "DIAGNOSTIC_ONLY"
+    },
+    {
+      "version": "v45A_ScaleNet",
+      "layer": "model",
+      "status": "invalid",
+      "metrics": {},
+      "diagnosis": "严重失败。",
+      "lesson": "关闭ScaleNet。",
+      "decision": "CLOSE_BRANCH"
+    },
+    {
+      "version": "v45B_H2GCN",
+      "layer": "higher_order",
+      "status": "diagnostic",
+      "metrics": {
+        "overall_oof": 0.71975
+      },
+      "diagnosis": "单模型弱，但Oracle互补证明高阶信号存在。",
+      "lesson": "只作为弱专家。",
+      "decision": "KEEP_DIAGNOSTIC"
+    },
+    {
+      "version": "v45C_MagNet",
+      "layer": "directed_gnn",
+      "status": "invalid",
+      "metrics": {
+        "overall_oof": 0.47059
+      },
+      "diagnosis": "显著失败。",
+      "lesson": "关闭MagNet。",
+      "decision": "CLOSE_BRANCH"
+    },
+    {
+      "version": "v46A-1",
+      "layer": "isolated_expert",
+      "status": "effective",
+      "metrics": {
+        "isolated_reference": 0.4012652508,
+        "isolated_candidate": 0.4211477632,
+        "changed": 242,
+        "rescue": 96,
+        "damage": 52,
+        "net": 44,
+        "precision": 0.6486486486,
+        "full_oof": 0.77538405599
+      },
+      "diagnosis": "Balanced TabM跨Seed共识改善Isolated。",
+      "lesson": "v43C负责Graph-visible，v46A-1负责Isolated。",
+      "decision": "KEEP_MAINLINE"
+    },
+    {
+      "version": "ModernNCA_R1A",
+      "layer": "isolated_semantic",
+      "status": "invalid",
+      "metrics": {
+        "isolated": 0.382738,
+        "positive_folds": 0
+      },
+      "diagnosis": "向class4坍塌，伤class1和class8。",
+      "lesson": "关闭ModernNCA当前路线。",
+      "decision": "CLOSE_BRANCH"
+    },
+    {
+      "version": "v47A",
+      "layer": "multiscale_residual",
+      "status": "invalid",
+      "metrics": {
+        "graph_visible": 0.862881,
+        "full_stack": 0.774021,
+        "net": -15
+      },
+      "diagnosis": "统一多尺度平均伤class4/class8。",
+      "lesson": "不调alpha，关闭。",
+      "decision": "CLOSE_BRANCH"
+    },
+    {
+      "version": "v47B",
+      "layer": "pair_rule",
+      "status": "invalid",
+      "metrics": {
+        "rescue": 58,
+        "damage": 373,
+        "net": -315,
+        "precision": 0.1346
+      },
+      "diagnosis": "类别关系不等于节点级可分。",
+      "lesson": "缺口是per-node reliability。",
+      "decision": "CLOSE_BRANCH"
+    },
+    {
+      "version": "v48-0",
+      "layer": "reliability_atlas",
+      "status": "invalid",
+      "metrics": {
+        "safe_cells": 0
+      },
+      "diagnosis": "当前离散状态无法识别专家互补。",
+      "lesson": "不降低Cell门槛。",
+      "decision": "CLOSE_BRANCH"
+    },
+    {
+      "version": "v48-1",
+      "layer": "confidence_router",
+      "status": "invalid",
+      "metrics": {
+        "changed": 41,
+        "rescue": 18,
+        "damage": 12,
+        "net": 6,
+        "precision": 0.6
+      },
+      "diagnosis": "收益太小，家族共识不足且Test漂移。",
+      "lesson": "关闭通用Confidence Router。",
+      "decision": "CLOSE_BRANCH"
+    },
+    {
+      "version": "v49A",
+      "layer": "edge_reliability",
+      "status": "diagnostic_effective",
+      "metrics": {
+        "edge_auc_mean": 0.871693,
+        "decisive_auc_confidence": 0.654655,
+        "decisive_auc_edge": 0.703058,
+        "changed": 55,
+        "rescue": 36,
+        "damage": 13,
+        "net": 23,
+        "precision": 0.734694,
+        "test_candidates": 8
+      },
+      "diagnosis": "Edge Utility适合判断何时相信H2，不适合直接改图。",
+      "lesson": "保留为Graph-visible reliability信号。",
+      "decision": "KEEP_DIAGNOSTIC"
+    },
+    {
+      "version": "v49B-0",
+      "layer": "hard_edge_filter",
+      "status": "invalid",
+      "metrics": {
+        "original": 0.7253886,
+        "filtered": 0.7211163
+      },
+      "diagnosis": "图被过度纯化并产生大量新Isolate。",
+      "lesson": "关闭硬删边。",
+      "decision": "CLOSE_BRANCH"
+    },
+    {
+      "version": "v49C-0",
+      "layer": "soft_edge_weight",
+      "status": "weak_not_deployable",
+      "metrics": {
+        "graph_visible_gain_pp": 0.22758,
+        "oracle_correct_loss": 22
+      },
+      "diagnosis": "弱正但互补性下降。",
+      "lesson": "Edge Utility仅保留诊断。",
+      "decision": "CLOSE_MODEL_ROUTE"
+    },
+    {
+      "version": "v50A",
+      "layer": "isolated_semantic_topology",
+      "status": "invalid",
+      "metrics": {
+        "current": 0.421148,
+        "global_knn": 0.329869,
+        "semantic": 0.117036,
+        "top2_recall": 0.2395
+      },
+      "diagnosis": "class4吸附转成class6过补偿。",
+      "lesson": "关闭语义KNN与类别条件拓扑。",
+      "decision": "CLOSE_BRANCH"
+    },
+    {
+      "version": "v51A",
+      "layer": "isolated_ovr",
+      "status": "invalid",
+      "metrics": {
+        "rules": 0,
+        "target_1_auc": 0.476,
+        "target_2_auc": 0.554,
+        "target_8_auc": 0.573
+      },
+      "diagnosis": "无法判断是否应推翻当前预测。",
+      "lesson": "关闭OVR救援。",
+      "decision": "CLOSE_BRANCH"
+    },
+    {
+      "version": "v52A",
+      "layer": "isolated_pairwise",
+      "status": "invalid",
+      "metrics": {
+        "4_vs_1_auc": 0.496,
+        "4_vs_2_auc": 0.6218,
+        "4_vs_8_auc": 0.5465,
+        "rules": 0
+      },
+      "diagnosis": "现有属性与专家概率无安全头部。",
+      "lesson": "关闭现有信号Isolated修补路线。",
+      "decision": "CLOSE_SIGNAL_FAMILY"
+    },
+    {
+      "version": "v53Q-1",
+      "layer": "online_micro_patch",
+      "status": "online_effective",
+      "metrics": {
+        "crossfit_changed": 24,
+        "crossfit_rescue": 20,
+        "crossfit_damage": 3,
+        "crossfit_neutral": 1,
+        "crossfit_net": 17,
+        "test_changes": 4,
+        "online_score": 0.78
+      },
+      "diagnosis": "转移稳定的Edge-H2微补丁线上兑现。",
+      "lesson": "冻结A榜冠军；不做节点子集变体。",
+      "decision": "FREEZE_ONLINE_CHAMPION"
+    }
+  ]
+}

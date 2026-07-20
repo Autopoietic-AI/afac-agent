@@ -1,0 +1,22 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "AFAC Agent Online Anchor Manifest",
+  "type": "object",
+  "required": [
+    "version",
+    "online_score",
+    "a1_csv",
+    "sha256",
+    "rows",
+    "num_classes",
+    "checks",
+    "passed",
+    "registered_as_anchor",
+    "registration_status"
+  ],
+  "properties": {
+    "version": {"type": "string"},
+    "online_score": {"type": "number"},
+    "registered_as_anchor": {"type": "boolean"}
+  }
+}

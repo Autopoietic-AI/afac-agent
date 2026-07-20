@@ -1,0 +1,38 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "AFAC Agent ProjectState",
+  "type": "object",
+  "required": [
+    "project",
+    "task",
+    "mode",
+    "dataset_id",
+    "online_version",
+    "history_imported",
+    "data_profile_ready",
+    "anchor_registered",
+    "anchor_oof_analyzed",
+    "main_contradiction",
+    "active_layer",
+    "active_experts",
+    "closed_branches",
+    "retained_signals",
+    "current_error_buckets",
+    "next_required_capability",
+    "budget"
+  ],
+  "properties": {
+    "task": {"enum": ["A1", "A2"]},
+    "online_score": {"type": ["number", "null"]},
+    "budget": {
+      "type": "object",
+      "required": [
+        "total_seconds",
+        "used_seconds",
+        "safety_margin_seconds",
+        "rounds_used",
+        "max_rounds"
+      ]
+    }
+  }
+}
