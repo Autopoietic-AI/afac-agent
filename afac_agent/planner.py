@@ -15,6 +15,7 @@ ACTION_BY_CAPABILITY = {
     "v53q1_patch_audit": "A1_V53Q1_PATCH_AUDIT",
     "v46a1_isolated_audit": "A1_V46A1_ISOLATED_AUDIT",
     "v49a_edge_utility_audit": "A1_V49A_EDGE_UTILITY_AUDIT",
+    "v53q1_patch_replay_safe": "A1_V53Q1_PATCH_REPLAY_SAFE",
     "new_isolated_signal": "AUDIT_NEW_ISOLATED_SIGNAL",
     "expert_complementarity": "AUDIT_EXPERT_COMPLEMENTARITY",
     "finalize": "FINALIZE_CURRENT_CHAMPION",

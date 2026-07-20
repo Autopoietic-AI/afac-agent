@@ -304,6 +304,69 @@
       ]
     },
     {
+      "name": "A1_V53Q1_PATCH_REPLAY_SAFE",
+      "task": "A1",
+      "layer": "champion_replay",
+      "description": "在隔离Adapter运行目录中执行冻结v53Q-1 Patch脚本，生成新的Replay Candidate并验证其与冻结Champion逐行语义和字节Hash一致；不注册、不提交、不覆盖Champion",
+      "action_type": "replay",
+      "expected_runtime_seconds": 60,
+      "prediction_changing": true,
+      "submission_creating": false,
+      "read_only": false,
+      "counts_as_experiment_round": false,
+      "mutates_predictions": true,
+      "mutates_project_state": false,
+      "requires_gpu": false,
+      "required_state": {},
+      "required_inputs": {
+        "v53q1_base_csv": {
+          "kind": "file"
+        },
+        "v49a_oof_meta_csv": {
+          "kind": "file"
+        },
+        "v49a_test_meta_csv": {
+          "kind": "file"
+        },
+        "v53q1_patch_py": {
+          "kind": "file"
+        },
+        "current_champion_csv": {
+          "kind": "file"
+        }
+      },
+      "forbidden_closed_branches": [],
+      "command_template": [],
+      "adapter_id": "A1_V53Q1_PATCH_REPLAY_SAFE",
+      "adapter_version": "m3d_v1",
+      "adapter_entrypoint": "afac_agent.adapters.a1_v53q1_patch_replay_safe:Adapter",
+      "execution_mode": "replay",
+      "result_schema": "schemas/adapter_execution_result.schema.json",
+      "output_policy": {
+        "output_root": "artifacts/adapter_runs",
+        "allow_overwrite": false,
+        "forbidden_paths": [
+          "artifacts/A1_v53q1_transition_stable_edge_h2_SAFE.csv"
+        ],
+        "frozen_gate_config": {
+          "minimum_support": 3,
+          "minimum_precision": 0.6666666666666666,
+          "minimum_net": 1,
+          "minimum_folds": 2
+        }
+      },
+      "identity_hash_fields": [
+        "tool_name",
+        "adapter_id",
+        "adapter_version",
+        "execution_mode",
+        "normalized_config",
+        "input_hashes",
+        "output_policy",
+        "frozen_gate_config"
+      ]
+    },
+    {
       "name": "AUDIT_NEW_ISOLATED_SIGNAL",
       "task": "A1",
       "layer": "new_signal",

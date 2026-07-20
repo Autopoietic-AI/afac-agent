@@ -21,6 +21,7 @@ ALLOWED_ADAPTER_ENTRYPOINTS = {
     "afac_agent.adapters.a1_v53q1_patch_audit:Adapter",
     "afac_agent.adapters.a1_v46a1_isolated_audit:Adapter",
     "afac_agent.adapters.a1_v49a_edge_utility_audit:Adapter",
+    "afac_agent.adapters.a1_v53q1_patch_replay_safe:Adapter",
 }
 OPTIONAL_ADAPTER_INPUT_KEYS_BY_TOOL = {
     "A1_V53Q1_PATCH_AUDIT": {
@@ -40,6 +41,10 @@ OPTIONAL_ADAPTER_INPUT_KEYS_BY_TOOL = {
         "v49a_report",
         "v49a_config",
         "v49a_fold_results",
+    },
+    "A1_V53Q1_PATCH_REPLAY_SAFE": {
+        "v53q1_audit_md",
+        "a1_npz",
     },
 }
 ENTRYPOINT_PATTERN = re.compile(
@@ -287,23 +292,49 @@ class AdapterRunner:
         input_paths: Dict[str, Path],
     ) -> str:
         resolved_output = output_root.resolve()
+        raw_root = str((tool.output_policy or {}).get("output_root", "")).strip()
+        if raw_root and not Path(raw_root).is_absolute() and ".." in Path(raw_root).parts:
+            return "unsafe_output_path_escape"
         input_values = {path.resolve() for path in input_paths.values()}
         if resolved_output in input_values:
             return "unsafe_output_path"
         input_dirs = {path.resolve().parent for path in input_paths.values()}
         if resolved_output in input_dirs:
             return "unsafe_output_path"
-        for forbidden in (tool.output_policy or {}).get("forbidden_paths", []):
-            forbidden_path = self._resolve_path(str(forbidden)).resolve()
-            if resolved_output == forbidden_path:
-                return "unsafe_output_path"
         champion = (
             self.project_root
             / "artifacts"
             / "A1_v53q1_transition_stable_edge_h2_SAFE.csv"
         ).resolve()
+        official_adapter_root = (
+            self.project_root / "artifacts" / "adapter_runs"
+        ).resolve()
+        for input_dir in input_dirs:
+            if (
+                tool.mutates_predictions
+                and input_dir == champion.parent
+                and (
+                    resolved_output == official_adapter_root
+                    or official_adapter_root in resolved_output.parents
+                )
+            ):
+                continue
+            if tool.mutates_predictions and (
+                resolved_output == input_dir
+                or resolved_output in input_dir.parents
+                or input_dir in resolved_output.parents
+            ):
+                return "unsafe_output_path"
+        for forbidden in (tool.output_policy or {}).get("forbidden_paths", []):
+            forbidden_path = self._resolve_path(str(forbidden)).resolve()
+            if resolved_output == forbidden_path:
+                return "unsafe_output_path"
         if resolved_output == champion:
             return "unsafe_output_path"
+        if tool.mutates_predictions:
+            artifacts_root = (self.project_root / "artifacts").resolve()
+            if resolved_output == artifacts_root or resolved_output == champion.parent:
+                return "unsafe_output_path"
         return ""
 
     def _write_json(self, path: Path, payload: Dict[str, Any]) -> None:
@@ -327,6 +358,29 @@ class AdapterRunner:
             return None
         if previous.get("status") not in {"completed", "duplicate"}:
             return None
+        if tool.mutates_predictions:
+            metrics = previous.get("metrics", {})
+            candidate_path = previous.get("artifacts", {}).get("candidate_csv", "")
+            if not candidate_path or not Path(candidate_path).exists():
+                return None
+            if sha256_file(Path(candidate_path)) != metrics.get("candidate_sha256"):
+                return None
+            champion_text = str(
+                previous.get("input_manifest", {}).get(
+                    "current_champion_csv",
+                    "",
+                )
+            ).strip()
+            champion = (
+                self._resolve_path(champion_text)
+                if champion_text
+                else self.project_root
+                / "artifacts"
+                / "A1_v53q1_transition_stable_edge_h2_SAFE.csv"
+            )
+            if champion.exists() and metrics.get("champion_sha256"):
+                if sha256_file(champion) != metrics.get("champion_sha256"):
+                    return None
         duplicate = dict(previous)
         duplicate["status"] = "duplicate"
         duplicate["artifacts"] = dict(previous.get("artifacts", {}))
@@ -369,6 +423,14 @@ class AdapterRunner:
                 failure_reason="missing_required_inputs",
                 input_manifest={"missing_files": missing_files},
             )
+        if tool.mutates_predictions and str(
+            variables.get("allow_prediction_artifact", "")
+        ).strip().lower() not in {"1", "true", "yes", "y"}:
+            return self._standard_result(
+                tool=tool,
+                status="blocked",
+                failure_reason="prediction_artifact_permission_required",
+            )
 
         input_paths = self._input_paths(tool, variables)
         input_hashes = {
@@ -376,7 +438,7 @@ class AdapterRunner:
             for key, path in sorted(input_paths.items())
             if path.exists() and path.is_file()
         }
-        if tool.name == "A1_V53Q1_PATCH_AUDIT":
+        if tool.name in {"A1_V53Q1_PATCH_AUDIT", "A1_V53Q1_PATCH_REPLAY_SAFE"}:
             normalized_config = {
                 "minimum_support": 3,
                 "minimum_precision": round(2.0 / 3.0, 12),
@@ -492,10 +554,10 @@ class AdapterRunner:
                 status = "failed"
                 failure_reason = "prediction_artifact_forbidden"
                 warnings.append("mutates_predictions=false but prediction artifact was generated")
-        if tool.read_only and frozen_after != frozen_before:
+        if not tool.mutates_project_state and frozen_after != frozen_before:
             status = "failed"
-            failure_reason = "read_only_contract_violated"
-            warnings.append("frozen file hash changed during read-only adapter run")
+            failure_reason = "protected_file_mutated"
+            warnings.append("protected frozen file hash changed during adapter run")
 
         result = self._standard_result(
             tool=tool,
@@ -504,7 +566,7 @@ class AdapterRunner:
             finished_at=finished_at,
             duration_seconds=duration,
             identity_hash=identity_hash,
-            command=[],
+            command=normalized.get("command", []),
             returncode=raw.returncode,
             input_manifest={
                 key: str(path)

@@ -39,6 +39,7 @@ def _run_adapter(argv: list[str]) -> None:
     parser.add_argument("--v49a_config", default="")
     parser.add_argument("--v49a_fold_results", default="")
     parser.add_argument("--adapter_output_root", default="")
+    parser.add_argument("--allow-prediction-artifact", action="store_true")
     args = parser.parse_args(argv)
 
     resolver = PathResolver(args.project_root, args.paths_config or None)
@@ -88,6 +89,9 @@ def _run_adapter(argv: list[str]) -> None:
         "v49a_config": str(resolver.a1_v49a_config(args.v49a_config) or ""),
         "v49a_fold_results": str(
             resolver.a1_v49a_fold_results(args.v49a_fold_results) or ""
+        ),
+        "allow_prediction_artifact": (
+            "true" if args.allow_prediction_artifact else ""
         ),
     }
     result = AdapterRunner(project_root=root).run(

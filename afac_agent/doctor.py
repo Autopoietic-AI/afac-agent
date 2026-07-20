@@ -245,6 +245,29 @@ def build_report(
             registry_errors.append("A1_V49A_EDGE_UTILITY_AUDIT must not mutate project state")
         if v49_audit.get("command_template") != []:
             registry_errors.append("A1_V49A_EDGE_UTILITY_AUDIT command_template must stay empty")
+    replay_safe = next(
+        (item for item in adapter_tools if item.get("name") == "A1_V53Q1_PATCH_REPLAY_SAFE"),
+        None,
+    )
+    if replay_safe is None:
+        registry_errors.append("A1_V53Q1_PATCH_REPLAY_SAFE is not registered")
+    else:
+        if replay_safe.get("adapter_entrypoint") != (
+            "afac_agent.adapters.a1_v53q1_patch_replay_safe:Adapter"
+        ):
+            registry_errors.append("A1_V53Q1_PATCH_REPLAY_SAFE entrypoint is invalid")
+        if replay_safe.get("read_only") is not False:
+            registry_errors.append("A1_V53Q1_PATCH_REPLAY_SAFE must not be read_only")
+        if replay_safe.get("counts_as_experiment_round") is not False:
+            registry_errors.append("A1_V53Q1_PATCH_REPLAY_SAFE must not consume rounds")
+        if replay_safe.get("mutates_predictions") is not True:
+            registry_errors.append("A1_V53Q1_PATCH_REPLAY_SAFE must declare prediction mutation")
+        if replay_safe.get("mutates_project_state") is not False:
+            registry_errors.append("A1_V53Q1_PATCH_REPLAY_SAFE must not mutate project state")
+        if replay_safe.get("submission_creating") is not False:
+            registry_errors.append("A1_V53Q1_PATCH_REPLAY_SAFE must not create submissions")
+        if replay_safe.get("command_template") != []:
+            registry_errors.append("A1_V53Q1_PATCH_REPLAY_SAFE command_template must stay empty")
     checks["adapter_registry_bindings"] = {
         "name": "adapter_registry_bindings",
         "passed": not registry_errors,
@@ -255,6 +278,7 @@ def build_report(
             "has_A1_V53Q1_PATCH_AUDIT": patch_audit is not None,
             "has_A1_V46A1_ISOLATED_AUDIT": v46_audit is not None,
             "has_A1_V49A_EDGE_UTILITY_AUDIT": v49_audit is not None,
+            "has_A1_V53Q1_PATCH_REPLAY_SAFE": replay_safe is not None,
         },
     }
 
@@ -292,6 +316,26 @@ def build_report(
         "details": {
             "audit_md_exists": resolver.a1_v53q1_audit_md().exists(),
             "patch_py_exists": resolver.a1_v53q1_patch_py().exists(),
+        },
+    }
+    replay_warnings: list[str] = []
+    for key, value in {
+        "v53q1_base_csv": resolver.a1_v53q1_base_csv(),
+        "v49a_oof_meta_csv": resolver.a1_v49a_oof_meta_csv(),
+        "v49a_test_meta_csv": resolver.a1_v49a_test_meta_csv(),
+    }.items():
+        if not value:
+            replay_warnings.append(f"{key}: not configured; replay adapter will wait for input")
+        elif not value.exists():
+            replay_warnings.append(f"{key}: configured path does not exist")
+    checks["A1_V53Q1_PATCH_REPLAY_SAFE_config"] = {
+        "name": "A1_V53Q1_PATCH_REPLAY_SAFE_config",
+        "passed": True,
+        "errors": [],
+        "warnings": replay_warnings,
+        "details": {
+            "patch_py_exists": resolver.a1_v53q1_patch_py().exists(),
+            "default_champion_exists": resolver.a1_current_champion_csv().exists(),
         },
     }
     v46_warnings: list[str] = []
