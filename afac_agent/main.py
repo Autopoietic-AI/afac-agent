@@ -27,6 +27,12 @@ def _run_adapter(argv: list[str]) -> None:
     parser.add_argument("--v49a_test_meta_csv", default="")
     parser.add_argument("--v53q1_audit_md", default="")
     parser.add_argument("--v53q1_patch_py", default="")
+    parser.add_argument("--a1_npz", default="")
+    parser.add_argument("--candidate_csv", default="")
+    parser.add_argument("--parent_csv", default="")
+    parser.add_argument("--candidate_oof_npz", default="")
+    parser.add_argument("--audit_report", default="")
+    parser.add_argument("--current_champion_csv", default="")
     parser.add_argument("--adapter_output_root", default="")
     args = parser.parse_args(argv)
 
@@ -52,6 +58,18 @@ def _run_adapter(argv: list[str]) -> None:
         ),
         "v53q1_audit_md": str(resolver.a1_v53q1_audit_md(args.v53q1_audit_md)),
         "v53q1_patch_py": str(resolver.a1_v53q1_patch_py(args.v53q1_patch_py)),
+        "a1_npz": str(resolver.a1_npz(args.a1_npz) or ""),
+        "candidate_csv": str(resolver.a1_v46a1_candidate_csv(args.candidate_csv) or ""),
+        "parent_csv": str(resolver.a1_v46a1_parent_csv(args.parent_csv) or ""),
+        "candidate_oof_npz": str(
+            resolver.a1_v46a1_candidate_oof_npz(args.candidate_oof_npz) or ""
+        ),
+        "audit_report": str(resolver.a1_v46a1_audit_report(args.audit_report) or ""),
+        "current_champion_csv": str(
+            resolver.a1_current_champion_csv(args.current_champion_csv)
+            if args.current_champion_csv
+            else ""
+        ),
     }
     result = AdapterRunner(project_root=root).run(
         tool=tool,

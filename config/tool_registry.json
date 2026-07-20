@@ -205,6 +205,54 @@
       ]
     },
     {
+      "name": "A1_V46A1_ISOLATED_AUDIT",
+      "task": "A1",
+      "layer": "isolated_expert_audit",
+      "description": "只读审计v46A-1 Balanced Seed Consensus Isolated专家候选CSV、canonical A1.npz isolated边界、Parent差异和可选OOF；不训练、不生成预测、不改Champion",
+      "action_type": "audit",
+      "expected_runtime_seconds": 60,
+      "prediction_changing": false,
+      "submission_creating": false,
+      "read_only": true,
+      "counts_as_experiment_round": false,
+      "mutates_predictions": false,
+      "mutates_project_state": false,
+      "requires_gpu": false,
+      "required_state": {},
+      "required_inputs": {
+        "a1_npz": {
+          "kind": "file"
+        },
+        "candidate_csv": {
+          "kind": "file"
+        }
+      },
+      "forbidden_closed_branches": [],
+      "command_template": [],
+      "adapter_id": "A1_V46A1_ISOLATED_AUDIT",
+      "adapter_version": "m3b_v1",
+      "adapter_entrypoint": "afac_agent.adapters.a1_v46a1_isolated_audit:Adapter",
+      "execution_mode": "audit",
+      "result_schema": "schemas/adapter_execution_result.schema.json",
+      "output_policy": {
+        "output_root": "artifacts/adapter_runs",
+        "allow_overwrite": false,
+        "forbidden_paths": [
+          "artifacts/A1_v53q1_transition_stable_edge_h2_SAFE.csv"
+        ]
+      },
+      "identity_hash_fields": [
+        "tool_name",
+        "adapter_id",
+        "adapter_version",
+        "execution_mode",
+        "normalized_config",
+        "input_hashes",
+        "output_policy",
+        "frozen_gate_config"
+      ]
+    },
+    {
       "name": "AUDIT_NEW_ISOLATED_SIGNAL",
       "task": "A1",
       "layer": "new_signal",

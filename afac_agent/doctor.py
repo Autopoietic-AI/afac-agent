@@ -118,6 +118,12 @@ def build_report(
             "v49a_test_meta_csv": str(resolver.a1_v49a_test_meta_csv() or ""),
             "v53q1_audit_md": str(resolver.a1_v53q1_audit_md()),
             "v53q1_patch_py": str(resolver.a1_v53q1_patch_py()),
+            "v46a1_candidate_csv": str(resolver.a1_v46a1_candidate_csv() or ""),
+            "v46a1_parent_csv": str(resolver.a1_v46a1_parent_csv() or ""),
+            "v46a1_candidate_oof_npz": str(
+                resolver.a1_v46a1_candidate_oof_npz() or ""
+            ),
+            "v46a1_audit_report": str(resolver.a1_v46a1_audit_report() or ""),
         },
     }
     schema_path = root / "schemas" / "adapter_execution_result.schema.json"
@@ -185,6 +191,27 @@ def build_report(
             registry_errors.append("A1_V53Q1_PATCH_AUDIT must not mutate project state")
         if patch_audit.get("command_template") != []:
             registry_errors.append("A1_V53Q1_PATCH_AUDIT command_template must stay empty")
+    v46_audit = next(
+        (item for item in adapter_tools if item.get("name") == "A1_V46A1_ISOLATED_AUDIT"),
+        None,
+    )
+    if v46_audit is None:
+        registry_errors.append("A1_V46A1_ISOLATED_AUDIT is not registered")
+    else:
+        if v46_audit.get("adapter_entrypoint") != (
+            "afac_agent.adapters.a1_v46a1_isolated_audit:Adapter"
+        ):
+            registry_errors.append("A1_V46A1_ISOLATED_AUDIT entrypoint is invalid")
+        if v46_audit.get("read_only") is not True:
+            registry_errors.append("A1_V46A1_ISOLATED_AUDIT must be read_only")
+        if v46_audit.get("counts_as_experiment_round") is not False:
+            registry_errors.append("A1_V46A1_ISOLATED_AUDIT must not consume rounds")
+        if v46_audit.get("mutates_predictions") is not False:
+            registry_errors.append("A1_V46A1_ISOLATED_AUDIT must not mutate predictions")
+        if v46_audit.get("mutates_project_state") is not False:
+            registry_errors.append("A1_V46A1_ISOLATED_AUDIT must not mutate project state")
+        if v46_audit.get("command_template") != []:
+            registry_errors.append("A1_V46A1_ISOLATED_AUDIT command_template must stay empty")
     checks["adapter_registry_bindings"] = {
         "name": "adapter_registry_bindings",
         "passed": not registry_errors,
@@ -193,6 +220,7 @@ def build_report(
         "details": {
             "adapter_count": len(adapter_tools),
             "has_A1_V53Q1_PATCH_AUDIT": patch_audit is not None,
+            "has_A1_V46A1_ISOLATED_AUDIT": v46_audit is not None,
         },
     }
 
@@ -231,6 +259,24 @@ def build_report(
             "audit_md_exists": resolver.a1_v53q1_audit_md().exists(),
             "patch_py_exists": resolver.a1_v53q1_patch_py().exists(),
         },
+    }
+    v46_warnings: list[str] = []
+    for key, value in {
+        "candidate_csv": resolver.a1_v46a1_candidate_csv(),
+        "parent_csv": resolver.a1_v46a1_parent_csv(),
+        "candidate_oof_npz": resolver.a1_v46a1_candidate_oof_npz(),
+        "audit_report": resolver.a1_v46a1_audit_report(),
+    }.items():
+        if not value:
+            v46_warnings.append(f"{key}: not configured; adapter may wait or mark optional audit unavailable")
+        elif not value.exists():
+            v46_warnings.append(f"{key}: configured path does not exist")
+    checks["A1_V46A1_ISOLATED_AUDIT_config"] = {
+        "name": "A1_V46A1_ISOLATED_AUDIT_config",
+        "passed": True,
+        "errors": [],
+        "warnings": v46_warnings,
+        "details": {},
     }
     checks["writable"] = {
         "name": "writable",

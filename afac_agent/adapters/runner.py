@@ -19,6 +19,18 @@ from afac_agent.schemas import ToolSpec
 
 ALLOWED_ADAPTER_ENTRYPOINTS = {
     "afac_agent.adapters.a1_v53q1_patch_audit:Adapter",
+    "afac_agent.adapters.a1_v46a1_isolated_audit:Adapter",
+}
+OPTIONAL_ADAPTER_INPUT_KEYS_BY_TOOL = {
+    "A1_V53Q1_PATCH_AUDIT": {
+        "v53q1_patch_py",
+    },
+    "A1_V46A1_ISOLATED_AUDIT": {
+        "parent_csv",
+        "candidate_oof_npz",
+        "audit_report",
+        "current_champion_csv",
+    },
 }
 ENTRYPOINT_PATTERN = re.compile(
     r"^afac_agent\.adapters\.[A-Za-z_][A-Za-z0-9_]*:[A-Za-z_][A-Za-z0-9_]*$"
@@ -105,7 +117,7 @@ class AdapterRunner:
             "adapter_id": tool.adapter_id or tool.name,
             "adapter_version": tool.adapter_version or "",
             "status": status,
-            "target_problem": "A1_v53Q1_champion_patch_audit",
+            "target_problem": tool.name,
             "execution_mode": tool.execution_mode or tool.action_type,
             "read_only": tool.read_only,
             "counts_as_experiment_round": tool.counts_as_experiment_round,
@@ -167,7 +179,12 @@ class AdapterRunner:
     ) -> Dict[str, Path]:
         paths: Dict[str, Path] = {}
         keys = set((tool.required_inputs or {}).keys())
-        keys.update(key for key in ["v53q1_patch_py"] if variables.get(key))
+        optional_keys = OPTIONAL_ADAPTER_INPUT_KEYS_BY_TOOL.get(tool.name, set())
+        keys.update(
+            key
+            for key in optional_keys
+            if variables.get(key)
+        )
         for key in sorted(keys):
             value = str(variables.get(key, "")).strip()
             if value:
@@ -349,12 +366,21 @@ class AdapterRunner:
             for key, path in sorted(input_paths.items())
             if path.exists() and path.is_file()
         }
-        normalized_config = {
-            "minimum_support": 3,
-            "minimum_precision": round(2.0 / 3.0, 12),
-            "minimum_net": 1,
-            "minimum_folds": 2,
-        }
+        if tool.name == "A1_V53Q1_PATCH_AUDIT":
+            normalized_config = {
+                "minimum_support": 3,
+                "minimum_precision": round(2.0 / 3.0, 12),
+                "minimum_net": 1,
+                "minimum_folds": 2,
+            }
+            frozen_gate_config = normalized_config
+        else:
+            normalized_config = {
+                "adapter_id": tool.adapter_id or tool.name,
+                "adapter_version": tool.adapter_version or "",
+                "execution_mode": tool.execution_mode or tool.action_type,
+            }
+            frozen_gate_config = {}
         output_policy = {
             "allow_overwrite": bool(
                 (tool.output_policy or {}).get("allow_overwrite", False)
@@ -366,7 +392,7 @@ class AdapterRunner:
             normalized_config=normalized_config,
             input_hashes=input_hashes,
             output_policy=output_policy,
-            frozen_gate_config=normalized_config,
+            frozen_gate_config=frozen_gate_config,
         )
         output_root = self._resolve_output_root(tool)
         unsafe_reason = self._check_output_safety(

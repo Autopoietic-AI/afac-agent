@@ -22,3 +22,8 @@ a1_v53q1_patch_audit:
   test_meta_csv: ""
   audit_md: artifacts/V53Q1_TRANSITION_STABLE_EDGE_H2_AUDIT.md
   patch_py: artifacts/a1_v53q1_transition_stable_edge_h2_patch.py
+a1_v46a1_isolated_audit:
+  candidate_csv: ""
+  parent_csv: ""
+  candidate_oof_npz: ""
+  audit_report: ""

@@ -167,3 +167,34 @@ class PathResolver:
             or self.get("a1_v53q1_patch_audit", "patch_py", DEFAULT_A1_V53Q1_PATCH_PY)
             or (self.project_root / DEFAULT_A1_V53Q1_PATCH_PY)
         )
+
+    def a1_v46a1_candidate_csv(self, override: str = "") -> Path | None:
+        return self.resolve(override) or self.get(
+            "a1_v46a1_isolated_audit",
+            "candidate_csv",
+            "",
+        )
+
+    def a1_v46a1_parent_csv(self, override: str = "") -> Path | None:
+        return self.resolve(override) or self.get(
+            "a1_v46a1_isolated_audit",
+            "parent_csv",
+            "",
+        )
+
+    def a1_v46a1_candidate_oof_npz(self, override: str = "") -> Path | None:
+        return self.resolve(override) or self.get(
+            "a1_v46a1_isolated_audit",
+            "candidate_oof_npz",
+            "",
+        )
+
+    def a1_v46a1_audit_report(self, override: str = "") -> Path | None:
+        return self.resolve(override) or self.get(
+            "a1_v46a1_isolated_audit",
+            "audit_report",
+            "",
+        )
+
+    def a1_current_champion_csv(self, override: str = "") -> Path:
+        return self.a1_anchor_csv(override)
