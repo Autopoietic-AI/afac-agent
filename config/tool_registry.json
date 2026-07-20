@@ -367,6 +367,54 @@
       ]
     },
     {
+      "name": "A1_OOF_CANDIDATE_EVALUATOR",
+      "task": "A1",
+      "layer": "evaluation",
+      "description": "只读评估A1候选OOF资产：完整性、OOF指标、结构桶、Rescue/Damage/Oracle和可选Fold稳定性；不训练、不生成Test预测、不修改Champion",
+      "action_type": "evaluate",
+      "expected_runtime_seconds": 60,
+      "prediction_changing": false,
+      "submission_creating": false,
+      "read_only": true,
+      "counts_as_experiment_round": false,
+      "mutates_predictions": false,
+      "mutates_project_state": false,
+      "requires_gpu": false,
+      "required_state": {},
+      "required_inputs": {
+        "a1_npz": {
+          "kind": "file"
+        },
+        "candidate_oof_npz": {
+          "kind": "file"
+        }
+      },
+      "forbidden_closed_branches": [],
+      "command_template": [],
+      "adapter_id": "A1_OOF_CANDIDATE_EVALUATOR",
+      "adapter_version": "m4b_v1",
+      "adapter_entrypoint": "afac_agent.adapters.a1_oof_candidate_evaluator:Adapter",
+      "execution_mode": "evaluate",
+      "result_schema": "schemas/a1_oof_evaluation.schema.json",
+      "output_policy": {
+        "output_root": "artifacts/evaluation_runs",
+        "allow_overwrite": false,
+        "forbidden_paths": [
+          "artifacts/A1_v53q1_transition_stable_edge_h2_SAFE.csv"
+        ]
+      },
+      "identity_hash_fields": [
+        "tool_name",
+        "adapter_id",
+        "adapter_version",
+        "execution_mode",
+        "normalized_config",
+        "input_hashes",
+        "output_policy",
+        "frozen_gate_config"
+      ]
+    },
+    {
       "name": "AUDIT_NEW_ISOLATED_SIGNAL",
       "task": "A1",
       "layer": "new_signal",

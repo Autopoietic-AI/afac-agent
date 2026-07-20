@@ -1,0 +1,76 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "AFAC A1 OOF Candidate Evaluation",
+  "type": "object",
+  "required": [
+    "evaluation_version",
+    "evaluation_id",
+    "analysis_tier",
+    "comparison_scope",
+    "candidate_identity",
+    "candidate_hash",
+    "parent_identity",
+    "parent_hash",
+    "parent_identity_status",
+    "input_validation",
+    "metric_semantics",
+    "overall_metrics",
+    "macro_metrics",
+    "class_metrics",
+    "bucket_metrics",
+    "fold_metrics",
+    "oracle_metrics",
+    "prediction_shift",
+    "limitations",
+    "warnings",
+    "test_truth_used",
+    "leakage_safety_pass",
+    "evaluation_integrity_pass"
+  ],
+  "properties": {
+    "evaluation_version": {"type": "string"},
+    "evaluation_id": {"type": "string", "minLength": 1},
+    "analysis_tier": {
+      "enum": [
+        "integrity_only",
+        "self_contained_oof_comparison",
+        "full_anchor_oof_comparison"
+      ]
+    },
+    "comparison_scope": {"type": "string"},
+    "candidate_identity": {"type": "object"},
+    "candidate_hash": {"type": "string"},
+    "parent_identity": {"type": "object"},
+    "parent_hash": {"type": "string"},
+    "parent_identity_status": {
+      "enum": [
+        "embedded_parent_verified",
+        "external_parent_verified",
+        "current_anchor_verified",
+        "unverified",
+        "unavailable"
+      ]
+    },
+    "input_validation": {
+      "type": "object",
+      "required": ["status", "test_truth_used"],
+      "properties": {
+        "status": {"enum": ["passed", "failed"]},
+        "test_truth_used": {"const": false}
+      }
+    },
+    "metric_semantics": {"type": "object"},
+    "overall_metrics": {"type": "object"},
+    "macro_metrics": {"type": "object"},
+    "class_metrics": {"type": "array", "items": {"type": "object"}},
+    "bucket_metrics": {"type": "array", "items": {"type": "object"}},
+    "fold_metrics": {"type": "object"},
+    "oracle_metrics": {"type": "object"},
+    "prediction_shift": {"type": "object"},
+    "limitations": {"type": "array", "items": {"type": "object"}},
+    "warnings": {"type": "array", "items": {"type": "string"}},
+    "test_truth_used": {"const": false},
+    "leakage_safety_pass": {"type": "boolean"},
+    "evaluation_integrity_pass": {"type": "boolean"}
+  }
+}

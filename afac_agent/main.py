@@ -32,6 +32,12 @@ def _run_adapter(argv: list[str]) -> None:
     parser.add_argument("--candidate_csv", default="")
     parser.add_argument("--parent_csv", default="")
     parser.add_argument("--candidate_oof_npz", default="")
+    parser.add_argument("--parent_oof_npz", default="")
+    parser.add_argument("--canonical_fold_csv", default="")
+    parser.add_argument("--anchor_manifest_json", default="")
+    parser.add_argument("--node_bucket_csv", default="")
+    parser.add_argument("--m2_profile_json", default="")
+    parser.add_argument("--evaluation_policy_json", default="")
     parser.add_argument("--audit_report", default="")
     parser.add_argument("--current_champion_csv", default="")
     parser.add_argument("--v46a1_base_csv", default="")
@@ -75,8 +81,16 @@ def _run_adapter(argv: list[str]) -> None:
         "candidate_csv": str(resolver.a1_v46a1_candidate_csv(args.candidate_csv) or ""),
         "parent_csv": str(resolver.a1_v46a1_parent_csv(args.parent_csv) or ""),
         "candidate_oof_npz": str(
-            resolver.a1_v46a1_candidate_oof_npz(args.candidate_oof_npz) or ""
+            resolver.resolve(args.candidate_oof_npz)
+            or resolver.a1_v46a1_candidate_oof_npz("")
+            or ""
         ),
+        "parent_oof_npz": str(resolver.resolve(args.parent_oof_npz) or ""),
+        "canonical_fold_csv": str(resolver.resolve(args.canonical_fold_csv) or ""),
+        "anchor_manifest_json": str(resolver.resolve(args.anchor_manifest_json) or ""),
+        "node_bucket_csv": str(resolver.resolve(args.node_bucket_csv) or ""),
+        "m2_profile_json": str(resolver.resolve(args.m2_profile_json) or ""),
+        "evaluation_policy_json": str(resolver.resolve(args.evaluation_policy_json) or ""),
         "audit_report": str(resolver.a1_v46a1_audit_report(args.audit_report) or ""),
         "current_champion_csv": str(
             resolver.a1_current_champion_csv(args.current_champion_csv)

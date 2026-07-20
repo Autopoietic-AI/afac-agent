@@ -269,6 +269,27 @@ def build_report(
             registry_errors.append("A1_V53Q1_PATCH_REPLAY_SAFE must not create submissions")
         if replay_safe.get("command_template") != []:
             registry_errors.append("A1_V53Q1_PATCH_REPLAY_SAFE command_template must stay empty")
+    oof_evaluator = next(
+        (item for item in adapter_tools if item.get("name") == "A1_OOF_CANDIDATE_EVALUATOR"),
+        None,
+    )
+    if oof_evaluator is None:
+        registry_errors.append("A1_OOF_CANDIDATE_EVALUATOR is not registered")
+    else:
+        if oof_evaluator.get("adapter_entrypoint") != (
+            "afac_agent.adapters.a1_oof_candidate_evaluator:Adapter"
+        ):
+            registry_errors.append("A1_OOF_CANDIDATE_EVALUATOR entrypoint is invalid")
+        if oof_evaluator.get("read_only") is not True:
+            registry_errors.append("A1_OOF_CANDIDATE_EVALUATOR must be read_only")
+        if oof_evaluator.get("counts_as_experiment_round") is not False:
+            registry_errors.append("A1_OOF_CANDIDATE_EVALUATOR must not consume rounds")
+        if oof_evaluator.get("mutates_predictions") is not False:
+            registry_errors.append("A1_OOF_CANDIDATE_EVALUATOR must not mutate predictions")
+        if oof_evaluator.get("mutates_project_state") is not False:
+            registry_errors.append("A1_OOF_CANDIDATE_EVALUATOR must not mutate project state")
+        if oof_evaluator.get("command_template") != []:
+            registry_errors.append("A1_OOF_CANDIDATE_EVALUATOR command_template must stay empty")
     checks["adapter_registry_bindings"] = {
         "name": "adapter_registry_bindings",
         "passed": not registry_errors,
@@ -280,6 +301,7 @@ def build_report(
             "has_A1_V46A1_ISOLATED_AUDIT": v46_audit is not None,
             "has_A1_V49A_EDGE_UTILITY_AUDIT": v49_audit is not None,
             "has_A1_V53Q1_PATCH_REPLAY_SAFE": replay_safe is not None,
+            "has_A1_OOF_CANDIDATE_EVALUATOR": oof_evaluator is not None,
         },
     }
 
@@ -323,10 +345,38 @@ def build_report(
         "warnings": [],
         "details": {"path": str(feedback_schema_path)},
     }
+    oof_eval_schema_errors: list[str] = []
+    oof_eval_schema_path = root / "schemas" / "a1_oof_evaluation.schema.json"
+    try:
+        oof_eval_schema = json.loads(oof_eval_schema_path.read_text(encoding="utf-8"))
+    except Exception as exc:
+        oof_eval_schema = {}
+        oof_eval_schema_errors.append(f"a1 oof evaluation schema unreadable: {exc}")
+    if isinstance(oof_eval_schema, dict):
+        required = set(oof_eval_schema.get("required", []))
+        for key in [
+            "evaluation_id",
+            "analysis_tier",
+            "comparison_scope",
+            "parent_identity_status",
+            "test_truth_used",
+            "leakage_safety_pass",
+            "evaluation_integrity_pass",
+        ]:
+            if key not in required:
+                oof_eval_schema_errors.append(f"a1 oof evaluation schema missing {key}")
+    checks["a1_oof_evaluation_schema"] = {
+        "name": "a1_oof_evaluation_schema",
+        "passed": not oof_eval_schema_errors,
+        "errors": oof_eval_schema_errors,
+        "warnings": [],
+        "details": {"path": str(oof_eval_schema_path)},
+    }
     expected_normalizers = {
         "A1_V46A1_ISOLATED_AUDIT",
         "A1_V49A_EDGE_UTILITY_AUDIT",
         "A1_V53Q1_PATCH_REPLAY_SAFE",
+        "A1_OOF_CANDIDATE_EVALUATOR",
     }
     normalizer_errors = [
         f"missing normalizer: {name}"
@@ -358,6 +408,26 @@ def build_report(
             "path": str(feedback_root),
             "exists": feedback_root.exists(),
             "parent_exists": feedback_root.parent.exists(),
+        },
+    }
+    evaluation_root = root / "artifacts" / "evaluation_runs"
+    checks["evaluation_output_root"] = {
+        "name": "evaluation_output_root",
+        "passed": evaluation_root.resolve() != champion_csv.resolve(),
+        "errors": (
+            ["evaluation output root must not equal champion csv"]
+            if evaluation_root.resolve() == champion_csv.resolve()
+            else []
+        ),
+        "warnings": (
+            ["evaluation_runs artifact root does not exist yet"]
+            if not evaluation_root.exists()
+            else []
+        ),
+        "details": {
+            "path": str(evaluation_root),
+            "exists": evaluation_root.exists(),
+            "parent_exists": evaluation_root.parent.exists(),
         },
     }
 

@@ -166,8 +166,58 @@ def normalize_v53q1_patch_replay(
     return feedback
 
 
+def normalize_a1_oof_candidate_evaluator(
+    execution: dict[str, Any],
+    execution_result_hash: str,
+    execution_result_ref: str,
+) -> dict[str, Any]:
+    metrics = execution.get("metrics", {})
+    feedback = base_feedback(
+        execution=execution,
+        execution_result_hash=execution_result_hash,
+        execution_result_ref=execution_result_ref,
+        feedback_kind="model_experiment",
+        evaluation_tier="oof_comparison",
+    )
+    analysis_tier = str(metrics.get("analysis_tier", "") or "")
+    parent_identity_status = str(metrics.get("parent_identity_status", "") or "")
+    policy_status = str(
+        metrics.get("evaluation_policy", {}).get("status", "unavailable")
+    )
+    overall = metrics.get("overall_metrics", {})
+    macro = metrics.get("macro_metrics", {})
+    feedback["evidence"] = {
+        "analysis_tier": analysis_tier,
+        "comparison_scope": metrics.get("comparison_scope", ""),
+        "parent_identity_status": parent_identity_status,
+        "test_truth_used": bool(metrics.get("test_truth_used", True)),
+        "leakage_safety_pass": bool(metrics.get("leakage_safety_pass", False)),
+        "evaluation_integrity_pass": bool(
+            metrics.get("evaluation_integrity_pass", False)
+        ),
+    }
+    feedback["metrics"] = {
+        "overall": overall,
+        "macro": macro,
+        "rescue_damage": metrics.get("rescue_damage", unavailable("missing_parent_oof")),
+        "oracle": metrics.get("oracle_metrics", unavailable("missing_parent_oof")),
+        "fold": metrics.get("fold_metrics", unavailable("missing_canonical_fold")),
+    }
+    feedback["limitations"].extend(metrics.get("limitations", []))
+    if (
+        analysis_tier == "self_contained_oof_comparison"
+        and parent_identity_status in {"embedded_parent_verified", "external_parent_verified"}
+        and policy_status == "observed"
+    ):
+        feedback["recommendation"] = "proceed_to_candidate_generation"
+    else:
+        feedback["recommendation"] = "informational_only"
+    return feedback
+
+
 NORMALIZER_REGISTRY: dict[str, Normalizer] = {
     "A1_V46A1_ISOLATED_AUDIT": normalize_v46a1_isolated,
     "A1_V49A_EDGE_UTILITY_AUDIT": normalize_v49a_edge_utility,
     "A1_V53Q1_PATCH_REPLAY_SAFE": normalize_v53q1_patch_replay,
+    "A1_OOF_CANDIDATE_EVALUATOR": normalize_a1_oof_candidate_evaluator,
 }

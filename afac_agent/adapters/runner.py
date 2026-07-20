@@ -22,6 +22,7 @@ ALLOWED_ADAPTER_ENTRYPOINTS = {
     "afac_agent.adapters.a1_v46a1_isolated_audit:Adapter",
     "afac_agent.adapters.a1_v49a_edge_utility_audit:Adapter",
     "afac_agent.adapters.a1_v53q1_patch_replay_safe:Adapter",
+    "afac_agent.adapters.a1_oof_candidate_evaluator:Adapter",
 }
 OPTIONAL_ADAPTER_INPUT_KEYS_BY_TOOL = {
     "A1_V53Q1_PATCH_AUDIT": {
@@ -45,6 +46,14 @@ OPTIONAL_ADAPTER_INPUT_KEYS_BY_TOOL = {
     "A1_V53Q1_PATCH_REPLAY_SAFE": {
         "v53q1_audit_md",
         "a1_npz",
+    },
+    "A1_OOF_CANDIDATE_EVALUATOR": {
+        "parent_oof_npz",
+        "canonical_fold_csv",
+        "anchor_manifest_json",
+        "node_bucket_csv",
+        "m2_profile_json",
+        "evaluation_policy_json",
     },
 }
 ENTRYPOINT_PATTERN = re.compile(
@@ -453,11 +462,12 @@ class AdapterRunner:
                 "execution_mode": tool.execution_mode or tool.action_type,
             }
             frozen_gate_config = {}
+        output_family = "evaluation_runs" if tool.name == "A1_OOF_CANDIDATE_EVALUATOR" else "adapter_runs"
         output_policy = {
             "allow_overwrite": bool(
                 (tool.output_policy or {}).get("allow_overwrite", False)
             ),
-            "output_family": "adapter_runs",
+            "output_family": output_family,
         }
         identity_hash = self.compute_identity_hash(
             tool=tool,

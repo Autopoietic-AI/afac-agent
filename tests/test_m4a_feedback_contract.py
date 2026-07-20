@@ -91,6 +91,7 @@ def test_feedback_schema_file_and_registered_normalizers() -> None:
         "A1_V46A1_ISOLATED_AUDIT",
         "A1_V49A_EDGE_UTILITY_AUDIT",
         "A1_V53Q1_PATCH_REPLAY_SAFE",
+        "A1_OOF_CANDIDATE_EVALUATOR",
     }.issubset(NORMALIZER_REGISTRY)
 
 
