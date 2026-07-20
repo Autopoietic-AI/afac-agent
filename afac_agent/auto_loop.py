@@ -21,6 +21,9 @@ def main() -> None:
     parser.add_argument("--paths_config", default="")
     parser.add_argument("--max_steps", type=int, default=10)
     parser.add_argument("--npz_path", default="")
+    parser.add_argument("--edges_csv", default="")
+    parser.add_argument("--fold_file", default="")
+    parser.add_argument("--profile_out_dir", default="")
     parser.add_argument("--anchor_csv", default="")
     parser.add_argument("--anchor_oof_npz", default="")
     parser.add_argument("--reference_oof_npz", default="")
@@ -35,6 +38,9 @@ def main() -> None:
         trajectory_path=root / args.trajectory,
     )
     npz_path = resolver.a1_npz(args.npz_path)
+    edges_csv = resolver.a1_edges_csv(args.edges_csv)
+    fold_file = resolver.a1_fold_file(args.fold_file)
+    profile_out_dir = resolver.a1_profile_out_dir(args.profile_out_dir)
     anchor_csv = resolver.a1_anchor_csv(args.anchor_csv)
     anchor_oof_npz = resolver.a1_anchor_oof_npz(args.anchor_oof_npz)
     reference_oof_npz = resolver.a1_reference_oof_npz(args.reference_oof_npz)
@@ -42,6 +48,9 @@ def main() -> None:
         "python": sys.executable,
         "root": str(root),
         "npz_path": str(npz_path or ""),
+        "edges_csv": str(edges_csv or ""),
+        "fold_file": str(fold_file or ""),
+        "out_dir": str(profile_out_dir),
         "anchor_csv": str(anchor_csv),
         "anchor_oof_npz": str(anchor_oof_npz or ""),
         "reference_oof_npz": str(reference_oof_npz or ""),

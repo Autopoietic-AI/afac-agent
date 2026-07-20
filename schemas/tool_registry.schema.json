@@ -17,6 +17,11 @@
           "expected_runtime_seconds",
           "prediction_changing",
           "submission_creating",
+          "read_only",
+          "counts_as_experiment_round",
+          "mutates_predictions",
+          "mutates_project_state",
+          "requires_gpu",
           "required_state",
           "required_inputs",
           "forbidden_closed_branches",
@@ -25,7 +30,12 @@
         "properties": {
           "task": {"enum": ["A1", "A2"]},
           "prediction_changing": {"type": "boolean"},
-          "submission_creating": {"type": "boolean"}
+          "submission_creating": {"type": "boolean"},
+          "read_only": {"type": "boolean"},
+          "counts_as_experiment_round": {"type": "boolean"},
+          "mutates_predictions": {"type": "boolean"},
+          "mutates_project_state": {"type": "boolean"},
+          "requires_gpu": {"type": "boolean"}
         }
       }
     }

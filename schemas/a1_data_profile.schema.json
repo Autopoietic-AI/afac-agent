@@ -1,0 +1,57 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "AFAC A1 M2 Data Profile",
+  "type": "object",
+  "required": [
+    "metadata",
+    "analysis_tier",
+    "dataset",
+    "graph",
+    "graph_direction_profile",
+    "structure_buckets",
+    "exact_hop_policy",
+    "folds",
+    "oof_profile",
+    "prediction_sink_source",
+    "test_policy",
+    "test_profile",
+    "warnings"
+  ],
+  "properties": {
+    "analysis_tier": {
+      "enum": ["dataset_only", "fold_aware_structure", "full_anchor_oof"]
+    },
+    "metadata": {
+      "type": "object",
+      "required": ["profile_version", "deterministic", "read_only", "cpu_only"]
+    },
+    "dataset": {
+      "type": "object",
+      "required": [
+        "num_nodes",
+        "num_features",
+        "num_classes",
+        "train_nodes",
+        "test_nodes"
+      ]
+    },
+    "test_policy": {
+      "type": "object",
+      "required": [
+        "truth_available",
+        "truth_dependent_metrics_emitted"
+      ]
+    },
+    "test_profile": {
+      "type": "object",
+      "required": ["champion_predicted_label_distribution"]
+    },
+    "exact_hop_policy": {
+      "type": "object",
+      "required": [
+        "primary_exact_hop_view",
+        "directed_exact_hop_breakdown"
+      ]
+    }
+  }
+}

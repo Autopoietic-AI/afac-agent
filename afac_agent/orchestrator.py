@@ -220,35 +220,37 @@ class AgentOrchestrator:
                 }
 
         if result["status"] == "success":
-            state.budget.consume(
-                result["elapsed_seconds"]
-            )
-            if tool.name == "IMPORT_CONFIRMED_HISTORY":
-                state.history_imported = True
-                state.next_required_capability = (
-                    "register_anchor"
+            if tool.counts_as_experiment_round:
+                state.budget.consume(
+                    result["elapsed_seconds"]
                 )
-            elif tool.name == "REGISTER_ONLINE_ANCHOR":
-                state.anchor_registered = True
-                state.next_required_capability = (
-                    "profile_dataset"
-                    if not state.data_profile_ready
-                    else "analyze_anchor_oof"
-                )
-            elif tool.name == "PROFILE_A1_DATASET":
-                state.data_profile_ready = True
-                state.next_required_capability = (
-                    "register_anchor"
-                    if not state.anchor_registered
-                    else "analyze_anchor_oof"
-                )
-            elif tool.name == "ANALYZE_ANCHOR_OOF":
-                state.anchor_oof_analyzed = True
-                state.next_required_capability = (
-                    "new_isolated_signal"
-                )
+            if tool.mutates_project_state:
+                if tool.name == "IMPORT_CONFIRMED_HISTORY":
+                    state.history_imported = True
+                    state.next_required_capability = (
+                        "register_anchor"
+                    )
+                elif tool.name == "REGISTER_ONLINE_ANCHOR":
+                    state.anchor_registered = True
+                    state.next_required_capability = (
+                        "profile_dataset"
+                        if not state.data_profile_ready
+                        else "analyze_anchor_oof"
+                    )
+                elif tool.name == "PROFILE_A1_DATASET":
+                    state.data_profile_ready = True
+                    state.next_required_capability = (
+                        "register_anchor"
+                        if not state.anchor_registered
+                        else "analyze_anchor_oof"
+                    )
+                elif tool.name == "ANALYZE_ANCHOR_OOF":
+                    state.anchor_oof_analyzed = True
+                    state.next_required_capability = (
+                        "new_isolated_signal"
+                    )
 
-            self.state_store.save(state)
+                self.state_store.save(state)
 
         self.trajectory.append(
             state_before=before,

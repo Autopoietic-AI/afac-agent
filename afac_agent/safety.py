@@ -29,6 +29,16 @@ class SafetyGate:
                 isinstance(tool.prediction_changing, bool),
             "submission_change_declared":
                 isinstance(tool.submission_creating, bool),
+            "read_only_declared":
+                isinstance(tool.read_only, bool),
+            "round_consumption_declared":
+                isinstance(tool.counts_as_experiment_round, bool),
+            "project_state_mutation_declared":
+                isinstance(tool.mutates_project_state, bool),
+            "prediction_mutation_declared":
+                isinstance(tool.mutates_predictions, bool),
+            "gpu_requirement_declared":
+                isinstance(tool.requires_gpu, bool),
         }
         return {
             "passed": all(checks.values()),

@@ -1,0 +1,14 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "AFAC A1 Fold Assignment CSV Contract",
+  "type": "object",
+  "required": ["columns", "coverage"],
+  "properties": {
+    "columns": {
+      "const": ["global_idx", "fold"]
+    },
+    "coverage": {
+      "const": "each train_idx appears exactly once"
+    }
+  }
+}

@@ -80,6 +80,11 @@ class ToolSpec:
     expected_runtime_seconds: int
     prediction_changing: bool
     submission_creating: bool
+    read_only: bool = False
+    counts_as_experiment_round: bool = True
+    mutates_predictions: bool = False
+    mutates_project_state: bool = True
+    requires_gpu: bool = False
     required_state: Dict[str, Any] = field(default_factory=dict)
     required_inputs: Dict[str, Any] = field(default_factory=dict)
     forbidden_closed_branches: List[str] = field(default_factory=list)

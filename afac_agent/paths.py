@@ -8,6 +8,7 @@ from typing import Any
 
 
 DEFAULT_A1_ANCHOR_CSV = "artifacts/A1_v53q1_transition_stable_edge_h2_SAFE.csv"
+DEFAULT_A1_PROFILE_OUT_DIR = "artifacts/data_profile/a1_m2_v1"
 
 
 def find_project_root(path: str | Path = ".") -> Path:
@@ -108,3 +109,16 @@ class PathResolver:
 
     def a1_reference_oof_npz(self, override: str = "") -> Path | None:
         return self.resolve(override) or self.get("a1", "reference_oof_npz", "")
+
+    def a1_edges_csv(self, override: str = "") -> Path | None:
+        return self.resolve(override) or self.get("a1", "edges_csv", "")
+
+    def a1_fold_file(self, override: str = "") -> Path | None:
+        return self.resolve(override) or self.get("a1", "fold_file", "")
+
+    def a1_profile_out_dir(self, override: str = "") -> Path:
+        return (
+            self.resolve(override)
+            or self.get("runtime", "profile_out_dir", DEFAULT_A1_PROFILE_OUT_DIR)
+            or (self.project_root / DEFAULT_A1_PROFILE_OUT_DIR)
+        )

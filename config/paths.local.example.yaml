@@ -1,6 +1,10 @@
 project_root: .
 a1:
   dataset_npz: ""
+  edges_csv: ""
+  fold_file: ""
+  fold_count: 5
+  fold_seed: 2026
   anchor_csv: artifacts/A1_v53q1_transition_stable_edge_h2_SAFE.csv
   anchor_oof_npz: ""
   reference_oof_npz: ""
@@ -10,3 +14,4 @@ a2:
 runtime:
   output_dir: output
   artifacts_dir: artifacts
+  profile_out_dir: artifacts/data_profile/a1_m2_v1

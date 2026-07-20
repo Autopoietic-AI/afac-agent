@@ -186,3 +186,59 @@ M0/M1 阶段禁止：
 - 修改 Fold、Gate 或 OOF 定义；
 - 删除历史文件；
 - 自动推进 M2 之后功能。
+
+## 9. M2 A1 Data Profiler
+
+M2 only implements the A1 Data Profiler. It is read-only, deterministic,
+idempotent, fold-aware when a canonical fold file is provided, and leakage-safe.
+It does not train models, call GPU, generate predictions, create submissions,
+write Memory, mutate Project State, or consume successful experiment rounds.
+
+Dataset-only profile:
+
+```bash
+python -m afac_agent.profilers.a1_data_profiler \
+  --npz_path "<path-to-A1.npz>" \
+  --edges_csv "<optional-path-to-A1_edges.csv>" \
+  --champion_csv artifacts/A1_v53q1_transition_stable_edge_h2_SAFE.csv \
+  --out_dir artifacts/data_profile/a1_m2_v1
+```
+
+Legacy wrapper:
+
+```bash
+python tools/profile_a1_dataset.py \
+  --npz_path "<path-to-A1.npz>" \
+  --out_dir artifacts/data_profile/a1_m2_v1
+```
+
+Optional tiers:
+
+- `fold_aware_structure` requires `--fold_file`.
+- `full_anchor_oof` requires both `--fold_file` and the exact v53Q-1
+  `--anchor_oof_npz`.
+
+Missing optional Fold or OOF inputs degrade to the lower available tier and are
+recorded in warnings. Use `--require_fold` or `--require_oof` when the desired
+behavior is `waiting_for_input` instead.
+
+M2 outputs:
+
+```text
+artifacts/data_profile/a1_m2_v1/
+  a1_data_profile.json
+  a1_profile_manifest.json
+  a1_input_validation.json
+  a1_node_buckets.csv
+  a1_structure_profile.csv
+  a1_train_neighbor_profile.csv
+  a1_hop_profile.csv
+  a1_class_profile.csv
+  a1_confusion_transitions.csv
+  a1_prediction_sink_source.csv
+  a1_fold_profile.csv
+  a1_shift_profile.csv
+  a1_signal_inventory.json
+  a1_problem_map.json
+  A1_DATA_PROFILE_REPORT.md
+```

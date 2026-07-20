@@ -1,5 +1,24 @@
 # CHANGELOG
 
+## 2026-07-20 - M2 A1 Data Profiler
+
+- Added a read-only, CPU-only, deterministic A1 Data Profiler.
+- Added dataset-only, fold-aware-structure, and full-anchor-OOF analysis tiers.
+- Added directed graph auditing with self-loop and duplicate directed-edge counts.
+- Added in/out/incident/either degree fields and either-neighbor degree buckets.
+- Added exact 1/2/3/4-hop visible-train counts with fold-aware visibility when a canonical fold file is provided.
+- Added OOF global `train_idx` alignment and prediction Sink/Source based on the OOF confusion matrix.
+- Added deterministic core artifact hashing with manifest timestamps excluded from the core hash.
+- Added M2 schemas, tests, CLI entrypoint, legacy tool wrapper, doctor integration, and Tool Registry metadata.
+- Added generic tool metadata for read-only behavior, experiment-round consumption, prediction mutation, Project State mutation, and GPU requirements.
+- Ensured `PROFILE_A1_DATASET` does not consume successful experiment rounds and does not mutate Project State.
+- Added Champion Test predicted-label distribution to deterministic M2 artifacts without treating it as Test truth.
+- Replaced empty `train_test_shift` placeholders with structured observed/unavailable/not-applicable shift status.
+- Explicitly marked directed exact-hop breakdown as `not_generated` for M2 v1 while keeping the primary exact-hop view as either-direction.
+- Added `legacy_data_profile_flag_stale` doctor warning for stale legacy data-profile state flags.
+
+No champion CSV, online score, Fold definition, Gate definition, OOF anchor, closed branch, or historical record was changed.
+
 ## 2026-07-20 - M0 + M1 Stabilization
 
 - Added M0/M1 tests for path handling, missing inputs, idempotent history import, idempotent champion registration, validation, doctor, and Windows Chinese/space paths.

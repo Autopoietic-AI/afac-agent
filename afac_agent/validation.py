@@ -53,6 +53,11 @@ TOOL_REQUIRED = {
     "expected_runtime_seconds": int,
     "prediction_changing": bool,
     "submission_creating": bool,
+    "read_only": bool,
+    "counts_as_experiment_round": bool,
+    "mutates_predictions": bool,
+    "mutates_project_state": bool,
+    "requires_gpu": bool,
     "required_state": dict,
     "forbidden_closed_branches": list,
     "command_template": list,
@@ -280,6 +285,106 @@ def validate_anchor_manifest_file(path: str | Path) -> ValidationReport:
         passed=not errors,
         errors=errors,
         details={"path": str(path)},
+    )
+
+
+def validate_a1_data_profile_dir(path: str | Path) -> ValidationReport:
+    path = Path(path)
+    profile_path = path / "a1_data_profile.json"
+    manifest_path = path / "a1_profile_manifest.json"
+    errors: list[str] = []
+    warnings: list[str] = []
+    details: dict[str, Any] = {"path": str(path)}
+    if not profile_path.exists() or not manifest_path.exists():
+        return ValidationReport(
+            name="a1_data_profile",
+            passed=True,
+            warnings=["M2 data profile artifact is not present"],
+            details={**details, "artifact_valid": False},
+        )
+
+    profile, profile_errors = _load_json(profile_path)
+    manifest, manifest_errors = _load_json(manifest_path)
+    errors.extend(profile_errors)
+    errors.extend(manifest_errors)
+    if isinstance(profile, dict):
+        errors.extend(
+            _check_required(
+                profile,
+                {
+                    "metadata": dict,
+                    "analysis_tier": str,
+                    "dataset": dict,
+                    "graph": dict,
+                    "exact_hop_policy": dict,
+                    "test_policy": dict,
+                    "test_profile": dict,
+                },
+                prefix="a1_data_profile",
+            )
+        )
+        if profile.get("analysis_tier") not in {
+            "dataset_only",
+            "fold_aware_structure",
+            "full_anchor_oof",
+        }:
+            errors.append("a1_data_profile.analysis_tier: invalid")
+        test_policy = profile.get("test_policy", {})
+        if isinstance(test_policy, dict) and test_policy.get(
+            "truth_dependent_metrics_emitted"
+        ):
+            errors.append("test truth-dependent metrics must not be emitted")
+        exact_hop_policy = profile.get("exact_hop_policy", {})
+        if isinstance(exact_hop_policy, dict):
+            if exact_hop_policy.get("primary_exact_hop_view") != "either_direction":
+                errors.append("primary exact-hop view must be either_direction")
+            breakdown = exact_hop_policy.get("directed_exact_hop_breakdown", {})
+            if isinstance(breakdown, dict) and breakdown.get("status") != "not_generated":
+                errors.append("directed exact-hop breakdown must be explicitly not_generated")
+        test_profile = profile.get("test_profile", {})
+        if isinstance(test_profile, dict):
+            distribution = test_profile.get("champion_predicted_label_distribution", {})
+            if isinstance(distribution, dict) and distribution.get("status") == "observed":
+                counts = distribution.get("predicted_class_counts", {})
+                ratios = distribution.get("predicted_class_ratios", {})
+                total = distribution.get("total_test_nodes")
+                if isinstance(counts, dict) and sum(counts.values()) != total:
+                    errors.append("champion predicted counts must sum to total_test_nodes")
+                if isinstance(ratios, dict) and abs(sum(ratios.values()) - 1.0) > 1e-9:
+                    errors.append("champion predicted ratios must sum to 1")
+    if isinstance(manifest, dict):
+        errors.extend(
+            _check_required(
+                manifest,
+                {
+                    "profile_version": str,
+                    "analysis_tier": str,
+                    "core_result_hash": str,
+                    "generated_files": list,
+                    "read_only": bool,
+                    "counts_as_experiment_round": bool,
+                    "mutates_project_state": bool,
+                    "mutates_predictions": bool,
+                    "requires_gpu": bool,
+                },
+                prefix="a1_profile_manifest",
+            )
+        )
+        if manifest.get("read_only") is not True:
+            errors.append("a1_profile_manifest.read_only must be true")
+        if manifest.get("counts_as_experiment_round") is not False:
+            errors.append("a1_profile_manifest must not consume experiment rounds")
+        if manifest.get("mutates_project_state") is not False:
+            errors.append("a1_profile_manifest must not mutate project state")
+        details["analysis_tier"] = manifest.get("analysis_tier")
+        details["core_result_hash"] = manifest.get("core_result_hash")
+    details["artifact_valid"] = not errors
+    return ValidationReport(
+        name="a1_data_profile",
+        passed=not errors,
+        errors=errors,
+        warnings=warnings,
+        details=details,
     )
 
 

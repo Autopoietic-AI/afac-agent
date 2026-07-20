@@ -102,3 +102,20 @@ Agent must audit information gain and compliance before model training.
 - Historical v43C/v46A-1 OOF numbers are confirmed.
 - Agent v1 standardized OOF parser has not yet generated its own artifact.
 - Therefore `anchor_oof_analyzed=false` in Agent state until the NPZ and OOF files are supplied.
+
+## M2 A1 Data Profiler Status
+
+- M2 implements only the A1 Data Profiler framework.
+- The profiler is read-only, CPU-only, deterministic and idempotent.
+- Canonical graph source is the A1 NPZ adjacency CSR.
+- `A1_edges.csv` is optional cross-validation only and is not merged into the graph.
+- Dataset-only profile can run with `A1.npz` alone.
+- Fold-aware structure requires an explicit canonical fold assignment file.
+- Full anchor OOF analysis requires the exact v53Q-1 OOF proba plus global `train_idx` alignment.
+- Missing optional Fold/OOF inputs degrade to a lower `analysis_tier` unless `--require_fold` or `--require_oof` is used.
+- `PROFILE_A1_DATASET` declares `counts_as_experiment_round=false` and `mutates_project_state=false`.
+- Champion Test predicted-label distribution is recorded as prediction distribution only, not Test truth.
+- `train_test_shift` now separates observed feature/structure shift from unavailable OOF-proba shift.
+- Directed exact-hop breakdown is explicitly marked `not_generated` in M2 v1; the primary exact-hop view remains `either_direction`.
+- Doctor reports `legacy_data_profile_flag_stale` when legacy `data_profile_ready=true` is not backed by a valid M2 artifact.
+- No champion CSV, online score, OOF anchor, Fold definition, Gate definition, closed branch, or confirmed historical record was changed.

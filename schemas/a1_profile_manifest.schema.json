@@ -1,0 +1,31 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "AFAC A1 M2 Data Profile Manifest",
+  "type": "object",
+  "required": [
+    "profile_version",
+    "started_at",
+    "finished_at",
+    "absolute_input_path",
+    "analysis_tier",
+    "core_result_hash",
+    "generated_files",
+    "read_only",
+    "counts_as_experiment_round",
+    "mutates_project_state",
+    "mutates_predictions",
+    "requires_gpu"
+  ],
+  "properties": {
+    "analysis_tier": {
+      "enum": ["dataset_only", "fold_aware_structure", "full_anchor_oof"]
+    },
+    "core_result_hash": {
+      "type": "string"
+    },
+    "generated_files": {
+      "type": "array",
+      "items": {"type": "string"}
+    }
+  }
+}

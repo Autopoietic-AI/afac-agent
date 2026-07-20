@@ -16,6 +16,7 @@ from typing import Any
 from .paths import PathResolver
 from .validation import (
     reports_to_checks,
+    validate_a1_data_profile_dir,
     validate_a1_champion_csv,
     validate_memory_records_file,
     validate_project_state_file,
@@ -55,8 +56,45 @@ def build_report(
         validate_memory_records_file(root / "history" / "confirmed_experiments_a1.json"),
         validate_trajectory_file(root / "output" / "trajectory_A1.json"),
         validate_a1_champion_csv(champion_csv, expected_rows=2751, num_classes=10),
+        validate_a1_data_profile_dir(resolver.a1_profile_out_dir()),
     ]
     checks = reports_to_checks(reports)
+    try:
+        project_state_payload = json.loads(
+            (root / "config" / "project_state.json").read_text(encoding="utf-8")
+        )
+    except Exception:
+        project_state_payload = {}
+    profile_check = checks.get("a1_data_profile", {})
+    profile_valid = bool(profile_check.get("details", {}).get("artifact_valid"))
+    profile_input_hash_stale = False
+    configured_npz = resolver.a1_npz()
+    input_validation_path = resolver.a1_profile_out_dir() / "a1_input_validation.json"
+    if profile_valid and configured_npz and configured_npz.exists() and input_validation_path.exists():
+        try:
+            input_validation = json.loads(
+                input_validation_path.read_text(encoding="utf-8")
+            )
+            recorded_hash = input_validation.get("npz_path", {}).get("sha256")
+            profile_input_hash_stale = recorded_hash != sha256(configured_npz)
+        except Exception:
+            profile_input_hash_stale = True
+    if profile_input_hash_stale:
+        profile_valid = False
+        profile_check.setdefault("warnings", []).append(
+            "legacy_data_profile_input_hash_stale"
+        )
+        profile_check.setdefault("details", {})[
+            "legacy_data_profile_input_hash_stale"
+        ] = True
+    if project_state_payload.get("data_profile_ready") is True and not profile_valid:
+        profile_check.setdefault("warnings", []).append(
+            "legacy_data_profile_flag_stale"
+        )
+        profile_check.setdefault("details", {})[
+            "legacy_data_profile_flag_stale"
+        ] = True
+        checks["a1_data_profile"] = profile_check
     if champion_csv.exists():
         checks["champion_csv"]["details"]["sha256"] = sha256(champion_csv)
     checks["paths"] = {
@@ -69,8 +107,11 @@ def build_report(
             "paths_config_exists": resolver.paths_config.exists(),
             "a1_anchor_csv": str(champion_csv),
             "a1_dataset_npz": str(resolver.a1_npz() or ""),
+            "a1_edges_csv": str(resolver.a1_edges_csv() or ""),
+            "a1_fold_file": str(resolver.a1_fold_file() or ""),
             "a1_anchor_oof_npz": str(resolver.a1_anchor_oof_npz() or ""),
             "a1_reference_oof_npz": str(resolver.a1_reference_oof_npz() or ""),
+            "a1_profile_out_dir": str(resolver.a1_profile_out_dir()),
         },
     }
     checks["writable"] = {
