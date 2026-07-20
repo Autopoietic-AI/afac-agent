@@ -9,6 +9,9 @@ from typing import Any
 
 DEFAULT_A1_ANCHOR_CSV = "artifacts/A1_v53q1_transition_stable_edge_h2_SAFE.csv"
 DEFAULT_A1_PROFILE_OUT_DIR = "artifacts/data_profile/a1_m2_v1"
+DEFAULT_ADAPTER_OUTPUT_ROOT = "artifacts/adapter_runs"
+DEFAULT_A1_V53Q1_AUDIT_MD = "artifacts/V53Q1_TRANSITION_STABLE_EDGE_H2_AUDIT.md"
+DEFAULT_A1_V53Q1_PATCH_PY = "artifacts/a1_v53q1_transition_stable_edge_h2_patch.py"
 
 
 def find_project_root(path: str | Path = ".") -> Path:
@@ -121,4 +124,46 @@ class PathResolver:
             self.resolve(override)
             or self.get("runtime", "profile_out_dir", DEFAULT_A1_PROFILE_OUT_DIR)
             or (self.project_root / DEFAULT_A1_PROFILE_OUT_DIR)
+        )
+
+    def adapter_output_root(self, override: str = "") -> Path:
+        return (
+            self.resolve(override)
+            or self.get("runtime", "adapter_output_root", DEFAULT_ADAPTER_OUTPUT_ROOT)
+            or (self.project_root / DEFAULT_ADAPTER_OUTPUT_ROOT)
+        )
+
+    def a1_v53q1_base_csv(self, override: str = "") -> Path | None:
+        return self.resolve(override) or self.get(
+            "a1_v53q1_patch_audit",
+            "base_csv",
+            "",
+        )
+
+    def a1_v49a_oof_meta_csv(self, override: str = "") -> Path | None:
+        return self.resolve(override) or self.get(
+            "a1_v53q1_patch_audit",
+            "oof_meta_csv",
+            "",
+        )
+
+    def a1_v49a_test_meta_csv(self, override: str = "") -> Path | None:
+        return self.resolve(override) or self.get(
+            "a1_v53q1_patch_audit",
+            "test_meta_csv",
+            "",
+        )
+
+    def a1_v53q1_audit_md(self, override: str = "") -> Path:
+        return (
+            self.resolve(override)
+            or self.get("a1_v53q1_patch_audit", "audit_md", DEFAULT_A1_V53Q1_AUDIT_MD)
+            or (self.project_root / DEFAULT_A1_V53Q1_AUDIT_MD)
+        )
+
+    def a1_v53q1_patch_py(self, override: str = "") -> Path:
+        return (
+            self.resolve(override)
+            or self.get("a1_v53q1_patch_audit", "patch_py", DEFAULT_A1_V53Q1_PATCH_PY)
+            or (self.project_root / DEFAULT_A1_V53Q1_PATCH_PY)
         )

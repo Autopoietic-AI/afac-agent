@@ -12,6 +12,7 @@ ACTION_BY_CAPABILITY = {
     "profile_dataset": "PROFILE_A1_DATASET",
     "register_anchor": "REGISTER_ONLINE_ANCHOR",
     "analyze_anchor_oof": "ANALYZE_ANCHOR_OOF",
+    "v53q1_patch_audit": "A1_V53Q1_PATCH_AUDIT",
     "new_isolated_signal": "AUDIT_NEW_ISOLATED_SIGNAL",
     "expert_complementarity": "AUDIT_EXPERT_COMPLEMENTARITY",
     "finalize": "FINALIZE_CURRENT_CHAMPION",

@@ -10,6 +10,7 @@ import time
 from pathlib import Path
 from typing import Any, Dict, List
 
+from .adapters.runner import AdapterRunner
 from .planner import HierarchicalPlanner
 from .registry import ToolRegistry
 from .safety import SafetyGate
@@ -123,6 +124,32 @@ class AgentOrchestrator:
                 "state": state.to_dict(),
             }
 
+        if getattr(tool, "adapter_entrypoint", ""):
+            result = AdapterRunner(project_root=self.project_root).run(
+                tool=tool,
+                variables=variables,
+                execute=execute,
+            )
+            result["safety"] = safety
+            if result["status"] == "completed":
+                if tool.counts_as_experiment_round:
+                    state.budget.consume(
+                        result.get("duration_seconds", 0.0)
+                    )
+                if tool.mutates_project_state:
+                    self.state_store.save(state)
+            self.trajectory.append(
+                state_before=before,
+                decision=decision.to_dict(),
+                result=result,
+                state_after=state.to_dict(),
+            )
+            return {
+                "decision": decision.to_dict(),
+                "result": result,
+                "state": state.to_dict(),
+            }
+
         command = self._resolve_command(
             tool.command_template,
             variables,
@@ -219,7 +246,7 @@ class AgentOrchestrator:
                     "elapsed_seconds": time.time() - started,
                 }
 
-        if result["status"] == "success":
+        if result["status"] in {"success", "completed"}:
             if tool.counts_as_experiment_round:
                 state.budget.consume(
                     result["elapsed_seconds"]

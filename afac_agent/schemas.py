@@ -89,6 +89,13 @@ class ToolSpec:
     required_inputs: Dict[str, Any] = field(default_factory=dict)
     forbidden_closed_branches: List[str] = field(default_factory=list)
     command_template: List[str] = field(default_factory=list)
+    adapter_id: str = ""
+    adapter_version: str = ""
+    adapter_entrypoint: str = ""
+    execution_mode: str = ""
+    result_schema: str = ""
+    output_policy: Dict[str, Any] = field(default_factory=dict)
+    identity_hash_fields: List[str] = field(default_factory=list)
 
 
 @dataclass

@@ -119,3 +119,24 @@ Agent must audit information gain and compliance before model training.
 - Directed exact-hop breakdown is explicitly marked `not_generated` in M2 v1; the primary exact-hop view remains `either_direction`.
 - Doctor reports `legacy_data_profile_flag_stale` when legacy `data_profile_ready=true` is not backed by a valid M2 artifact.
 - No champion CSV, online score, OOF anchor, Fold definition, Gate definition, closed branch, or confirmed historical record was changed.
+
+## M3A Tool Adapter Foundation Status
+
+- M3A adds a minimal Adapter protocol, AdapterRunner, Execution Result Schema,
+  Registry binding fields and CLI/Orchestrator integration.
+- First real Adapter:
+  - `A1_V53Q1_PATCH_AUDIT`
+  - read-only
+  - `counts_as_experiment_round=false`
+  - `mutates_predictions=false`
+  - `mutates_project_state=false`
+  - `requires_gpu=false`
+- The Adapter audits v53Q-1 patch evidence only. It does not execute patch
+  replay, does not train, does not generate prediction CSVs, and does not
+  register a new Champion.
+- Adapter run outputs are local artifacts under `artifacts/adapter_runs/` and
+  are ignored by git.
+- External historical v46A1/v49A paths must come from CLI or
+  `config/paths.local.yaml`; no machine-specific absolute path is hard-coded.
+- No champion CSV, online score, OOF anchor, Fold definition, Gate definition,
+  closed branch, Project State, or confirmed historical record was changed.

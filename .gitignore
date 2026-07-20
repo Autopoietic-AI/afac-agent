@@ -31,6 +31,7 @@ output/
 artifacts/online_anchor/
 artifacts/data_profile/
 artifacts/anchor_oof/
+artifacts/adapter_runs/
 
 # Large local competition/model assets must stay outside git unless explicitly curated.
 data/

@@ -1,0 +1,63 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "AFAC Agent Adapter Execution Result",
+  "type": "object",
+  "required": [
+    "tool_name",
+    "adapter_id",
+    "adapter_version",
+    "status",
+    "target_problem",
+    "execution_mode",
+    "read_only",
+    "counts_as_experiment_round",
+    "mutates_predictions",
+    "mutates_project_state",
+    "requires_gpu",
+    "identity_hash",
+    "started_at",
+    "finished_at",
+    "duration_seconds",
+    "command",
+    "returncode",
+    "input_manifest",
+    "input_hashes",
+    "metrics",
+    "bucket_metrics",
+    "class_metrics",
+    "artifacts",
+    "stdout_log",
+    "stderr_log",
+    "warnings",
+    "failure_reason",
+    "missing_inputs"
+  ],
+  "properties": {
+    "status": {
+      "enum": [
+        "completed",
+        "waiting_for_input",
+        "failed",
+        "blocked",
+        "duplicate",
+        "dry_run"
+      ]
+    },
+    "read_only": {"type": "boolean"},
+    "counts_as_experiment_round": {"type": "boolean"},
+    "mutates_predictions": {"type": "boolean"},
+    "mutates_project_state": {"type": "boolean"},
+    "requires_gpu": {"type": "boolean"},
+    "duration_seconds": {"type": "number"},
+    "command": {"type": "array"},
+    "returncode": {"type": ["integer", "null"]},
+    "input_manifest": {"type": "object"},
+    "input_hashes": {"type": "object"},
+    "metrics": {"type": "object"},
+    "bucket_metrics": {"type": "array"},
+    "class_metrics": {"type": "array"},
+    "artifacts": {"type": "object"},
+    "warnings": {"type": "array"},
+    "missing_inputs": {"type": "array"}
+  }
+}

@@ -15,3 +15,10 @@ runtime:
   output_dir: output
   artifacts_dir: artifacts
   profile_out_dir: artifacts/data_profile/a1_m2_v1
+  adapter_output_root: artifacts/adapter_runs
+a1_v53q1_patch_audit:
+  base_csv: ""
+  oof_meta_csv: ""
+  test_meta_csv: ""
+  audit_md: artifacts/V53Q1_TRANSITION_STABLE_EDGE_H2_AUDIT.md
+  patch_py: artifacts/a1_v53q1_transition_stable_edge_h2_patch.py

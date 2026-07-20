@@ -36,6 +36,17 @@
           "mutates_predictions": {"type": "boolean"},
           "mutates_project_state": {"type": "boolean"},
           "requires_gpu": {"type": "boolean"}
+          ,
+          "adapter_id": {"type": "string"},
+          "adapter_version": {"type": "string"},
+          "adapter_entrypoint": {"type": "string"},
+          "execution_mode": {"type": "string"},
+          "result_schema": {"type": "string"},
+          "output_policy": {"type": "object"},
+          "identity_hash_fields": {
+            "type": "array",
+            "items": {"type": "string"}
+          }
         }
       }
     }

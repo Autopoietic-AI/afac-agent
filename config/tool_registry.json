@@ -148,6 +148,63 @@
       ]
     },
     {
+      "name": "A1_V53Q1_PATCH_AUDIT",
+      "task": "A1",
+      "layer": "champion_audit",
+      "description": "只读审计v53Q-1 Transition-Stable Edge-H2补丁资产、Hash、4节点迁移和v49A meta证据；不执行patch replay，不生成预测CSV",
+      "action_type": "audit",
+      "expected_runtime_seconds": 60,
+      "prediction_changing": false,
+      "submission_creating": false,
+      "read_only": true,
+      "counts_as_experiment_round": false,
+      "mutates_predictions": false,
+      "mutates_project_state": false,
+      "requires_gpu": false,
+      "required_state": {},
+      "required_inputs": {
+        "anchor_csv": {
+          "kind": "file"
+        },
+        "v53q1_base_csv": {
+          "kind": "file"
+        },
+        "v49a_oof_meta_csv": {
+          "kind": "file"
+        },
+        "v49a_test_meta_csv": {
+          "kind": "file"
+        },
+        "v53q1_audit_md": {
+          "kind": "file"
+        }
+      },
+      "forbidden_closed_branches": [],
+      "command_template": [],
+      "adapter_id": "A1_V53Q1_PATCH_AUDIT",
+      "adapter_version": "m3a_v1",
+      "adapter_entrypoint": "afac_agent.adapters.a1_v53q1_patch_audit:Adapter",
+      "execution_mode": "audit",
+      "result_schema": "schemas/adapter_execution_result.schema.json",
+      "output_policy": {
+        "output_root": "artifacts/adapter_runs",
+        "allow_overwrite": false,
+        "forbidden_paths": [
+          "artifacts/A1_v53q1_transition_stable_edge_h2_SAFE.csv"
+        ]
+      },
+      "identity_hash_fields": [
+        "tool_name",
+        "adapter_id",
+        "adapter_version",
+        "execution_mode",
+        "normalized_config",
+        "input_hashes",
+        "output_policy",
+        "frozen_gate_config"
+      ]
+    },
+    {
       "name": "AUDIT_NEW_ISOLATED_SIGNAL",
       "task": "A1",
       "layer": "new_signal",

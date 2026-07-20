@@ -1,4 +1,4 @@
-# AFAC Agent v1.2
+# AFAC Agent v1.3
 
 Current A1 champion: `v53Q-1`, online `0.7800`.
 
@@ -112,3 +112,31 @@ The dataset-only profile records Champion Test predicted-label distribution as
 prediction distribution only, never as Test truth.  Shift reporting separates
 observed feature/structure shift from OOF-proba shift that is unavailable until
 the exact v53Q-1 OOF input is supplied.
+
+## M3A Tool Adapter Foundation
+
+M3A adds the minimal Tool Adapter protocol and the first real read-only
+adapter, `A1_V53Q1_PATCH_AUDIT`.  It audits the v53Q-1 patch assets, hashes,
+4-node migration evidence and v49A meta files without running patch replay,
+training, using GPU, generating prediction CSVs, registering a champion, or
+consuming successful experiment rounds.
+
+Run with explicit local historical asset paths:
+
+```bash
+python -m afac_agent.main run-adapter \
+  --tool A1_V53Q1_PATCH_AUDIT \
+  --anchor_csv artifacts/A1_v53q1_transition_stable_edge_h2_SAFE.csv \
+  --v53q1_base_csv "<local-v46A1-base-csv>" \
+  --v49a_oof_meta_csv "<local-v49A-oof-meta-csv>" \
+  --v49a_test_meta_csv "<local-v49A-test-meta-csv>" \
+  --v53q1_audit_md artifacts/V53Q1_TRANSITION_STABLE_EDGE_H2_AUDIT.md \
+  --v53q1_patch_py artifacts/a1_v53q1_transition_stable_edge_h2_patch.py \
+  --execute
+```
+
+Adapter outputs are ignored by git under:
+
+```text
+artifacts/adapter_runs/
+```

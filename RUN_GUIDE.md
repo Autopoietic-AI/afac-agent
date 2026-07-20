@@ -242,3 +242,53 @@ artifacts/data_profile/a1_m2_v1/
   a1_problem_map.json
   A1_DATA_PROFILE_REPORT.md
 ```
+
+## 10. M3A Tool Adapter Foundation
+
+M3A introduces a minimal Adapter protocol and `AdapterRunner`. Registered tools
+with `adapter_entrypoint` use the Adapter path; older tools keep the existing
+`command_template` path.
+
+The first real Adapter is read-only:
+
+```text
+A1_V53Q1_PATCH_AUDIT
+```
+
+It verifies the packaged v53Q-1 Champion CSV, the v46A-1 base CSV, v49A OOF/Test
+meta CSVs, the audit markdown and optional patch source hash. It does not
+execute patch replay and must not generate prediction CSVs.
+
+Dry run:
+
+```bash
+python -m afac_agent.main run-adapter --tool A1_V53Q1_PATCH_AUDIT
+```
+
+Execute with explicit local inputs:
+
+```bash
+python -m afac_agent.main run-adapter \
+  --tool A1_V53Q1_PATCH_AUDIT \
+  --anchor_csv artifacts/A1_v53q1_transition_stable_edge_h2_SAFE.csv \
+  --v53q1_base_csv "<local-v46A1-base-csv>" \
+  --v49a_oof_meta_csv "<local-v49A-oof-meta-csv>" \
+  --v49a_test_meta_csv "<local-v49A-test-meta-csv>" \
+  --v53q1_audit_md artifacts/V53Q1_TRANSITION_STABLE_EDGE_H2_AUDIT.md \
+  --v53q1_patch_py artifacts/a1_v53q1_transition_stable_edge_h2_patch.py \
+  --execute
+```
+
+Outputs:
+
+```text
+artifacts/adapter_runs/A1_V53Q1_PATCH_AUDIT/<identity_hash>/
+  execution_result.json
+  input_manifest.json
+  stdout.log
+  stderr.log
+  audit_details.json
+```
+
+`artifacts/adapter_runs/` and `config/paths.local.yaml` are ignored by git.
+External historical paths may be supplied by CLI or local paths config only.

@@ -112,6 +112,124 @@ def build_report(
             "a1_anchor_oof_npz": str(resolver.a1_anchor_oof_npz() or ""),
             "a1_reference_oof_npz": str(resolver.a1_reference_oof_npz() or ""),
             "a1_profile_out_dir": str(resolver.a1_profile_out_dir()),
+            "adapter_output_root": str(resolver.adapter_output_root()),
+            "v53q1_base_csv": str(resolver.a1_v53q1_base_csv() or ""),
+            "v49a_oof_meta_csv": str(resolver.a1_v49a_oof_meta_csv() or ""),
+            "v49a_test_meta_csv": str(resolver.a1_v49a_test_meta_csv() or ""),
+            "v53q1_audit_md": str(resolver.a1_v53q1_audit_md()),
+            "v53q1_patch_py": str(resolver.a1_v53q1_patch_py()),
+        },
+    }
+    schema_path = root / "schemas" / "adapter_execution_result.schema.json"
+    schema_errors: list[str] = []
+    if not schema_path.exists():
+        schema_errors.append(f"{schema_path}: missing")
+    else:
+        try:
+            schema_payload = json.loads(schema_path.read_text(encoding="utf-8"))
+            required = schema_payload.get("required", [])
+            for key in [
+                "tool_name",
+                "adapter_id",
+                "adapter_version",
+                "status",
+                "identity_hash",
+                "input_hashes",
+                "stdout_log",
+                "stderr_log",
+            ]:
+                if key not in required:
+                    schema_errors.append(f"adapter result schema missing required {key}")
+        except Exception as exc:
+            schema_errors.append(f"{schema_path}: cannot read JSON: {exc}")
+    checks["adapter_result_schema"] = {
+        "name": "adapter_result_schema",
+        "passed": not schema_errors,
+        "errors": schema_errors,
+        "warnings": [],
+        "details": {"path": str(schema_path)},
+    }
+
+    registry_errors: list[str] = []
+    registry_warnings: list[str] = []
+    try:
+        registry_payload = json.loads(
+            (root / "config" / "tool_registry.json").read_text(encoding="utf-8")
+        )
+        tools = registry_payload.get("tools", [])
+    except Exception as exc:
+        tools = []
+        registry_errors.append(f"tool registry unreadable: {exc}")
+    adapter_tools = [
+        item for item in tools
+        if isinstance(item, dict) and item.get("adapter_entrypoint")
+    ]
+    patch_audit = next(
+        (item for item in adapter_tools if item.get("name") == "A1_V53Q1_PATCH_AUDIT"),
+        None,
+    )
+    if patch_audit is None:
+        registry_errors.append("A1_V53Q1_PATCH_AUDIT is not registered")
+    else:
+        if patch_audit.get("adapter_entrypoint") != (
+            "afac_agent.adapters.a1_v53q1_patch_audit:Adapter"
+        ):
+            registry_errors.append("A1_V53Q1_PATCH_AUDIT entrypoint is invalid")
+        if patch_audit.get("read_only") is not True:
+            registry_errors.append("A1_V53Q1_PATCH_AUDIT must be read_only")
+        if patch_audit.get("counts_as_experiment_round") is not False:
+            registry_errors.append("A1_V53Q1_PATCH_AUDIT must not consume rounds")
+        if patch_audit.get("mutates_predictions") is not False:
+            registry_errors.append("A1_V53Q1_PATCH_AUDIT must not mutate predictions")
+        if patch_audit.get("mutates_project_state") is not False:
+            registry_errors.append("A1_V53Q1_PATCH_AUDIT must not mutate project state")
+        if patch_audit.get("command_template") != []:
+            registry_errors.append("A1_V53Q1_PATCH_AUDIT command_template must stay empty")
+    checks["adapter_registry_bindings"] = {
+        "name": "adapter_registry_bindings",
+        "passed": not registry_errors,
+        "errors": registry_errors,
+        "warnings": registry_warnings,
+        "details": {
+            "adapter_count": len(adapter_tools),
+            "has_A1_V53Q1_PATCH_AUDIT": patch_audit is not None,
+        },
+    }
+
+    output_root = resolver.adapter_output_root()
+    output_errors: list[str] = []
+    if output_root.resolve() == champion_csv.resolve():
+        output_errors.append("adapter output root must not equal champion csv")
+    checks["adapter_output_root"] = {
+        "name": "adapter_output_root",
+        "passed": not output_errors,
+        "errors": output_errors,
+        "warnings": [],
+        "details": {
+            "path": str(output_root),
+            "exists": output_root.exists(),
+            "parent_exists": output_root.parent.exists(),
+        },
+    }
+
+    asset_warnings: list[str] = []
+    for key, value in {
+        "v53q1_base_csv": resolver.a1_v53q1_base_csv(),
+        "v49a_oof_meta_csv": resolver.a1_v49a_oof_meta_csv(),
+        "v49a_test_meta_csv": resolver.a1_v49a_test_meta_csv(),
+    }.items():
+        if not value:
+            asset_warnings.append(f"{key}: not configured; adapter will wait for input")
+        elif not value.exists():
+            asset_warnings.append(f"{key}: configured path does not exist")
+    checks["A1_V53Q1_PATCH_AUDIT_config"] = {
+        "name": "A1_V53Q1_PATCH_AUDIT_config",
+        "passed": True,
+        "errors": [],
+        "warnings": asset_warnings,
+        "details": {
+            "audit_md_exists": resolver.a1_v53q1_audit_md().exists(),
+            "patch_py_exists": resolver.a1_v53q1_patch_py().exists(),
         },
     }
     checks["writable"] = {

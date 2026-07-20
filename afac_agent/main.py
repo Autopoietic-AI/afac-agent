@@ -8,11 +8,69 @@ import json
 import sys
 from pathlib import Path
 
+from .adapters.runner import AdapterRunner
 from .orchestrator import AgentOrchestrator
 from .paths import PathResolver
+from .registry import ToolRegistry
+
+
+def _run_adapter(argv: list[str]) -> None:
+    parser = argparse.ArgumentParser(prog="afac_agent.main run-adapter")
+    parser.add_argument("--project_root", default=".")
+    parser.add_argument("--registry", default="config/tool_registry.json")
+    parser.add_argument("--paths_config", default="")
+    parser.add_argument("--tool", required=True)
+    parser.add_argument("--execute", action="store_true")
+    parser.add_argument("--anchor_csv", default="")
+    parser.add_argument("--v53q1_base_csv", default="")
+    parser.add_argument("--v49a_oof_meta_csv", default="")
+    parser.add_argument("--v49a_test_meta_csv", default="")
+    parser.add_argument("--v53q1_audit_md", default="")
+    parser.add_argument("--v53q1_patch_py", default="")
+    parser.add_argument("--adapter_output_root", default="")
+    args = parser.parse_args(argv)
+
+    resolver = PathResolver(args.project_root, args.paths_config or None)
+    root = resolver.project_root
+    registry = ToolRegistry(root / args.registry)
+    tool = registry.get(args.tool)
+    if args.adapter_output_root:
+        tool.output_policy = dict(tool.output_policy or {})
+        tool.output_policy["output_root"] = str(
+            resolver.adapter_output_root(args.adapter_output_root)
+        )
+    variables = {
+        "python": sys.executable,
+        "root": str(root),
+        "anchor_csv": str(resolver.a1_anchor_csv(args.anchor_csv)),
+        "v53q1_base_csv": str(resolver.a1_v53q1_base_csv(args.v53q1_base_csv) or ""),
+        "v49a_oof_meta_csv": str(
+            resolver.a1_v49a_oof_meta_csv(args.v49a_oof_meta_csv) or ""
+        ),
+        "v49a_test_meta_csv": str(
+            resolver.a1_v49a_test_meta_csv(args.v49a_test_meta_csv) or ""
+        ),
+        "v53q1_audit_md": str(resolver.a1_v53q1_audit_md(args.v53q1_audit_md)),
+        "v53q1_patch_py": str(resolver.a1_v53q1_patch_py(args.v53q1_patch_py)),
+    }
+    result = AdapterRunner(project_root=root).run(
+        tool=tool,
+        variables=variables,
+        execute=args.execute,
+    )
+    print(json.dumps(result, ensure_ascii=False, indent=2))
+    if result["status"] in {"completed", "dry_run", "duplicate"}:
+        raise SystemExit(0)
+    if result["status"] == "waiting_for_input":
+        raise SystemExit(3)
+    raise SystemExit(2)
 
 
 def main() -> None:
+    if len(sys.argv) > 1 and sys.argv[1] == "run-adapter":
+        _run_adapter(sys.argv[2:])
+        return
+
     parser = argparse.ArgumentParser()
     parser.add_argument(
         "--project_root",

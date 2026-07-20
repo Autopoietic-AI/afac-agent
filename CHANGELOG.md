@@ -1,5 +1,22 @@
 # CHANGELOG
 
+## 2026-07-20 - M3A Tool Adapter Foundation
+
+- Added the minimal M3A Tool Adapter protocol and AdapterRunner.
+- Added standard Adapter Execution Result Schema.
+- Extended Tool Registry metadata with optional Adapter binding fields.
+- Added `A1_V53Q1_PATCH_AUDIT`, the first real read-only Adapter.
+- Added CLI support for `python -m afac_agent.main run-adapter`.
+- Integrated Adapter execution into Orchestrator without removing legacy
+  `command_template` execution.
+- Added Doctor checks for Adapter schema, registry bindings and output root.
+- Added tests for missing inputs, failed validation, duplicate identity,
+  read-only frozen-file hashes, stdout/stderr logs, CLI, Orchestrator and
+  Windows Chinese/space paths.
+
+No champion CSV, online score, Fold definition, Gate definition, OOF anchor,
+Project State, closed branch, or historical record was changed.
+
 ## 2026-07-20 - M2 A1 Data Profiler
 
 - Added a read-only, CPU-only, deterministic A1 Data Profiler.

@@ -168,12 +168,37 @@ def validate_tool_registry_file(path: str | Path) -> ValidationReport:
                 errors.append(f"{prefix}.task: must be A1 or A2")
             if tool.get("expected_runtime_seconds", 0) <= 0:
                 errors.append(f"{prefix}.expected_runtime_seconds: must be positive")
-            if not tool.get("command_template"):
+            adapter_entrypoint = str(tool.get("adapter_entrypoint", "")).strip()
+            if not tool.get("command_template") and not adapter_entrypoint:
                 warnings.append(f"{name}: command_template is not yet bound")
             if "required_inputs" in tool and not isinstance(
                 tool["required_inputs"], dict
             ):
                 errors.append(f"{prefix}.required_inputs: must be object")
+            if adapter_entrypoint:
+                for adapter_key in [
+                    "adapter_id",
+                    "adapter_version",
+                    "execution_mode",
+                    "result_schema",
+                    "output_policy",
+                    "identity_hash_fields",
+                ]:
+                    if adapter_key not in tool:
+                        errors.append(f"{prefix}.{adapter_key}: missing for adapter")
+                if not adapter_entrypoint.startswith("afac_agent.adapters."):
+                    errors.append(f"{prefix}.adapter_entrypoint: unsupported namespace")
+                if ":" not in adapter_entrypoint:
+                    errors.append(f"{prefix}.adapter_entrypoint: must use module:Class")
+                if tool.get("read_only") is True and tool.get("mutates_predictions"):
+                    errors.append(f"{prefix}: read_only adapter cannot mutate predictions")
+                if tool.get("read_only") is True and tool.get("mutates_project_state"):
+                    errors.append(f"{prefix}: read_only adapter cannot mutate project state")
+                output_policy = tool.get("output_policy", {})
+                if not isinstance(output_policy, dict):
+                    errors.append(f"{prefix}.output_policy: must be object")
+                elif not output_policy.get("output_root"):
+                    errors.append(f"{prefix}.output_policy.output_root: missing")
     return ValidationReport(
         name="tool_registry",
         passed=not errors,
