@@ -995,6 +995,9 @@ def build_report(
         "method_extraction_record.schema.json": {"extraction_record_id", "method_id", "extraction_mode"},
         "method_ranking_record.schema.json": {"ranking_record_id", "method_id", "ranking_components"},
         "method_research_run.schema.json": {"run_version", "run_id", "artifacts"},
+        "live_method_research_run.schema.json": {"run_version", "run_id", "network_mode", "qwen_call_count"},
+        "research_provider_registry.schema.json": {"registry_version", "providers", "provider_count"},
+        "research_query.schema.json": {"query_id", "research_question", "query_text"},
     }
     for filename, required in research_schema_required.items():
         schema_check = _json_file_check(root, f"schemas/{filename}", {"$schema", "type"})
@@ -1067,6 +1070,18 @@ def build_report(
         missing_method_weights = sorted(required_method_weights - set(ranking_weights))
         if missing_method_weights:
             research_policy_check["errors"].append(f"method_research_ranking_weights missing {missing_method_weights}")
+        live_policy = policy_payload.get("live_method_research", {})
+        if live_policy.get("real_default_network_mode") != "live_cached":
+            research_policy_check["errors"].append("live research real default must be live_cached")
+        if live_policy.get("test_default_network_mode") != "disabled":
+            research_policy_check["errors"].append("live research test default must be disabled")
+        if live_policy.get("fallback_to_cache") is not True:
+            research_policy_check["errors"].append("live research fallback_to_cache must be true")
+        for key in ["require_registered_provider", "require_cache", "require_primary_source"]:
+            if live_policy.get(key) is not True:
+                research_policy_check["errors"].append(f"live research {key} must be true")
+        if live_policy.get("allow_unknown_source_promotion") is not False:
+            research_policy_check["errors"].append("unknown source promotion must be false")
         research_policy_check["passed"] = not research_policy_check["errors"]
         research_policy_check["details"].update({
             "analysis_levels": policy_payload.get("analysis_levels"),
@@ -1102,6 +1117,23 @@ def build_report(
         "errors": ([] if _gitignore_has(root, "artifacts/method_research_runs/") else ["artifacts/method_research_runs/ must be ignored"]),
         "warnings": (["method_research_runs artifact root does not exist yet"] if not method_research_runs_root.exists() else []),
         "details": {"path": str(method_research_runs_root), "exists": method_research_runs_root.exists(), "gitignored": _gitignore_has(root, "artifacts/method_research_runs/")},
+    }
+
+    research_cache_root = root / "artifacts" / "research_cache"
+    checks["research_cache_output_root"] = {
+        "name": "research_cache_output_root",
+        "passed": research_cache_root.resolve() != champion_csv.resolve() and _gitignore_has(root, "artifacts/research_cache/"),
+        "errors": ([] if _gitignore_has(root, "artifacts/research_cache/") else ["artifacts/research_cache/ must be ignored"]),
+        "warnings": (["research_cache artifact root does not exist yet"] if not research_cache_root.exists() else []),
+        "details": {"path": str(research_cache_root), "exists": research_cache_root.exists(), "gitignored": _gitignore_has(root, "artifacts/research_cache/")},
+    }
+    live_method_root = root / "artifacts" / "live_method_research"
+    checks["live_method_research_output_root"] = {
+        "name": "live_method_research_output_root",
+        "passed": live_method_root.resolve() != champion_csv.resolve() and _gitignore_has(root, "artifacts/live_method_research/"),
+        "errors": ([] if _gitignore_has(root, "artifacts/live_method_research/") else ["artifacts/live_method_research/ must be ignored"]),
+        "warnings": (["live_method_research artifact root does not exist yet"] if not live_method_root.exists() else []),
+        "details": {"path": str(live_method_root), "exists": live_method_root.exists(), "gitignored": _gitignore_has(root, "artifacts/live_method_research/")},
     }
 
     method_research_module = root / "afac_agent" / "research" / "method_research.py"
@@ -1154,6 +1186,29 @@ def build_report(
         "errors": [] if research_policy_check["passed"] else ["research policy safety failed"],
         "warnings": [],
         "details": {"method_research_network_enabled": False, "method_research_llm_enabled": False},
+    }
+    live_module = root / "afac_agent" / "research" / "live_method_research.py"
+    live_text = live_module.read_text(encoding="utf-8") if live_module.exists() else ""
+    checks["live_provider_registry"] = {
+        "name": "live_provider_registry",
+        "passed": all(token in live_text for token in ["class ProviderRegistry", "OpenAlexProvider", "ArxivProvider", "GitHubRepositoryProvider", "DirectUrlFetchProvider"]),
+        "errors": [] if live_module.exists() else ["live_method_research.py missing"],
+        "warnings": [],
+        "details": {"registered_provider_required": True},
+    }
+    checks["live_network_modes"] = {
+        "name": "live_network_modes",
+        "passed": all(token in live_text for token in ["live_cached", "cache_only", "disabled"]) and research_policy_check["passed"],
+        "errors": [] if research_policy_check["passed"] else ["research policy live network mode check failed"],
+        "warnings": [],
+        "details": {"live_cached": True, "cache_only": True, "disabled": True},
+    }
+    checks["live_research_safety"] = {
+        "name": "live_research_safety",
+        "passed": all(token in live_text for token in ["executes_adapter", "trains_model", "generates_prediction", "counts_as_experiment_round"]),
+        "errors": [] if live_module.exists() else ["live method research module missing"],
+        "warnings": [],
+        "details": {"adapter_training_prediction_disabled": True},
     }
 
 

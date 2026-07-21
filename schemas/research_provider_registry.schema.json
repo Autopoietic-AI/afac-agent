@@ -1,0 +1,11 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "additionalProperties": true,
+  "required": [
+    "registry_version",
+    "providers",
+    "provider_count"
+  ],
+  "title": "AFAC Research Provider Registry",
+  "type": "object"
+}

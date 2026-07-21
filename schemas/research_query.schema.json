@@ -1,0 +1,15 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "additionalProperties": true,
+  "required": [
+    "query_id",
+    "research_question",
+    "query_text",
+    "query_type",
+    "target_source_types",
+    "expected_evidence",
+    "reason"
+  ],
+  "title": "AFAC Research Query",
+  "type": "object"
+}

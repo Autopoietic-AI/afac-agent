@@ -105,6 +105,27 @@
     "source_verification": 0.16
   },
   "method_research_top_k": 2,
+  "live_method_research": {
+    "allow_discovery_sources": true,
+    "allow_unknown_source_promotion": false,
+    "fallback_to_cache": true,
+    "max_followup_queries": 1,
+    "max_queries_per_problem": 3,
+    "max_research_seconds_per_problem": 180,
+    "max_sources_per_query": 5,
+    "max_total_research_seconds": 420,
+    "max_verified_sources_per_problem": 4,
+    "network_modes": [
+      "live_cached",
+      "cache_only",
+      "disabled"
+    ],
+    "real_default_network_mode": "live_cached",
+    "require_cache": true,
+    "require_primary_source": true,
+    "require_registered_provider": true,
+    "test_default_network_mode": "disabled"
+  },
   "policy_version": "m6r_a_v2",
   "priority_component_weights": {
     "affected_count_component": 0.12,

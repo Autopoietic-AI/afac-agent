@@ -23,7 +23,7 @@ from .orchestrator import AgentOrchestrator
 from .paths import PathResolver
 from .planning.deterministic_planner import DeterministicPlanner
 from .registry import ToolRegistry
-from .research import MethodResearchRunner, ResearchBriefBuilder, ResearchMemoryBuilder
+from .research import LiveCachedMethodResearchRunner, MethodResearchRunner, ResearchBriefBuilder, ResearchMemoryBuilder
 
 
 def _run_adapter(argv: list[str]) -> None:
@@ -373,6 +373,42 @@ def _method_research_local(argv: list[str]) -> None:
     raise SystemExit(2)
 
 
+def _live_method_research(argv: list[str]) -> None:
+    parser = argparse.ArgumentParser(prog="afac_agent.main live-method-research")
+    parser.add_argument("--project_root", default=".")
+    parser.add_argument("--research-brief", required=True)
+    parser.add_argument("--research-memory-root", required=True)
+    parser.add_argument("--research-policy", default="config/research_policy.json")
+    parser.add_argument("--out-root", default="artifacts/live_method_research")
+    parser.add_argument("--cache-root", default="artifacts/research_cache")
+    parser.add_argument("--network-mode", default="live_cached", choices=["live_cached", "cache_only", "disabled"])
+    parser.add_argument("--provider", default=ALIYUN_BAILIAN_PROVIDER)
+    parser.add_argument("--model", default=ALIYUN_BAILIAN_DEFAULT_MODEL)
+    parser.add_argument("--max-queries", type=int, default=0)
+    parser.add_argument("--force-rebuild", action="store_true")
+    args = parser.parse_args(argv)
+    resolver = PathResolver(args.project_root)
+    root = resolver.project_root
+    result = LiveCachedMethodResearchRunner(project_root=root).run(
+        research_brief=resolver.resolve(args.research_brief) or root / args.research_brief,
+        research_memory_root=resolver.resolve(args.research_memory_root) or root / args.research_memory_root,
+        research_policy=resolver.resolve(args.research_policy) or root / args.research_policy,
+        out_root=resolver.resolve(args.out_root) or root / args.out_root,
+        cache_root=resolver.resolve(args.cache_root) or root / args.cache_root,
+        network_mode=args.network_mode,
+        provider=args.provider,
+        model=args.model,
+        max_queries=args.max_queries or None,
+        force_rebuild=args.force_rebuild,
+    )
+    print(json.dumps(result, ensure_ascii=False, indent=2))
+    if result["status"] in {"completed", "duplicate"}:
+        raise SystemExit(0)
+    if result["status"] == "waiting_for_input":
+        raise SystemExit(3)
+    raise SystemExit(2)
+
+
 def _llm_provider_check(argv: list[str]) -> None:
     parser = argparse.ArgumentParser(prog="afac_agent.main llm-provider-check")
     parser.add_argument("--project_root", default=".")
@@ -456,6 +492,9 @@ def main() -> None:
         return
     if len(sys.argv) > 1 and sys.argv[1] == "method-research-local":
         _method_research_local(sys.argv[2:])
+        return
+    if len(sys.argv) > 1 and sys.argv[1] == "live-method-research":
+        _live_method_research(sys.argv[2:])
         return
 
     parser = argparse.ArgumentParser()

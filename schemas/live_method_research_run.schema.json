@@ -1,0 +1,19 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "additionalProperties": true,
+  "required": [
+    "run_version",
+    "run_id",
+    "network_mode",
+    "effective_network_mode",
+    "qwen_call_count",
+    "read_only",
+    "executes_adapter",
+    "trains_model",
+    "generates_prediction",
+    "counts_as_experiment_round",
+    "artifacts"
+  ],
+  "title": "AFAC Live Method Research Run",
+  "type": "object"
+}
