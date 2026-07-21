@@ -1005,6 +1005,7 @@ def build_report(
         "m7_dry_run_manifest.schema.json": {"run_version", "run_id", "status", "artifacts", "round_consumed"},
         "m7b_readiness_manifest.schema.json": {"run_version", "run_id", "status", "artifacts", "anchor_status"},
         "evaluation_anchor_bootstrap_manifest.schema.json": {"manifest_version", "run_id", "status", "historical_v53q1_oof_status"},
+        "fusion_manifest.schema.json": {"manifest_version", "run_id", "status", "artifacts", "counts_as_experiment_round"},
     }
     for filename, required in research_schema_required.items():
         schema_check = _json_file_check(root, f"schemas/{filename}", {"$schema", "type"})
@@ -1173,6 +1174,14 @@ def build_report(
         "errors": ([] if _gitignore_has(root, "artifacts/evaluation_anchor/") else ["artifacts/evaluation_anchor/ must be ignored"]),
         "warnings": (["evaluation_anchor artifact root does not exist yet"] if not evaluation_anchor_root.exists() else []),
         "details": {"path": str(evaluation_anchor_root), "exists": evaluation_anchor_root.exists(), "gitignored": _gitignore_has(root, "artifacts/evaluation_anchor/")},
+    }
+    fusion_root = root / "artifacts" / "fusion_runs"
+    checks["fusion_output_root"] = {
+        "name": "fusion_output_root",
+        "passed": fusion_root.resolve() != champion_csv.resolve() and _gitignore_has(root, "artifacts/fusion_runs/"),
+        "errors": ([] if _gitignore_has(root, "artifacts/fusion_runs/") else ["artifacts/fusion_runs/ must be ignored"]),
+        "warnings": (["fusion_runs artifact root does not exist yet"] if not fusion_root.exists() else []),
+        "details": {"path": str(fusion_root), "exists": fusion_root.exists(), "gitignored": _gitignore_has(root, "artifacts/fusion_runs/")},
     }
     eval_anchor_dir = evaluation_anchor_root / "A1_EVAL_ANCHOR_V1"
     eval_manifest_path = eval_anchor_dir / "A1_EVAL_ANCHOR_V1_manifest.json"
@@ -1473,6 +1482,31 @@ def build_report(
         "errors": [] if (eval_anchor_module.exists() and eval_anchor_safety_ok) else ["evaluation anchor bootstrap module must separate anchors and declare no training/prediction/submission"],
         "warnings": [],
         "details": {"module": str(eval_anchor_module)},
+    }
+    fusion_module = root / "afac_agent" / "fusion_controller.py"
+    fusion_text = fusion_module.read_text(encoding="utf-8") if fusion_module.exists() else ""
+    fusion_safety_ok = all(
+        token in fusion_text
+        for token in [
+            "class ModelPortfolio",
+            "class FusionController",
+            "classification_proba",
+            "ranking_score",
+            "ranked_candidates",
+            "trains_model",
+            "generates_test_prediction",
+            "creates_submission",
+            "counts_as_experiment_round",
+            "oracle_is_diagnostic_only",
+            "strict_outer_fold_cross_fit",
+        ]
+    )
+    checks["fusion_controller_safety"] = {
+        "name": "fusion_controller_safety",
+        "passed": fusion_module.exists() and fusion_safety_ok,
+        "errors": [] if (fusion_module.exists() and fusion_safety_ok) else ["fusion controller must declare portfolio/fusion contracts and no training/Test/submission/round use"],
+        "warnings": [],
+        "details": {"module": str(fusion_module)},
     }
 
 

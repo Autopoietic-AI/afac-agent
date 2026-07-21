@@ -1,0 +1,62 @@
+# AFAC Agent Current Handoff
+
+## Current module
+
+- Module: Unified Model Portfolio & Fusion Controller
+- Commit status: this file is part of the module commit; use `git rev-parse HEAD` after commit for the immutable commit id.
+- Previous frozen baseline: `e170b82a20d84e54a19643378530caf528e81203`
+- Scope: offline A1 OOF portfolio registration, complementarity audit, bounded fusion planning, deterministic report package.
+
+## Frozen facts
+
+- Online Champion: `v53Q-1`
+- Online score: `0.7800`
+- Canonical OOF baseline remains frozen by policy.
+- Fold, Gate, confirmed history, closed branches, Champion CSV, Test predictions, and submissions must not be modified by this module.
+- Scientific rounds used by this module: `0`
+
+## Evaluation anchor
+
+- Anchor id: `A1_EVAL_ANCHOR_V1`
+- Anchor directory: `artifacts/evaluation_anchor/A1_EVAL_ANCHOR_V1`
+- Anchor OOF: `artifacts/evaluation_anchor/A1_EVAL_ANCHOR_V1/A1_EVAL_ANCHOR_V1_oof.npz`
+- Anchor role: offline evaluation anchor only; not an online Champion replacement.
+
+## Registered portfolio assets
+
+- `A1_EVAL_ANCHOR_V1`: offline evaluation anchor OOF.
+- `V43C_ASSOCIATED_REPRODUCIBLE_BASE_OOF`: v43C associated reproducible base OOF, using `base_proba`.
+- `V46A_ISOLATED_EXPERT_OOF`: v46A isolated expert OOF, using `expert_proba` plus `isolated_mask`.
+- `V46A_ISOLATED_COMPOSED_OOF`: v46A isolated composed OOF, using full `proba`.
+
+All registered OOF assets must be verified against the explicit train index, labels, and fold assignment before use.
+
+## Fusion controller boundaries
+
+- No model training.
+- No GPU use.
+- No Test prediction generation.
+- No submission generation.
+- No Champion mutation.
+- No Project State or confirmed history mutation.
+- No LLM call, network call, Adapter execution, or scientific round consumption.
+- Oracle upper bound is diagnostic only and cannot be used as accepted gain.
+
+## Real smoke command
+
+```powershell
+python -m afac_agent.main fusion-controller --project_root . --anchor-dir artifacts/evaluation_anchor/A1_EVAL_ANCHOR_V1 --v43c-oof "C:\Users\李天皓\agent比赛\model_pro\a1\new-a1\a1_openroute_cs_v1_v43c\correct_smooth_v1_oof_proba.npz" --v46a-oof "C:\Users\李天皓\agent比赛\model_pro\a1\new-a1\a1_v46a_tabm_two_seed_decision\two_seed_balanced_candidate_oof.npz" --out-root artifacts/fusion_runs --force-rebuild
+```
+
+## Latest real smoke result
+
+- Status: `completed`
+- Run id: `b053e405ff9f6dcf9d7df95b287e16d16c5d3669f2c17a076c7ce00efda98244`
+- Candidate count: `11`
+- Accepted count: `2`
+- Best candidate: `class_weighted_blend_base_composed`
+- Handoff status: `ready_for_real_single_round_experiment_design`
+
+## Next recommended step
+
+Use the Fusion Controller report package as offline evidence for the next strictly controlled single-round experiment design. Do not start training or Test prediction until the next module explicitly approves the experiment boundary and output path.

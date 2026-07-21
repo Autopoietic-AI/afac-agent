@@ -1,0 +1,42 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "AFAC Fusion Controller Manifest",
+  "type": "object",
+  "additionalProperties": true,
+  "required": [
+    "manifest_version",
+    "run_id",
+    "status",
+    "task_type",
+    "read_only_inputs",
+    "executes_adapter",
+    "trains_model",
+    "generates_test_prediction",
+    "creates_submission",
+    "calls_llm",
+    "uses_network",
+    "counts_as_experiment_round",
+    "scientific_rounds_used",
+    "anchor_id",
+    "anchor_hash",
+    "candidate_count",
+    "artifacts"
+  ],
+  "properties": {
+    "status": {
+      "enum": ["completed", "failed", "waiting_for_input"]
+    },
+    "task_type": {
+      "enum": ["classification", "ranking_recommendation"]
+    },
+    "read_only_inputs": {"const": true},
+    "executes_adapter": {"const": false},
+    "trains_model": {"const": false},
+    "generates_test_prediction": {"const": false},
+    "creates_submission": {"const": false},
+    "calls_llm": {"const": false},
+    "uses_network": {"const": false},
+    "counts_as_experiment_round": {"const": false},
+    "scientific_rounds_used": {"const": 0}
+  }
+}

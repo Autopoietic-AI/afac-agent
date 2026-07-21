@@ -10,6 +10,7 @@ from pathlib import Path
 
 from .adapters.runner import AdapterRunner
 from .feedback.builder import FeedbackBuilder
+from .fusion_controller import run_fusion_controller
 from .llm.base import LLMRequest
 from .llm.providers import (
     ALIYUN_BAILIAN_DEFAULT_MODEL,
@@ -542,6 +543,33 @@ def _evaluation_anchor_bootstrap(argv: list[str]) -> None:
     raise SystemExit(2)
 
 
+def _fusion_controller(argv: list[str]) -> None:
+    parser = argparse.ArgumentParser(prog="afac_agent.main fusion-controller")
+    parser.add_argument("--project_root", default=".")
+    parser.add_argument("--anchor-dir", default="artifacts/evaluation_anchor/A1_EVAL_ANCHOR_V1")
+    parser.add_argument("--v43c-oof", required=True)
+    parser.add_argument("--v46a-oof", required=True)
+    parser.add_argument("--out-root", default="artifacts/fusion_runs")
+    parser.add_argument("--force-rebuild", action="store_true")
+    args = parser.parse_args(argv)
+    resolver = PathResolver(args.project_root)
+    root = resolver.project_root
+    result = run_fusion_controller(
+        project_root=root,
+        anchor_dir=resolver.resolve(args.anchor_dir) or root / args.anchor_dir,
+        v43_oof=resolver.resolve(args.v43c_oof) or args.v43c_oof,
+        v46_oof=resolver.resolve(args.v46a_oof) or args.v46a_oof,
+        out_root=resolver.resolve(args.out_root) or root / args.out_root,
+        force_rebuild=args.force_rebuild,
+    )
+    print(json.dumps(result, ensure_ascii=False, indent=2))
+    if result["status"] in {"completed", "failed"}:
+        raise SystemExit(0)
+    if result["status"] == "waiting_for_input":
+        raise SystemExit(3)
+    raise SystemExit(2)
+
+
 def _llm_provider_check(argv: list[str]) -> None:
     parser = argparse.ArgumentParser(prog="afac_agent.main llm-provider-check")
     parser.add_argument("--project_root", default=".")
@@ -640,6 +668,9 @@ def main() -> None:
         return
     if len(sys.argv) > 1 and sys.argv[1] == "evaluation-anchor-bootstrap":
         _evaluation_anchor_bootstrap(sys.argv[2:])
+        return
+    if len(sys.argv) > 1 and sys.argv[1] == "fusion-controller":
+        _fusion_controller(sys.argv[2:])
         return
 
     parser = argparse.ArgumentParser()
