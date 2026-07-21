@@ -44,6 +44,7 @@ artifacts/method_research/
 artifacts/research_memory/
 artifacts/decision_core_runs/
 artifacts/m7_dry_runs/
+artifacts/m7b_readiness/
 
 # Large local competition/model assets must stay outside git unless explicitly curated.
 data/

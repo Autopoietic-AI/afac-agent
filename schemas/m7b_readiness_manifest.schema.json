@@ -1,0 +1,42 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "AFAC M7B Readiness Repair Manifest",
+  "type": "object",
+  "additionalProperties": true,
+  "required": [
+    "run_version",
+    "run_id",
+    "status",
+    "read_only",
+    "executes_adapter",
+    "trains_model",
+    "generates_prediction",
+    "creates_submission",
+    "mutates_project_state",
+    "mutates_history",
+    "counts_as_experiment_round",
+    "round_consumed",
+    "anchor_status",
+    "full_anchor_evaluator_status",
+    "artifacts"
+  ],
+  "properties": {
+    "status": {
+      "enum": [
+        "ready_for_human_approval",
+        "waiting_for_input",
+        "diagnostic_only",
+        "blocked"
+      ]
+    },
+    "read_only": {"const": true},
+    "executes_adapter": {"const": false},
+    "trains_model": {"const": false},
+    "generates_prediction": {"const": false},
+    "creates_submission": {"const": false},
+    "mutates_project_state": {"const": false},
+    "mutates_history": {"const": false},
+    "counts_as_experiment_round": {"const": false},
+    "round_consumed": {"const": false}
+  }
+}

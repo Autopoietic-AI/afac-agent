@@ -20,6 +20,7 @@ from .llm.providers import (
 )
 from .llm.shadow_planner import LLMShadowPlanner
 from .m7_dry_run import M7DryRunOrchestrator
+from .m7b_readiness import M7BReadinessRepair
 from .orchestrator import AgentOrchestrator
 from .paths import PathResolver
 from .planning.deterministic_planner import DeterministicPlanner
@@ -476,6 +477,41 @@ def _m7_dry_run(argv: list[str]) -> None:
     raise SystemExit(2)
 
 
+def _m7b_readiness(argv: list[str]) -> None:
+    parser = argparse.ArgumentParser(prog="afac_agent.main m7b-readiness")
+    parser.add_argument("--project_root", default=".")
+    parser.add_argument("--paths_config", default="")
+    parser.add_argument("--problem-map", default="artifacts/data_profile/a1_m2_v1/a1_problem_map.json")
+    parser.add_argument("--data-profile", default="artifacts/data_profile/a1_m2_v1/a1_data_profile.json")
+    parser.add_argument("--method-research-run", default="")
+    parser.add_argument("--decision-run", default="")
+    parser.add_argument("--m7a-run", default="")
+    parser.add_argument("--project-state", default="config/project_state.json")
+    parser.add_argument("--tool-registry", default="config/tool_registry.json")
+    parser.add_argument("--out-root", default="artifacts/m7b_readiness")
+    parser.add_argument("--force-rebuild", action="store_true")
+    args = parser.parse_args(argv)
+    resolver = PathResolver(args.project_root, args.paths_config or None)
+    root = resolver.project_root
+    result = M7BReadinessRepair(project_root=root, paths_config=args.paths_config).run(
+        problem_map=resolver.resolve(args.problem_map) or root / args.problem_map,
+        data_profile=resolver.resolve(args.data_profile) or root / args.data_profile,
+        method_research_run=resolver.resolve(args.method_research_run) or args.method_research_run,
+        decision_run=resolver.resolve(args.decision_run) or args.decision_run,
+        m7a_run=resolver.resolve(args.m7a_run) or args.m7a_run,
+        project_state=resolver.resolve(args.project_state) or root / args.project_state,
+        tool_registry=resolver.resolve(args.tool_registry) or root / args.tool_registry,
+        out_root=resolver.resolve(args.out_root) or root / args.out_root,
+        force_rebuild=args.force_rebuild,
+    )
+    print(json.dumps(result, ensure_ascii=False, indent=2))
+    if result["status"] in {"ready_for_human_approval", "diagnostic_only", "blocked"}:
+        raise SystemExit(0)
+    if result["status"] == "waiting_for_input":
+        raise SystemExit(3)
+    raise SystemExit(2)
+
+
 def _llm_provider_check(argv: list[str]) -> None:
     parser = argparse.ArgumentParser(prog="afac_agent.main llm-provider-check")
     parser.add_argument("--project_root", default=".")
@@ -568,6 +604,9 @@ def main() -> None:
         return
     if len(sys.argv) > 1 and sys.argv[1] == "m7-dry-run":
         _m7_dry_run(sys.argv[2:])
+        return
+    if len(sys.argv) > 1 and sys.argv[1] == "m7b-readiness":
+        _m7b_readiness(sys.argv[2:])
         return
 
     parser = argparse.ArgumentParser()

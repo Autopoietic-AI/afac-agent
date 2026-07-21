@@ -1003,6 +1003,7 @@ def build_report(
         "critic_review.schema.json": {"verdict", "critical_issues", "minimal_safe_revision"},
         "decision_core_manifest.schema.json": {"run_version", "run_id", "artifacts", "counts_as_experiment_round"},
         "m7_dry_run_manifest.schema.json": {"run_version", "run_id", "status", "artifacts", "round_consumed"},
+        "m7b_readiness_manifest.schema.json": {"run_version", "run_id", "status", "artifacts", "anchor_status"},
     }
     for filename, required in research_schema_required.items():
         schema_check = _json_file_check(root, f"schemas/{filename}", {"$schema", "type"})
@@ -1156,6 +1157,14 @@ def build_report(
         "warnings": (["m7_dry_runs artifact root does not exist yet"] if not m7_root.exists() else []),
         "details": {"path": str(m7_root), "exists": m7_root.exists(), "gitignored": _gitignore_has(root, "artifacts/m7_dry_runs/")},
     }
+    m7b_root = root / "artifacts" / "m7b_readiness"
+    checks["m7b_readiness_output_root"] = {
+        "name": "m7b_readiness_output_root",
+        "passed": m7b_root.resolve() != champion_csv.resolve() and _gitignore_has(root, "artifacts/m7b_readiness/"),
+        "errors": ([] if _gitignore_has(root, "artifacts/m7b_readiness/") else ["artifacts/m7b_readiness/ must be ignored"]),
+        "warnings": (["m7b_readiness artifact root does not exist yet"] if not m7b_root.exists() else []),
+        "details": {"path": str(m7b_root), "exists": m7b_root.exists(), "gitignored": _gitignore_has(root, "artifacts/m7b_readiness/")},
+    }
 
     method_research_module = root / "afac_agent" / "research" / "method_research.py"
     method_research_text = method_research_module.read_text(encoding="utf-8") if method_research_module.exists() else ""
@@ -1289,6 +1298,29 @@ def build_report(
         "errors": [] if (m7_module.exists() and m7_safety_ok) else ["m7 dry-run module must declare no execution/training/prediction/submission/round use"],
         "warnings": [],
         "details": {"module": str(m7_module)},
+    }
+    m7b_module = root / "afac_agent" / "m7b_readiness.py"
+    m7b_text = m7b_module.read_text(encoding="utf-8") if m7b_module.exists() else ""
+    m7b_safety_ok = all(
+        token in m7b_text
+        for token in [
+            "class M7BReadinessRepair",
+            "executes_adapter",
+            "trains_model",
+            "generates_prediction",
+            "creates_submission",
+            "counts_as_experiment_round",
+            "round_consumed",
+            "execution_allowed",
+            "allowed_in_m7b",
+        ]
+    )
+    checks["m7b_readiness_safety"] = {
+        "name": "m7b_readiness_safety",
+        "passed": m7b_module.exists() and m7b_safety_ok,
+        "errors": [] if (m7b_module.exists() and m7b_safety_ok) else ["m7b readiness module must declare read-only/no execution and no rebuild safety"],
+        "warnings": [],
+        "details": {"module": str(m7b_module)},
     }
 
 
