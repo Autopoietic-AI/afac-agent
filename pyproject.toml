@@ -8,6 +8,7 @@ dependencies = [
   "pandas",
   "scipy",
   "scikit-learn",
+  "openai",
 ]
 
 [tool.pytest.ini_options]

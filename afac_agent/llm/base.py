@@ -25,6 +25,7 @@ class LLMResponse:
     model: str = ""
     warnings: list[str] = field(default_factory=list)
     failure_reason: str = ""
+    audit: dict[str, Any] = field(default_factory=dict)
 
 
 class LLMProvider(Protocol):

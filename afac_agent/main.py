@@ -10,6 +10,14 @@ from pathlib import Path
 
 from .adapters.runner import AdapterRunner
 from .feedback.builder import FeedbackBuilder
+from .llm.base import LLMRequest
+from .llm.providers import (
+    ALIYUN_BAILIAN_DEFAULT_MODEL,
+    ALIYUN_BAILIAN_PROVIDER,
+    is_allowed_bailian_model,
+    make_provider,
+    redact_secret,
+)
 from .llm.shadow_planner import LLMShadowPlanner
 from .orchestrator import AgentOrchestrator
 from .paths import PathResolver
@@ -197,7 +205,11 @@ def _shadow_plan(argv: list[str]) -> None:
     parser.add_argument("--history", default="history/confirmed_experiments_a1.json")
     parser.add_argument("--planner-policy", default="config/planner_policy.json")
     parser.add_argument("--llm-policy", default="config/llm_shadow_policy.json")
-    parser.add_argument("--provider", default="mock", choices=["mock", "local_ollama"])
+    parser.add_argument(
+        "--provider",
+        default="mock",
+        choices=["mock", "local_ollama", ALIYUN_BAILIAN_PROVIDER],
+    )
     parser.add_argument("--provider-config", default="")
     parser.add_argument("--mock-mode", default="agree")
     parser.add_argument("--out-root", default="artifacts/llm_shadow_runs")
@@ -244,6 +256,62 @@ def _shadow_plan(argv: list[str]) -> None:
     raise SystemExit(2)
 
 
+def _llm_provider_check(argv: list[str]) -> None:
+    parser = argparse.ArgumentParser(prog="afac_agent.main llm-provider-check")
+    parser.add_argument("--project_root", default=".")
+    parser.add_argument("--provider", required=True, choices=[ALIYUN_BAILIAN_PROVIDER])
+    parser.add_argument("--provider-config", default="")
+    parser.add_argument("--model", default=ALIYUN_BAILIAN_DEFAULT_MODEL)
+    args = parser.parse_args(argv)
+
+    resolver = PathResolver(args.project_root)
+    root = resolver.project_root
+    model = args.model
+    if not is_allowed_bailian_model(model):
+        result = {
+            "status": "provider_unavailable",
+            "provider": args.provider,
+            "model": model,
+            "failure_reason": "configured_model_not_allowed",
+            "response_schema_pass": False,
+        }
+        print(json.dumps(result, ensure_ascii=False, indent=2))
+        raise SystemExit(0)
+    provider = make_provider(
+        args.provider,
+        project_root=root,
+        provider_config=args.provider_config,
+    )
+    response = provider.generate(
+        LLMRequest(
+            prompt="这是接口连通测试，请简短回复OK。",
+            provider=args.provider,
+            model=model,
+            timeout_seconds=180,
+            max_output_tokens=128,
+            temperature=0.0,
+            metadata={"provider_check": True},
+        )
+    )
+    schema_pass = False
+    if response.status == "completed":
+        schema_pass = bool(response.audit.get("content_present"))
+    result = {
+        "status": response.status,
+        "provider": response.provider or args.provider,
+        "model": response.model or model,
+        "failure_reason": response.failure_reason,
+        "response_schema_pass": schema_pass,
+        "content_present": bool(response.audit.get("content_present")),
+        "audit": response.audit,
+        "warnings": [redact_secret(item) for item in response.warnings],
+    }
+    print(json.dumps(result, ensure_ascii=False, indent=2))
+    if response.status in {"completed", "provider_unavailable", "timeout", "invalid_output"}:
+        raise SystemExit(0)
+    raise SystemExit(2)
+
+
 def main() -> None:
     if len(sys.argv) > 1 and sys.argv[1] == "run-adapter":
         _run_adapter(sys.argv[2:])
@@ -256,6 +324,9 @@ def main() -> None:
         return
     if len(sys.argv) > 1 and sys.argv[1] == "shadow-plan":
         _shadow_plan(sys.argv[2:])
+        return
+    if len(sys.argv) > 1 and sys.argv[1] == "llm-provider-check":
+        _llm_provider_check(sys.argv[2:])
         return
 
     parser = argparse.ArgumentParser()

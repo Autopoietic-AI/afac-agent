@@ -5,10 +5,12 @@ from __future__ import annotations
 
 import argparse
 import hashlib
+import importlib.metadata
 import importlib.util
 import json
 import os
 import platform
+import re
 import subprocess
 import sys
 from pathlib import Path
@@ -16,6 +18,11 @@ from typing import Any
 
 from .feedback.normalizers import NORMALIZER_REGISTRY
 from .llm.policy import load_llm_shadow_policy
+from .llm.providers import (
+    ALIYUN_BAILIAN_DEFAULT_MODEL,
+    ALIYUN_BAILIAN_PROVIDER,
+    is_allowed_bailian_model,
+)
 from .paths import PathResolver
 from .planning.policy import load_policy
 from .validation import (
@@ -44,6 +51,38 @@ def dependency_check(names: list[str]) -> dict[str, Any]:
             "available": importlib.util.find_spec(name) is not None,
         }
     return result
+
+
+def _git_lines(root: Path, *args: str) -> list[str]:
+    proc = subprocess.run(
+        ["git", *args],
+        cwd=root,
+        text=True,
+        capture_output=True,
+        check=False,
+    )
+    if proc.returncode != 0:
+        return []
+    return [line for line in proc.stdout.splitlines() if line.strip()]
+
+
+def _scan_tracked_secret_locations(root: Path) -> list[str]:
+    locations: list[str] = []
+    secret_pattern = re.compile(r"sk-[A-Za-z0-9._-]+|Authorization\s*[:=]\s*Bearer\s+", re.IGNORECASE)
+    for rel in _git_lines(root, "ls-files"):
+        if rel.startswith("artifacts/llm_shadow_runs/"):
+            continue
+        path = root / rel
+        if not path.is_file() or path.suffix.lower() in {".pyc", ".npz", ".npy"}:
+            continue
+        try:
+            text = path.read_text(encoding="utf-8")
+        except UnicodeDecodeError:
+            continue
+        for line_no, line in enumerate(text.splitlines(), 1):
+            if secret_pattern.search(line):
+                locations.append(f"{rel}:{line_no}")
+    return locations
 
 
 def build_report(
@@ -549,9 +588,10 @@ def build_report(
     }
     llm_policy_errors: list[str] = []
     llm_policy_warnings: list[str] = []
+    llm_policy_payload: dict[str, Any] = {}
     llm_policy_path = root / "config" / "llm_shadow_policy.json"
     try:
-        _llm_policy_payload, llm_policy_hash = load_llm_shadow_policy(llm_policy_path)
+        llm_policy_payload, llm_policy_hash = load_llm_shadow_policy(llm_policy_path)
     except Exception as exc:
         llm_policy_hash = ""
         llm_policy_errors.append(str(exc))
@@ -579,6 +619,155 @@ def build_report(
             "path": str(llm_policy_path),
             "sha256": llm_policy_hash,
             "local_config_exists": local_llm_config.exists(),
+        },
+    }
+    provider_source_for_binding = (root / "afac_agent" / "llm" / "providers.py").read_text(encoding="utf-8")
+    main_source_for_binding = (root / "afac_agent" / "main.py").read_text(encoding="utf-8")
+    provider_binding_passed = (
+        ALIYUN_BAILIAN_PROVIDER in provider_source_for_binding
+        and (
+            ALIYUN_BAILIAN_PROVIDER in main_source_for_binding
+            or "ALIYUN_BAILIAN_PROVIDER" in main_source_for_binding
+        )
+    )
+    checks["aliyun_bailian_provider_binding"] = {
+        "name": "aliyun_bailian_provider_binding",
+        "passed": provider_binding_passed,
+        "errors": (
+            []
+            if provider_binding_passed
+            else ["aliyun_bailian_openai provider binding is incomplete"]
+        ),
+        "warnings": [],
+        "details": {
+            "provider": ALIYUN_BAILIAN_PROVIDER,
+            "default_model": ALIYUN_BAILIAN_DEFAULT_MODEL,
+        },
+    }
+    openai_available = importlib.util.find_spec("openai") is not None
+    try:
+        openai_version = importlib.metadata.version("openai") if openai_available else ""
+    except importlib.metadata.PackageNotFoundError:
+        openai_version = ""
+    pyproject_text = (root / "pyproject.toml").read_text(encoding="utf-8")
+    openai_declared = '"openai"' in pyproject_text or "'openai'" in pyproject_text
+    checks["openai_sdk_available"] = {
+        "name": "openai_sdk_available",
+        "passed": openai_available or openai_declared,
+        "errors": [] if (openai_available or openai_declared) else ["openai SDK is not installed or declared"],
+        "warnings": [] if openai_available else ["openai SDK is declared but not importable in this environment"],
+        "details": {
+            "available": openai_available,
+            "version": openai_version,
+            "declared_in_pyproject": openai_declared,
+        },
+    }
+    example_config_path = root / "config" / "llm.local.example.json"
+    try:
+        example_config = json.loads(example_config_path.read_text(encoding="utf-8"))
+    except Exception:
+        example_config = {}
+    model_policy_errors: list[str] = []
+    example_model = str(example_config.get("model") or "")
+    if example_model != ALIYUN_BAILIAN_DEFAULT_MODEL:
+        model_policy_errors.append("llm.local.example.json must default to qwen3.6-max-preview")
+    if not is_allowed_bailian_model(example_model):
+        model_policy_errors.append("llm.local.example.json model must be qwen3.5-* or qwen3.6-*")
+    if not is_allowed_bailian_model(ALIYUN_BAILIAN_DEFAULT_MODEL):
+        model_policy_errors.append("default Bailian model is outside allowed family")
+    provider_source = (root / "afac_agent" / "llm" / "providers.py").read_text(encoding="utf-8")
+    forbidden_fallbacks = ["qwen-plus", "qwen-turbo", "deepseek", "gpt-", "kimi"]
+    for forbidden in forbidden_fallbacks:
+        if forbidden in provider_source.lower():
+            model_policy_errors.append(f"forbidden fallback model appears in provider source: {forbidden}")
+    checks["llm_provider_model_policy"] = {
+        "name": "llm_provider_model_policy",
+        "passed": not model_policy_errors,
+        "errors": model_policy_errors,
+        "warnings": [],
+        "details": {
+            "allowed_prefixes": ["qwen3.5-", "qwen3.6-"],
+            "example_model": example_model,
+            "default_model": ALIYUN_BAILIAN_DEFAULT_MODEL,
+        },
+    }
+    main_source = (root / "afac_agent" / "main.py").read_text(encoding="utf-8")
+    secret_locations = _scan_tracked_secret_locations(root)
+    secret_errors = []
+    if "--api-key" in main_source or "--api_key" in main_source:
+        secret_errors.append("CLI must not accept API key arguments")
+    if secret_locations:
+        secret_errors.append("tracked files contain possible secret locations")
+    tracked_local_config = bool(_git_lines(root, "ls-files", "--error-unmatch", "config/llm.local.json"))
+    if tracked_local_config:
+        secret_errors.append("config/llm.local.json must not be tracked")
+    secret_warnings = []
+    if not os.environ.get("DASHSCOPE_API_KEY"):
+        secret_warnings.append("DASHSCOPE_API_KEY is not set")
+    if not os.environ.get("AFAC_BAILIAN_BASE_URL"):
+        secret_warnings.append("AFAC_BAILIAN_BASE_URL is not set")
+    checks["llm_secret_source_policy"] = {
+        "name": "llm_secret_source_policy",
+        "passed": not secret_errors,
+        "errors": secret_errors,
+        "warnings": secret_warnings,
+        "details": {
+            "api_key_cli_allowed": "--api-key" in main_source or "--api_key" in main_source,
+            "matching_file_count": len({item.rsplit(":", 1)[0] for item in secret_locations}),
+            "redacted_locations": secret_locations[:20],
+            "local_config_tracked": tracked_local_config,
+        },
+    }
+    try:
+        ignored = subprocess.run(
+            ["git", "check-ignore", "config/llm.local.json"],
+            cwd=root,
+            text=True,
+            capture_output=True,
+            check=False,
+        )
+        llm_local_ignored = ignored.returncode == 0
+    except Exception:
+        llm_local_ignored = False
+    checks["llm_local_config_gitignore"] = {
+        "name": "llm_local_config_gitignore",
+        "passed": llm_local_ignored and not tracked_local_config,
+        "errors": [] if (llm_local_ignored and not tracked_local_config) else ["config/llm.local.json must be ignored and untracked"],
+        "warnings": [] if local_llm_config.exists() else ["user local provider config is not configured"],
+        "details": {
+            "ignored": llm_local_ignored,
+            "tracked": tracked_local_config,
+            "exists": local_llm_config.exists(),
+        },
+    }
+    safety_errors: list[str] = []
+    forbidden_actions = set(map(str, llm_policy_payload.get("forbidden_actions", [])))
+    for action in [
+        "online_submission",
+        "register_champion",
+        "modify_champion",
+        "overwrite_prediction",
+        "execute_shell",
+        "execute_python",
+        "run_unregistered_tool",
+    ]:
+        if action not in forbidden_actions:
+            safety_errors.append(f"llm shadow policy must forbid {action}")
+    if llm_policy_payload.get("force_auto_execution_false") is not True:
+        safety_errors.append("llm shadow policy must force auto_execution_allowed=false")
+    if not llm_policy_payload.get("force_human_approval_for_training", False):
+        safety_errors.append("training proposals must require human approval")
+    if not llm_policy_payload.get("force_human_approval_for_prediction", False):
+        safety_errors.append("prediction proposals must require human approval")
+    checks["llm_shadow_api_safety"] = {
+        "name": "llm_shadow_api_safety",
+        "passed": not safety_errors,
+        "errors": safety_errors,
+        "warnings": [],
+        "details": {
+            "auto_execution_forced_false": llm_policy_payload.get("force_auto_execution_false") is True,
+            "forbidden_actions_checked": sorted(forbidden_actions),
+            "max_calls": llm_policy_payload.get("max_calls"),
         },
     }
     expected_normalizers = {

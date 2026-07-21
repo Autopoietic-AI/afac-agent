@@ -15,9 +15,10 @@ from .base import LLMRequest, LLMResponse
 from .comparator import compare_shadow_plan
 from .policy import load_llm_shadow_policy
 from .prompt_builder import build_prompt_package
+from .providers import provider_config_hash as build_provider_config_hash
 from .providers import make_provider
 from .report import render_shadow_report
-from .utils import pretty_json, sha256_file, stable_hash
+from .utils import pretty_json, stable_hash
 
 PROPOSAL_VERSION = "m6a_v1"
 SHADOW_RUNNER_VERSION = "m6a_shadow_runner_v1"
@@ -141,6 +142,7 @@ class LLMShadowPlanner:
             "raw_response": run_dir / "raw_response.txt",
             "llm_plan_proposal": run_dir / "llm_plan_proposal.json",
             "shadow_plan_comparison": run_dir / "shadow_plan_comparison.json",
+            "provider_usage": run_dir / "provider_usage.json",
             "shadow_report": run_dir / "SHADOW_REPORT.md",
             "shadow_manifest": run_dir / "shadow_manifest.json",
         }
@@ -149,6 +151,15 @@ class LLMShadowPlanner:
         artifacts["raw_response"].write_text(response.text, encoding="utf-8")
         artifacts["llm_plan_proposal"].write_text(pretty_json(proposal) + "\n", encoding="utf-8")
         artifacts["shadow_plan_comparison"].write_text(pretty_json(comparison) + "\n", encoding="utf-8")
+        provider_usage = {
+            "provider": response.provider or provider_name,
+            "model": response.model,
+            "status": response.status,
+            "failure_reason": response.failure_reason,
+            "warnings": response.warnings,
+            "audit": response.audit,
+        }
+        artifacts["provider_usage"].write_text(pretty_json(provider_usage) + "\n", encoding="utf-8")
         artifacts["shadow_report"].write_text(render_shadow_report(proposal, comparison), encoding="utf-8")
         manifest = {
             "shadow_runner_version": SHADOW_RUNNER_VERSION,
@@ -165,7 +176,10 @@ class LLMShadowPlanner:
             "comparison_hash": comparison_hash,
             "llm_policy_hash": llm_policy_hash,
             "created_at_epoch_seconds": time.time(),
-            "artifacts": {key: str(path) for key, path in artifacts.items()},
+            "artifacts": {
+                key: self._safe_artifact_ref(path)
+                for key, path in artifacts.items()
+            },
         }
         artifacts["shadow_manifest"].write_text(pretty_json(manifest) + "\n", encoding="utf-8")
         return {
@@ -196,14 +210,21 @@ class LLMShadowPlanner:
             return response
         try:
             json.loads(response.text)
-            return response
         except json.JSONDecodeError:
             if max_calls < 2:
                 return response
+        if not self._response_has_required_schema(response.text):
+            if max_calls < 2:
+                return response
+        else:
+            return response
         retry = LLMRequest(
             prompt=(
-                "Return only one valid JSON object matching the previous schema. "
-                "Do not add Markdown or commands."
+                "Your previous output was not a valid AFAC M6A shadow proposal. "
+                "Using the same evidence and facts below, return exactly one JSON object "
+                "matching the output_contract. Do not add new evidence, Markdown, prose, "
+                "commands, or a top-level key named plan.\n\n"
+                f"{request.prompt}"
             ),
             provider=request.provider,
             model=request.model,
@@ -213,6 +234,24 @@ class LLMShadowPlanner:
             metadata=request.metadata,
         )
         return provider.generate(retry)
+
+    @staticmethod
+    def _response_has_required_schema(text: str) -> bool:
+        try:
+            payload = json.loads(text)
+        except json.JSONDecodeError:
+            return False
+        if not isinstance(payload, dict):
+            return False
+        required = {
+            "proposal_version",
+            "status",
+            "proposed_action",
+            "proposed_tool",
+            "research_needed",
+            "auto_execution_allowed",
+        }
+        return required.issubset(payload)
 
     def _normalize_response(
         self,
@@ -255,6 +294,14 @@ class LLMShadowPlanner:
                 proposed_action="request_missing_input",
                 proposed_tool=None,
                 reason_codes=["json_not_object"],
+            )
+        if not self._response_has_required_schema(response.text):
+            return self._base_proposal(
+                deterministic_plan,
+                status="invalid_output",
+                proposed_action="request_missing_input",
+                proposed_tool=None,
+                reason_codes=["proposal_schema_invalid"],
             )
         proposal = self._base_proposal(
             deterministic_plan,
@@ -372,7 +419,10 @@ class LLMShadowPlanner:
         }
 
     def _provider_config_hash(self, provider_config: str) -> str:
-        path = Path(provider_config) if provider_config else self.project_root / "config" / "llm.local.json"
-        if path.exists():
-            return sha256_file(path)
-        return stable_hash({"provider_config": "unavailable"})
+        return build_provider_config_hash(self.project_root, provider_config)
+
+    def _safe_artifact_ref(self, path: Path) -> str:
+        try:
+            return path.resolve().relative_to(self.project_root).as_posix()
+        except ValueError:
+            return path.name

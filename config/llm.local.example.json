@@ -1,8 +1,12 @@
 {
-  "provider": "",
-  "model": "",
-  "base_url": "",
-  "timeout_seconds": 30,
+  "provider": "aliyun_bailian_openai",
+  "model": "qwen3.6-max-preview",
+  "api_key_env": "DASHSCOPE_API_KEY",
+  "base_url_env": "AFAC_BAILIAN_BASE_URL",
+  "timeout_seconds": 180,
+  "max_retries": 1,
   "max_output_tokens": 4096,
-  "temperature": 0
+  "temperature": 0,
+  "enable_thinking": true,
+  "response_format": "json_object"
 }

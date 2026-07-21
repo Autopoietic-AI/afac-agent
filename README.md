@@ -140,3 +140,51 @@ Adapter outputs are ignored by git under:
 ```text
 artifacts/adapter_runs/
 ```
+
+## M6A LLM Shadow Planner and Bailian provider
+
+M6A keeps the deterministic M5A planner authoritative.  LLM output is only a
+shadow proposal: it is schema-normalized, safety-filtered and compared with the
+deterministic plan, but it never executes tools, trains models, generates
+submissions, registers champions, mutates Project State, or consumes successful
+experiment rounds.
+
+The Aliyun Bailian OpenAI-compatible provider is available as:
+
+```bash
+python -m afac_agent.main llm-provider-check --provider aliyun_bailian_openai
+```
+
+and for advisory shadow planning:
+
+```bash
+python -m afac_agent.main shadow-plan --provider aliyun_bailian_openai ...
+```
+
+The default model is:
+
+```text
+qwen3.6-max-preview
+```
+
+Only `qwen3.5-*` and `qwen3.6-*` model names are allowed.  API credentials and
+the Bailian base URL are read only from environment variables named in the
+ignored local config:
+
+```text
+DASHSCOPE_API_KEY
+AFAC_BAILIAN_BASE_URL
+```
+
+`config/llm.local.json` remains git-ignored.  The committed
+`config/llm.local.example.json` contains only non-secret field names and
+defaults.  Provider usage artifacts record safe audit metadata such as provider,
+model, host, latency, token usage and finish reason; they do not record API
+keys, authorization headers, cookies, account data or full environment values.
+
+Framework inspiration / reuse: this provider borrows only the official baseline
+idea that model name, endpoint, timeout and credentials should be configurable
+and that credentials should come from environment variables.  It does not reuse
+baseline behavior where an LLM directly edits model code, chooses final
+CONTINUE/PIVOT/STOP decisions, executes unregistered commands, generates
+submissions, or treats weak/empty metrics as proof of improvement.
