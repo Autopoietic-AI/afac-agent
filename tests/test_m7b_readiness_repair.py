@@ -160,7 +160,7 @@ def test_m7b_missing_evaluation_anchor_waits_for_rebuild_approval_and_scientific
     assert adapter["prediction_generated"] is False
 
 
-def test_m7b_verified_anchor_ready_for_human_approval(tmp_path: Path) -> None:
+def test_m7b_verified_anchor_ready_for_experiment_design(tmp_path: Path) -> None:
     project_root = _project_root(tmp_path)
     result = M7BReadinessRepair(project_root=project_root, paths_config=str(_paths_config(tmp_path, verified=True, project_root=project_root))).run(
         problem_map=_problem_map(tmp_path),
@@ -170,7 +170,7 @@ def test_m7b_verified_anchor_ready_for_human_approval(tmp_path: Path) -> None:
         tool_registry=_registry(tmp_path),
         out_root=tmp_path / "out",
     )
-    assert result["status"] == "ready_for_human_approval"
+    assert result["status"] == "ready_for_experiment_design"
     run_dir = tmp_path / "out" / result["run_id"]
     fold = json.loads((run_dir / "canonical_fold_verification.json").read_text(encoding="utf-8"))
     oof = json.loads((run_dir / "v53q1_oof_verification.json").read_text(encoding="utf-8"))

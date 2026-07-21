@@ -155,8 +155,14 @@ class M7BReadinessRepair:
         return artifacts
 
     def _anchor_inventory(self, data_profile: dict[str, Any]) -> dict[str, Any]:
-        fold = self.resolver.a1_fold_file() or (self.project_root / "artifacts" / "evaluation_anchor" / "AFAC_A1_FOLD_V1.csv")
-        eval_manifest = self.project_root / "artifacts" / "evaluation_anchor" / "A1_EVAL_ANCHOR_V1_manifest.json"
+        anchor_root = self.project_root / "artifacts" / "evaluation_anchor" / "A1_EVAL_ANCHOR_V1"
+        legacy_root = self.project_root / "artifacts" / "evaluation_anchor"
+        fold = self.resolver.a1_fold_file() or (anchor_root / "AFAC_A1_FOLD_V1.csv")
+        if not fold.exists():
+            fold = legacy_root / "AFAC_A1_FOLD_V1.csv"
+        eval_manifest = anchor_root / "A1_EVAL_ANCHOR_V1_manifest.json"
+        if not eval_manifest.exists():
+            eval_manifest = legacy_root / "A1_EVAL_ANCHOR_V1_manifest.json"
         eval_oof = self._eval_oof_from_manifest(eval_manifest)
         ref_oof = self.resolver.a1_reference_oof_npz()
         anchor_csv = self.resolver.a1_anchor_csv()
@@ -575,7 +581,7 @@ class M7BReadinessRepair:
 
     def _status(self, anchor: dict[str, Any], admission: dict[str, Any], adapter: dict[str, Any]) -> str:
         if admission["status"] == "ready_for_human_approval" and not adapter["missing_inputs"]:
-            return "ready_for_human_approval"
+            return "ready_for_experiment_design"
         if admission["status"] == "diagnostic_only":
             return "diagnostic_only"
         if admission["status"] == "waiting_for_anchor_rebuild_approval":

@@ -1174,6 +1174,125 @@ def build_report(
         "warnings": (["evaluation_anchor artifact root does not exist yet"] if not evaluation_anchor_root.exists() else []),
         "details": {"path": str(evaluation_anchor_root), "exists": evaluation_anchor_root.exists(), "gitignored": _gitignore_has(root, "artifacts/evaluation_anchor/")},
     }
+    eval_anchor_dir = evaluation_anchor_root / "A1_EVAL_ANCHOR_V1"
+    eval_manifest_path = eval_anchor_dir / "A1_EVAL_ANCHOR_V1_manifest.json"
+    eval_oof_path = eval_anchor_dir / "A1_EVAL_ANCHOR_V1_oof.npz"
+    eval_replay_path = eval_anchor_dir / "A1_EVAL_ANCHOR_V1_replay_oof.npz"
+    eval_fold_manifest_path = eval_anchor_dir / "AFAC_A1_FOLD_V1_manifest.json"
+    eval_anchor_exists = eval_manifest_path.exists() and eval_oof_path.exists()
+    checks["evaluation_anchor_exists"] = {
+        "name": "evaluation_anchor_exists",
+        "passed": True if not eval_anchor_dir.exists() else eval_anchor_exists,
+        "errors": [] if (not eval_anchor_dir.exists() or eval_anchor_exists) else ["evaluation anchor directory exists but manifest or OOF artifact is missing"],
+        "warnings": ([] if eval_anchor_dir.exists() else ["A1_EVAL_ANCHOR_V1 has not been materialized yet"]),
+        "details": {"path": str(eval_anchor_dir), "exists": eval_anchor_dir.exists(), "manifest_exists": eval_manifest_path.exists(), "oof_exists": eval_oof_path.exists()},
+    }
+    eval_manifest_errors: list[str] = []
+    eval_manifest: dict[str, Any] = {}
+    if eval_manifest_path.exists():
+        try:
+            eval_manifest = json.loads(eval_manifest_path.read_text(encoding="utf-8"))
+        except Exception as exc:
+            eval_manifest_errors.append(f"evaluation anchor manifest unreadable: {exc}")
+        for key, expected in {
+            "evaluation_anchor_identity": "A1_EVAL_ANCHOR_V1",
+            "online_deployment_anchor": "A1_V53Q1_TRANSITION_STABLE_EDGE_H2",
+            "deployment_equivalent": False,
+            "historical_v53q1_oof_equivalent": False,
+            "historical_v53q1_oof_status": "not_materialized",
+            "functional_oof_validity": "verified",
+        }.items():
+            if eval_manifest and eval_manifest.get(key) != expected:
+                eval_manifest_errors.append(f"{key} != {expected!r}")
+    checks["evaluation_anchor_manifest"] = {
+        "name": "evaluation_anchor_manifest",
+        "passed": not eval_manifest_path.exists() or not eval_manifest_errors,
+        "errors": eval_manifest_errors,
+        "warnings": ([] if eval_manifest_path.exists() else ["evaluation anchor manifest not present"]),
+        "details": {"path": str(eval_manifest_path), "exists": eval_manifest_path.exists()},
+    }
+    oof_errors: list[str] = []
+    oof_details: dict[str, Any] = {"path": str(eval_oof_path), "exists": eval_oof_path.exists()}
+    if eval_oof_path.exists():
+        try:
+            import numpy as np
+            z = np.load(eval_oof_path, allow_pickle=False)
+            keys = set(z.files)
+            required = {"train_idx", "labels", "proba", "pred", "fold", "connectivity_visibility", "train_label_reachability", "degree_band", "isolated_mask", "component_source", "anchor_version"}
+            missing_keys = sorted(required - keys)
+            if missing_keys:
+                oof_errors.append(f"missing OOF keys: {missing_keys}")
+            if "proba" in keys:
+                proba = z["proba"]
+                row_sums = proba.sum(axis=1)
+                oof_details["proba_shape"] = list(proba.shape)
+                if proba.shape != (11001, 10):
+                    oof_errors.append("proba shape must be 11001x10")
+                if not bool(np.isfinite(proba).all()):
+                    oof_errors.append("proba contains NaN/Inf")
+                if not bool(np.allclose(row_sums, 1.0, atol=1e-5)):
+                    oof_errors.append("proba rows do not sum to 1")
+            if "train_idx" in keys:
+                train_idx = z["train_idx"].astype(int)
+                if len(set(train_idx.tolist())) != 11001:
+                    oof_errors.append("train_idx must contain 11001 unique rows")
+        except Exception as exc:
+            oof_errors.append(f"evaluation anchor OOF unreadable: {exc}")
+    checks["evaluation_anchor_oof_integrity"] = {
+        "name": "evaluation_anchor_oof_integrity",
+        "passed": not eval_oof_path.exists() or not oof_errors,
+        "errors": oof_errors,
+        "warnings": ([] if eval_oof_path.exists() else ["evaluation anchor OOF not present"]),
+        "details": oof_details,
+    }
+    fold_hash_errors: list[str] = []
+    if eval_fold_manifest_path.exists():
+        try:
+            fold_manifest = json.loads(eval_fold_manifest_path.read_text(encoding="utf-8"))
+            if fold_manifest.get("sha256") != "1c9dbaf6718eef8e19acec57106122a4d74e3ecbf5481b7d8898e91e658bccb3":
+                fold_hash_errors.append("AFAC_A1_FOLD_V1 hash mismatch")
+            if fold_manifest.get("historical_v53q1_fold_equivalence") != "unverified":
+                fold_hash_errors.append("fold must not claim historical v53Q-1 equivalence")
+            if fold_manifest.get("future_evaluation_protocol") != "verified":
+                fold_hash_errors.append("fold future evaluation protocol must be verified")
+        except Exception as exc:
+            fold_hash_errors.append(f"fold manifest unreadable: {exc}")
+    checks["evaluation_fold_hash"] = {
+        "name": "evaluation_fold_hash",
+        "passed": not eval_fold_manifest_path.exists() or not fold_hash_errors,
+        "errors": fold_hash_errors,
+        "warnings": ([] if eval_fold_manifest_path.exists() else ["evaluation fold manifest not present"]),
+        "details": {"path": str(eval_fold_manifest_path), "exists": eval_fold_manifest_path.exists()},
+    }
+    replay_errors: list[str] = []
+    if eval_oof_path.exists() and eval_replay_path.exists():
+        if sha256(eval_oof_path) != sha256(eval_replay_path):
+            replay_errors.append("evaluation anchor replay hash mismatch")
+    checks["evaluation_anchor_replay"] = {
+        "name": "evaluation_anchor_replay",
+        "passed": not (eval_oof_path.exists() or eval_replay_path.exists()) or (eval_oof_path.exists() and eval_replay_path.exists() and not replay_errors),
+        "errors": replay_errors,
+        "warnings": ([] if eval_replay_path.exists() else ["evaluation anchor replay artifact not present"]),
+        "details": {"oof": str(eval_oof_path), "replay": str(eval_replay_path)},
+    }
+    dual_anchor_errors = []
+    if eval_manifest and eval_manifest.get("online_deployment_anchor") == eval_manifest.get("evaluation_anchor_identity"):
+        dual_anchor_errors.append("online deployment anchor and evaluation anchor must be separate")
+    checks["dual_anchor_contract"] = {
+        "name": "dual_anchor_contract",
+        "passed": not dual_anchor_errors,
+        "errors": dual_anchor_errors,
+        "warnings": [],
+        "details": {"online_deployment_anchor": eval_manifest.get("online_deployment_anchor", ""), "evaluation_anchor_identity": eval_manifest.get("evaluation_anchor_identity", "")},
+    }
+    m7b_text_for_binding = (root / "afac_agent" / "m7b_readiness.py").read_text(encoding="utf-8") if (root / "afac_agent" / "m7b_readiness.py").exists() else ""
+    checks["m5_evaluation_anchor_binding"] = {
+        "name": "m5_evaluation_anchor_binding",
+        "passed": "A1_EVAL_ANCHOR_V1" in m7b_text_for_binding and "requires_final_v53q1_oof\": False" in m7b_text_for_binding,
+        "errors": [] if ("A1_EVAL_ANCHOR_V1" in m7b_text_for_binding and "requires_final_v53q1_oof\": False" in m7b_text_for_binding) else ["M5/M7 readiness must bind to evaluation anchor rather than final v53Q-1 OOF"],
+        "warnings": [],
+        "details": {"m7b_binding": True},
+    }
 
     method_research_module = root / "afac_agent" / "research" / "method_research.py"
     method_research_text = method_research_module.read_text(encoding="utf-8") if method_research_module.exists() else ""

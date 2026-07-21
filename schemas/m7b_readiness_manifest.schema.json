@@ -24,6 +24,7 @@
     "status": {
       "enum": [
         "ready_for_human_approval",
+        "ready_for_experiment_design",
         "waiting_for_input",
         "waiting_for_anchor_rebuild_approval",
         "diagnostic_only",

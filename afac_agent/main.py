@@ -506,7 +506,7 @@ def _m7b_readiness(argv: list[str]) -> None:
         force_rebuild=args.force_rebuild,
     )
     print(json.dumps(result, ensure_ascii=False, indent=2))
-    if result["status"] in {"ready_for_human_approval", "diagnostic_only", "waiting_for_anchor_rebuild_approval", "blocked"}:
+    if result["status"] in {"ready_for_human_approval", "ready_for_experiment_design", "diagnostic_only", "waiting_for_anchor_rebuild_approval", "blocked"}:
         raise SystemExit(0)
     if result["status"] == "waiting_for_input":
         raise SystemExit(3)
@@ -521,7 +521,7 @@ def _evaluation_anchor_bootstrap(argv: list[str]) -> None:
     parser.add_argument("--fold-candidate", required=True)
     parser.add_argument("--v43c-oof", required=True)
     parser.add_argument("--v46a-oof", required=True)
-    parser.add_argument("--out-root", default="artifacts/evaluation_anchor")
+    parser.add_argument("--out-root", default="artifacts/evaluation_anchor/A1_EVAL_ANCHOR_V1")
     parser.add_argument("--force-rebuild", action="store_true")
     args = parser.parse_args(argv)
     resolver = PathResolver(args.project_root, args.paths_config or None)
