@@ -1004,6 +1004,7 @@ def build_report(
         "decision_core_manifest.schema.json": {"run_version", "run_id", "artifacts", "counts_as_experiment_round"},
         "m7_dry_run_manifest.schema.json": {"run_version", "run_id", "status", "artifacts", "round_consumed"},
         "m7b_readiness_manifest.schema.json": {"run_version", "run_id", "status", "artifacts", "anchor_status"},
+        "evaluation_anchor_bootstrap_manifest.schema.json": {"manifest_version", "run_id", "status", "historical_v53q1_oof_status"},
     }
     for filename, required in research_schema_required.items():
         schema_check = _json_file_check(root, f"schemas/{filename}", {"$schema", "type"})
@@ -1165,6 +1166,14 @@ def build_report(
         "warnings": (["m7b_readiness artifact root does not exist yet"] if not m7b_root.exists() else []),
         "details": {"path": str(m7b_root), "exists": m7b_root.exists(), "gitignored": _gitignore_has(root, "artifacts/m7b_readiness/")},
     }
+    evaluation_anchor_root = root / "artifacts" / "evaluation_anchor"
+    checks["evaluation_anchor_output_root"] = {
+        "name": "evaluation_anchor_output_root",
+        "passed": evaluation_anchor_root.resolve() != champion_csv.resolve() and _gitignore_has(root, "artifacts/evaluation_anchor/"),
+        "errors": ([] if _gitignore_has(root, "artifacts/evaluation_anchor/") else ["artifacts/evaluation_anchor/ must be ignored"]),
+        "warnings": (["evaluation_anchor artifact root does not exist yet"] if not evaluation_anchor_root.exists() else []),
+        "details": {"path": str(evaluation_anchor_root), "exists": evaluation_anchor_root.exists(), "gitignored": _gitignore_has(root, "artifacts/evaluation_anchor/")},
+    }
 
     method_research_module = root / "afac_agent" / "research" / "method_research.py"
     method_research_text = method_research_module.read_text(encoding="utf-8") if method_research_module.exists() else ""
@@ -1321,6 +1330,30 @@ def build_report(
         "errors": [] if (m7b_module.exists() and m7b_safety_ok) else ["m7b readiness module must declare read-only/no execution and no rebuild safety"],
         "warnings": [],
         "details": {"module": str(m7b_module)},
+    }
+    eval_anchor_module = root / "afac_agent" / "evaluation_anchor_bootstrap.py"
+    eval_anchor_text = eval_anchor_module.read_text(encoding="utf-8") if eval_anchor_module.exists() else ""
+    eval_anchor_safety_ok = all(
+        token in eval_anchor_text
+        for token in [
+            "class EvaluationAnchorBootstrap",
+            "online_deployment_anchor",
+            "oof_evaluation_anchor",
+            "historical_v53q1_oof_status",
+            "not_materialized",
+            "trains_model",
+            "generates_prediction",
+            "creates_submission",
+            "counts_as_experiment_round",
+            "rebuild_required",
+        ]
+    )
+    checks["evaluation_anchor_bootstrap_safety"] = {
+        "name": "evaluation_anchor_bootstrap_safety",
+        "passed": eval_anchor_module.exists() and eval_anchor_safety_ok,
+        "errors": [] if (eval_anchor_module.exists() and eval_anchor_safety_ok) else ["evaluation anchor bootstrap module must separate anchors and declare no training/prediction/submission"],
+        "warnings": [],
+        "details": {"module": str(eval_anchor_module)},
     }
 
 

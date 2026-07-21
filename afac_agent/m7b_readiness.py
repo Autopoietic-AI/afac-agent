@@ -88,8 +88,8 @@ class M7BReadinessRepair:
         state = load_json(inputs["project_state"])
         registry = load_json(inputs["tool_registry"])
         inventory = self._anchor_inventory(data_profile)
-        fold_verification = self._verify_fold(inventory.get("canonical_fold_assignment", {}).get("path", ""))
-        oof_verification = self._verify_oof(inventory.get("final_v53q1_oof_proba", {}).get("path", ""))
+        fold_verification = self._verify_fold(inventory.get("canonical_evaluation_fold", {}).get("path", ""))
+        oof_verification = self._verify_oof(inventory.get("oof_evaluation_anchor", {}).get("path", ""))
         anchor_decision = self._anchor_decision(inventory, fold_verification, oof_verification)
         queue = self._scientific_queue(problem_map, data_profile, anchor_decision)
         selected = self._select_problem(queue, anchor_decision)
@@ -155,24 +155,34 @@ class M7BReadinessRepair:
         return artifacts
 
     def _anchor_inventory(self, data_profile: dict[str, Any]) -> dict[str, Any]:
-        fold = self.resolver.a1_fold_file()
-        anchor_oof = self.resolver.a1_anchor_oof_npz()
+        fold = self.resolver.a1_fold_file() or (self.project_root / "artifacts" / "evaluation_anchor" / "AFAC_A1_FOLD_V1.csv")
+        eval_manifest = self.project_root / "artifacts" / "evaluation_anchor" / "A1_EVAL_ANCHOR_V1_manifest.json"
+        eval_oof = self._eval_oof_from_manifest(eval_manifest)
         ref_oof = self.resolver.a1_reference_oof_npz()
         anchor_csv = self.resolver.a1_anchor_csv()
         candidates = {
-            "canonical_fold_assignment": self._candidate_record(fold, "config.a1.fold_file"),
-            "final_v53q1_oof_proba": self._candidate_record(anchor_oof, "config.a1.anchor_oof_npz"),
+            "online_deployment_anchor": self._candidate_record(anchor_csv, "config.a1.anchor_csv"),
+            "canonical_evaluation_fold": self._candidate_record(fold, "AFAC_A1_FOLD_V1"),
+            "oof_evaluation_anchor_manifest": self._candidate_record(eval_manifest, "A1_EVAL_ANCHOR_V1_manifest"),
+            "oof_evaluation_anchor": self._candidate_record(eval_oof, "A1_EVAL_ANCHOR_V1_oof"),
             "reference_oof": self._candidate_record(ref_oof, "config.a1.reference_oof_npz"),
             "champion_csv": self._candidate_record(anchor_csv, "config.a1.anchor_csv"),
         }
         candidates["dataset_profile_anchor_identity"] = data_profile.get("anchor_identity")
         candidates["data_profile_oof_status"] = data_profile.get("oof_profile", {}).get("status")
-        candidates["known_missing_inputs"] = [
-            "canonical_fold_assignment",
-            "final_v53q1_oof_identity_or_manifest",
-            "final_v53q1_oof_proba",
-        ]
+        candidates["historical_v53q1_oof_status"] = "not_materialized"
+        candidates["known_missing_inputs"] = ["verified_oof_evaluation_anchor", "verified_canonical_evaluation_fold"]
         return candidates
+
+    def _eval_oof_from_manifest(self, manifest_path: Path) -> Path | None:
+        if not manifest_path.exists():
+            return None
+        try:
+            payload = load_json(manifest_path)
+            artifact = payload.get("artifact", "")
+            return self._resolve(artifact) if artifact else None
+        except Exception:
+            return None
 
     def _candidate_record(self, path: Path | None, source: str) -> dict[str, Any]:
         exists = bool(path and path.exists())
@@ -195,7 +205,7 @@ class M7BReadinessRepair:
             "contains_fold_assignment": False,
             "fold_count": 0,
             "duplicate_or_missing_rows": "unknown",
-            "reason": "canonical_fold_assignment_missing",
+            "reason": "canonical_evaluation_fold_missing",
         }
         if not path_text or not path.exists() or not path.is_file():
             return result
@@ -244,13 +254,13 @@ class M7BReadinessRepair:
             "verification_version": M7B_VERSION,
             "status": "unavailable",
             "path": path_text,
-            "is_final_v53q1": False,
+            "is_oof_evaluation_anchor": False,
             "contains_11001_train_idx": False,
             "contains_10_class_proba": False,
             "probability_normalization": "unknown",
             "node_ordering": "unknown",
             "provenance_chain": "missing",
-            "reason": "final_v53q1_oof_proba_missing",
+            "reason": "oof_evaluation_anchor_missing",
         }
         if not path_text or not path.exists() or not path.is_file():
             return result
@@ -278,13 +288,13 @@ class M7BReadinessRepair:
                 sums = arr.sum(axis=1)
                 result["probability_normalization"] = "pass" if bool(((sums > 0.999) & (sums < 1.001)).all()) else "fail"
             name_text = path.name.lower()
-            result["is_final_v53q1"] = "v53" in name_text and "oof" in name_text and result["contains_10_class_proba"]
-            if result["is_final_v53q1"] and result["contains_11001_train_idx"] and result["probability_normalization"] == "pass":
+            result["is_oof_evaluation_anchor"] = "eval_anchor" in name_text and "oof" in name_text and result["contains_10_class_proba"]
+            if result["is_oof_evaluation_anchor"] and result["contains_11001_train_idx"] and result["probability_normalization"] == "pass":
                 result["status"] = "verified_existing"
                 result["reason"] = "verified_existing_candidate"
             else:
                 result["status"] = "conflicting_candidates"
-                result["reason"] = "candidate_does_not_satisfy_final_v53q1_oof_contract"
+                result["reason"] = "candidate_does_not_satisfy_oof_evaluation_anchor_contract"
         except Exception as exc:
             result["status"] = "conflicting_candidates"
             result["reason"] = f"verification_error:{type(exc).__name__}"
@@ -293,12 +303,12 @@ class M7BReadinessRepair:
     def _anchor_decision(self, inventory: dict[str, Any], fold: dict[str, Any], oof: dict[str, Any]) -> dict[str, Any]:
         missing = []
         if fold["status"] != "verified_existing":
-            missing.append("canonical_fold_assignment")
+            missing.append("verified_canonical_evaluation_fold")
         if oof["status"] != "verified_existing":
-            missing.extend(["final_v53q1_oof_identity_or_manifest", "final_v53q1_oof_proba"])
+            missing.append("verified_oof_evaluation_anchor")
         champion_ok = inventory.get("champion_csv", {}).get("exists") is True
         if not champion_ok:
-            missing.append("champion_csv")
+            missing.append("online_deployment_anchor")
         status = "verified_existing" if not missing else "unavailable"
         if missing and champion_ok:
             status = "rebuild_required"
@@ -307,35 +317,31 @@ class M7BReadinessRepair:
             "status": status,
             "missing_inputs": sorted(set(missing)),
             "verified_inputs": {
-                "champion_csv": champion_ok,
-                "canonical_fold_assignment": fold["status"] == "verified_existing",
-                "final_v53q1_oof_proba": oof["status"] == "verified_existing",
+                "online_deployment_anchor": champion_ok,
+                "canonical_evaluation_fold": fold["status"] == "verified_existing",
+                "oof_evaluation_anchor": oof["status"] == "verified_existing",
             },
             "may_clear_m7a_missing_input": status in {"verified_existing", "materialized_from_verified_components"},
             "rebuild_specification": {
                 "required": bool(missing),
                 "allowed_in_m7b": False,
-                "reason": "M7B readiness may specify but must not rebuild Fold or final OOF",
+                "reason": "M7B readiness may specify but must not train or rebuild the evaluation anchor without approval",
             },
+            "historical_v53q1_oof_status": "not_materialized",
         }
 
     def _scientific_queue(self, problem_map: dict[str, Any], data_profile: dict[str, Any], anchor: dict[str, Any]) -> dict[str, Any]:
         total = _safe_float(data_profile.get("dataset", {}).get("num_nodes"), 1.0) or 1.0
         items = []
+        infrastructure_blockers = []
         if anchor["status"] != "verified_existing":
-            items.append(self._queue_item("anchor_recovery::missing_full_anchor_inputs", "readiness", 1.0, {
-                "evidence_strength": 1.0,
-                "observed_error_headroom": 0.5,
-                "macro_importance": 0.8,
-                "mechanism_specificity": 1.0,
-                "new_information_gap": 1.0,
-                "local_failure_explanation": 0.7,
-                "method_researchability": 1.0,
-                "expected_information_gain": 1.0,
-                "implementation_feasibility": 1.0,
-                "scope_size": 0.1,
-                "overlap_penalty": 0.0,
-            }, anchor["missing_inputs"], "Anchor readiness blocks executable full-anchor evaluation."))
+            infrastructure_blockers.append({
+                "blocker_id": "anchor_recovery::missing_full_anchor_inputs",
+                "scope": "evaluation_infrastructure",
+                "status": "waiting_for_anchor_rebuild_approval" if anchor["status"] == "rebuild_required" else "waiting_for_input",
+                "missing_inputs": anchor["missing_inputs"],
+                "rationale": "Verified offline evaluation anchor is required before executable OOF comparison, but this is infrastructure, not a scientific model problem.",
+            })
         for problem in _as_list(problem_map.get("problems")):
             node_count = _safe_float(problem.get("node_count"), 0.0)
             headroom_unknown = problem.get("error_count") is None and problem.get("error_rate") is None
@@ -357,7 +363,13 @@ class M7BReadinessRepair:
         items.sort(key=lambda item: (-item["scientific_priority_score"], item["problem_id"]))
         for rank, item in enumerate(items, 1):
             item["rank"] = rank
-        return {"queue_version": M7B_VERSION, "ranking_policy": "scientific_priority_not_coverage_only", "items": items, "view_hash": stable_hash(items)}
+        return {
+            "queue_version": M7B_VERSION,
+            "ranking_policy": "scientific_priority_not_coverage_only",
+            "items": items,
+            "infrastructure_blockers": infrastructure_blockers,
+            "view_hash": stable_hash({"items": items, "infrastructure_blockers": infrastructure_blockers}),
+        }
 
     def _queue_item(self, problem_id: str, scope: str, score: float, components: dict[str, float], missing: list[str], rationale: str) -> dict[str, Any]:
         return {
@@ -389,9 +401,9 @@ class M7BReadinessRepair:
         selected = items[0] if items else {}
         return {
             "selection_version": M7B_VERSION,
-            "status": "selected",
+            "status": "selected" if selected else "no_scientific_problem_available",
             "selected_problem": selected,
-            "selection_reason": "anchor readiness blocker takes priority before executable experiment" if anchor["status"] != "verified_existing" else "highest scientific priority score",
+            "selection_reason": "highest scientific priority score; infrastructure blockers are tracked separately from scientific queue",
         }
 
     def _research_bundle(self, run: Path | None) -> dict[str, Any]:
@@ -412,20 +424,35 @@ class M7BReadinessRepair:
         missing = list(anchor["missing_inputs"])
         return {
             "proposal_id": stable_hash({"m7b": selected, "anchor": anchor["status"]}),
-            "target_problem_ids": [selected.get("selected_problem", {}).get("problem_id", "anchor_recovery::missing_full_anchor_inputs")],
-            "target_scope": selected.get("selected_problem", {}).get("scope", "readiness"),
-            "core_hypothesis": "Recover verified full-anchor inputs before any executable model experiment.",
-            "expected_new_information": "Anchor identity, canonical Fold, and final v53Q-1 OOF readiness status.",
+            "target_problem_ids": [selected.get("selected_problem", {}).get("problem_id", "no_scientific_problem_selected")],
+            "target_scope": selected.get("selected_problem", {}).get("scope", "dataset_problem"),
+            "core_hypothesis": "Use a verified offline evaluation anchor and canonical evaluation fold before any executable OOF model comparison.",
+            "expected_new_information": "Whether the candidate OOF improves over the offline evaluation parent under the same verified evaluation protocol.",
             "selected_method_components": [],
             "method_card_count": method_count,
             "adapter_or_tool": "A1_OOF_CANDIDATE_EVALUATOR" if anchor["status"] == "verified_existing" else "",
-            "required_inputs": ["canonical_fold_assignment", "final_v53q1_oof_proba", "final_v53q1_oof_identity_or_manifest"],
+            "required_inputs": [
+                "verified_oof_evaluation_anchor",
+                "verified_canonical_evaluation_fold",
+                "candidate_oof",
+                "same_evaluation_protocol",
+                "registered_adapter",
+                "complete_oof_plan",
+            ],
             "missing_inputs": missing,
-            "minimal_experiment": {"mode": "full_anchor_evaluation_preview" if not missing else "readiness_repair_diagnostic"},
-            "oof_evaluation_plan": {"fold_aware": True, "requires_final_v53q1_oof": True, "test_truth_used": False},
+            "minimal_experiment": {"mode": "offline_oof_evaluation_preview" if not missing else "evaluation_anchor_rebuild_diagnostic"},
+            "oof_evaluation_plan": {
+                "fold_aware": True,
+                "requires_oof_evaluation_anchor": True,
+                "requires_final_v53q1_oof": False,
+                "same_evaluation_protocol": True,
+                "test_truth_used": False,
+                "evaluation_parent": "A1_EVAL_ANCHOR_V1",
+                "deployment_parent": "A1_V53Q1_TRANSITION_STABLE_EDGE_H2",
+            },
             "bucket_metrics": ["overall", "macro", "bucket", "bucket_class"],
-            "success_conditions": ["verified canonical Fold", "verified final v53Q-1 OOF proba", "M5 admits registered read-only evaluator"],
-            "failure_conditions": ["conflicting anchor candidates", "missing final OOF identity"],
+            "success_conditions": ["verified canonical evaluation Fold", "verified offline OOF evaluation anchor", "M5 admits registered read-only evaluator"],
+            "failure_conditions": ["conflicting evaluation-anchor candidates", "missing evaluation anchor identity or OOF manifest"],
             "stop_conditions": ["requires rebuilding Fold", "requires generating OOF", "requires test truth", "requires training"],
             "round_cost": 0,
             "risk_level": "low",
@@ -436,7 +463,7 @@ class M7BReadinessRepair:
         verdict = "approve"
         if anchor["status"] != "verified_existing":
             verdict = "revise"
-            issues.append("full_anchor_inputs_unavailable")
+            issues.append("oof_evaluation_anchor_unavailable")
         if not _as_list(research.get("method_cards_validated", {}).get("items")):
             issues.append("method_research_unavailable")
         return {
@@ -454,9 +481,9 @@ class M7BReadinessRepair:
         revised = dict(proposal)
         if critic["verdict"] == "revise" or anchor["status"] != "verified_existing":
             revised["adapter_or_tool"] = ""
-            revised["minimal_experiment"] = {"mode": "readiness_repair_diagnostic"}
+            revised["minimal_experiment"] = {"mode": "evaluation_anchor_rebuild_diagnostic"}
             revised["round_cost"] = 0
-            revised["revision_applied"] = "diagnostic_only_until_anchor_verified"
+            revised["revision_applied"] = "diagnostic_only_until_oof_evaluation_anchor_verified"
         else:
             revised["revision_applied"] = "none"
         return revised
@@ -472,7 +499,14 @@ class M7BReadinessRepair:
         budget = state.get("budget", {})
         if int(budget.get("rounds_used", 0)) >= int(budget.get("max_rounds", 0)):
             reasons.append("round_budget_exhausted")
-        status = "ready_for_human_approval" if not reasons and tool_name else ("diagnostic_only" if not reasons else "waiting_for_input")
+        if not reasons and tool_name:
+            status = "ready_for_human_approval"
+        elif not reasons:
+            status = "diagnostic_only"
+        elif anchor["status"] == "rebuild_required":
+            status = "waiting_for_anchor_rebuild_approval"
+        else:
+            status = "waiting_for_input"
         return {
             "admission_version": M7B_VERSION,
             "status": status,
@@ -506,10 +540,14 @@ class M7BReadinessRepair:
 
     def _evaluation_preview(self, proposal: dict[str, Any], anchor: dict[str, Any]) -> dict[str, Any]:
         ready = anchor["status"] == "verified_existing"
+        wait_status = "waiting_for_anchor_rebuild_approval" if anchor["status"] == "rebuild_required" else "waiting_for_input"
         return {
             "preview_version": M7B_VERSION,
-            "full_anchor_evaluator_status": "ready" if ready else "waiting_for_input",
-            "parent_identity": "final_v53Q-1" if ready else "unverified_until_anchor_recovered",
+            "full_anchor_evaluator_status": "ready" if ready else wait_status,
+            "evaluation_anchor_evaluator_status": "ready" if ready else wait_status,
+            "evaluation_parent": "A1_EVAL_ANCHOR_V1" if ready else "unverified_until_evaluation_anchor_rebuilt",
+            "deployment_parent": "A1_V53Q1_TRANSITION_STABLE_EDGE_H2",
+            "parent_identity": "A1_EVAL_ANCHOR_V1" if ready else "unverified_until_evaluation_anchor_rebuilt",
             "fold_plan": "canonical_fold_verified" if ready else "missing",
             "overall_metrics": ["accuracy", "macro_f1"] if ready else [],
             "macro_metrics": ["macro_f1"] if ready else [],
@@ -540,6 +578,8 @@ class M7BReadinessRepair:
             return "ready_for_human_approval"
         if admission["status"] == "diagnostic_only":
             return "diagnostic_only"
+        if admission["status"] == "waiting_for_anchor_rebuild_approval":
+            return "waiting_for_anchor_rebuild_approval"
         if admission["status"] == "waiting_for_input":
             return "waiting_for_input"
         return "blocked" if anchor["status"] == "conflicting_candidates" else "waiting_for_input"

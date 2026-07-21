@@ -42,6 +42,7 @@ artifacts/live_method_research/
 artifacts/method_research_runs/
 artifacts/method_research/
 artifacts/research_memory/
+artifacts/evaluation_anchor/
 artifacts/decision_core_runs/
 artifacts/m7_dry_runs/
 artifacts/m7b_readiness/

@@ -94,22 +94,36 @@ def _method_research(tmp_path: Path) -> Path:
     return root
 
 
-def _paths_config(tmp_path: Path, *, verified: bool) -> Path:
+def _project_root(tmp_path: Path) -> Path:
+    root = tmp_path / "project"
+    (root / "artifacts" / "evaluation_anchor").mkdir(parents=True, exist_ok=True)
+    return root
+
+
+def _paths_config(tmp_path: Path, *, verified: bool, project_root: Path | None = None) -> Path:
     fold = tmp_path / "fold.csv"
-    oof = tmp_path / "v53q1_final_oof.npz"
     if verified:
         with fold.open("w", encoding="utf-8", newline="") as handle:
             handle.write("train_idx,fold\n")
             for idx in range(11001):
                 handle.write(f"{idx},{idx % 5}\n")
+        assert project_root is not None
+        eval_dir = project_root / "artifacts" / "evaluation_anchor"
+        eval_dir.mkdir(parents=True, exist_ok=True)
         proba = np.full((11001, 10), 0.1, dtype=np.float64)
+        oof = eval_dir / "A1_EVAL_ANCHOR_V1_oof.npz"
         np.savez(oof, proba=proba)
+        manifest = {
+            "artifact": "artifacts/evaluation_anchor/A1_EVAL_ANCHOR_V1_oof.npz",
+            "evaluation_anchor_identity": "A1_EVAL_ANCHOR_V1",
+            "historical_v53q1_oof_status": "not_materialized",
+        }
+        (eval_dir / "A1_EVAL_ANCHOR_V1_manifest.json").write_text(json_dumps(manifest), encoding="utf-8")
     cfg = tmp_path / "paths.local.yaml"
     cfg.write_text(
         "\n".join([
             "a1:",
             f"  fold_file: \"{fold}\"",
-            f"  anchor_oof_npz: \"{oof}\"",
             f"  anchor_csv: \"{CHAMPION}\"",
         ]),
         encoding="utf-8",
@@ -117,8 +131,9 @@ def _paths_config(tmp_path: Path, *, verified: bool) -> Path:
     return cfg
 
 
-def test_m7b_missing_anchor_waiting_for_input_and_scientific_queue(tmp_path: Path) -> None:
-    result = M7BReadinessRepair(project_root=PROJECT_ROOT, paths_config=str(_paths_config(tmp_path, verified=False))).run(
+def test_m7b_missing_evaluation_anchor_waits_for_rebuild_approval_and_scientific_queue_stays_scientific(tmp_path: Path) -> None:
+    project_root = _project_root(tmp_path)
+    result = M7BReadinessRepair(project_root=project_root, paths_config=str(_paths_config(tmp_path, verified=False, project_root=project_root))).run(
         problem_map=_problem_map(tmp_path),
         data_profile=_data_profile(tmp_path),
         method_research_run=_method_research(tmp_path),
@@ -126,21 +141,28 @@ def test_m7b_missing_anchor_waiting_for_input_and_scientific_queue(tmp_path: Pat
         tool_registry=_registry(tmp_path),
         out_root=tmp_path / "out",
     )
-    assert result["status"] == "waiting_for_input"
+    assert result["status"] == "waiting_for_anchor_rebuild_approval"
     run_dir = tmp_path / "out" / result["run_id"]
     anchor = json.loads((run_dir / "anchor_recovery_decision.json").read_text(encoding="utf-8"))
     queue = json.loads((run_dir / "scientific_research_queue.json").read_text(encoding="utf-8"))
     adapter = json.loads((run_dir / "adapter_execution_preview.json").read_text(encoding="utf-8"))
+    proposal = json.loads((run_dir / "m6b_proposals.json").read_text(encoding="utf-8"))["primary_proposal"]
     assert anchor["status"] == "rebuild_required"
-    assert "canonical_fold_assignment" in anchor["missing_inputs"]
-    assert queue["items"][0]["problem_id"] == "anchor_recovery::missing_full_anchor_inputs"
+    assert anchor["historical_v53q1_oof_status"] == "not_materialized"
+    assert "verified_oof_evaluation_anchor" in anchor["missing_inputs"]
+    assert queue["infrastructure_blockers"][0]["blocker_id"] == "anchor_recovery::missing_full_anchor_inputs"
+    assert all(not item["problem_id"].startswith("anchor_recovery::") for item in queue["items"])
     assert queue["ranking_policy"] == "scientific_priority_not_coverage_only"
+    assert "final_v53q1_oof_proba" not in proposal["required_inputs"]
+    assert "verified_oof_evaluation_anchor" in proposal["required_inputs"]
+    assert proposal["oof_evaluation_plan"]["requires_final_v53q1_oof"] is False
     assert adapter["execution_allowed"] is False
     assert adapter["prediction_generated"] is False
 
 
 def test_m7b_verified_anchor_ready_for_human_approval(tmp_path: Path) -> None:
-    result = M7BReadinessRepair(project_root=PROJECT_ROOT, paths_config=str(_paths_config(tmp_path, verified=True))).run(
+    project_root = _project_root(tmp_path)
+    result = M7BReadinessRepair(project_root=project_root, paths_config=str(_paths_config(tmp_path, verified=True, project_root=project_root))).run(
         problem_map=_problem_map(tmp_path),
         data_profile=_data_profile(tmp_path),
         method_research_run=_method_research(tmp_path),
@@ -158,6 +180,8 @@ def test_m7b_verified_anchor_ready_for_human_approval(tmp_path: Path) -> None:
     assert oof["status"] == "verified_existing"
     assert admission["status"] == "ready_for_human_approval"
     assert evaluation["full_anchor_evaluator_status"] == "ready"
+    assert evaluation["evaluation_parent"] == "A1_EVAL_ANCHOR_V1"
+    assert evaluation["deployment_parent"] == "A1_V53Q1_TRANSITION_STABLE_EDGE_H2"
     assert evaluation["evaluation_executed"] is False
 
 
@@ -167,8 +191,8 @@ def test_m7b_frozen_hashes_rounds_and_cli_doctor(tmp_path: Path) -> None:
     missing = subprocess.run(
         [
             sys.executable, "-m", "afac_agent.main", "m7b-readiness",
-            "--project_root", str(PROJECT_ROOT),
-            "--paths_config", str(_paths_config(tmp_path, verified=False)),
+            "--project_root", str(_project_root(tmp_path)),
+            "--paths_config", str(_paths_config(tmp_path, verified=False, project_root=_project_root(tmp_path))),
             "--problem-map", str(_problem_map(tmp_path)),
             "--data-profile", str(_data_profile(tmp_path)),
             "--method-research-run", str(_method_research(tmp_path)),
@@ -181,8 +205,8 @@ def test_m7b_frozen_hashes_rounds_and_cli_doctor(tmp_path: Path) -> None:
         capture_output=True,
         check=False,
     )
-    assert missing.returncode == 3
-    assert json.loads(missing.stdout)["status"] == "waiting_for_input"
+    assert missing.returncode == 0
+    assert json.loads(missing.stdout)["status"] == "waiting_for_anchor_rebuild_approval"
     assert {_p: _sha(_p) for _p in [CHAMPION, STATE, HISTORY]} == before
     assert json.loads(STATE.read_text(encoding="utf-8"))["budget"]["rounds_used"] == rounds_before
     doctor = subprocess.run([sys.executable, "-m", "afac_agent.doctor", "--project_root", str(PROJECT_ROOT), "--json"], cwd=PROJECT_ROOT, text=True, capture_output=True, check=False)

@@ -19,6 +19,7 @@ from .llm.providers import (
     redact_secret,
 )
 from .llm.shadow_planner import LLMShadowPlanner
+from .evaluation_anchor_bootstrap import EvaluationAnchorBootstrap
 from .m7_dry_run import M7DryRunOrchestrator
 from .m7b_readiness import M7BReadinessRepair
 from .orchestrator import AgentOrchestrator
@@ -505,7 +506,36 @@ def _m7b_readiness(argv: list[str]) -> None:
         force_rebuild=args.force_rebuild,
     )
     print(json.dumps(result, ensure_ascii=False, indent=2))
-    if result["status"] in {"ready_for_human_approval", "diagnostic_only", "blocked"}:
+    if result["status"] in {"ready_for_human_approval", "diagnostic_only", "waiting_for_anchor_rebuild_approval", "blocked"}:
+        raise SystemExit(0)
+    if result["status"] == "waiting_for_input":
+        raise SystemExit(3)
+    raise SystemExit(2)
+
+
+def _evaluation_anchor_bootstrap(argv: list[str]) -> None:
+    parser = argparse.ArgumentParser(prog="afac_agent.main evaluation-anchor-bootstrap")
+    parser.add_argument("--project_root", default=".")
+    parser.add_argument("--paths_config", default="")
+    parser.add_argument("--a1-npz", required=True)
+    parser.add_argument("--fold-candidate", required=True)
+    parser.add_argument("--v43c-oof", required=True)
+    parser.add_argument("--v46a-oof", required=True)
+    parser.add_argument("--out-root", default="artifacts/evaluation_anchor")
+    parser.add_argument("--force-rebuild", action="store_true")
+    args = parser.parse_args(argv)
+    resolver = PathResolver(args.project_root, args.paths_config or None)
+    root = resolver.project_root
+    result = EvaluationAnchorBootstrap(project_root=root, paths_config=args.paths_config).run(
+        a1_npz=resolver.resolve(args.a1_npz) or args.a1_npz,
+        fold_candidate=resolver.resolve(args.fold_candidate) or args.fold_candidate,
+        v43c_oof=resolver.resolve(args.v43c_oof) or args.v43c_oof,
+        v46a_oof=resolver.resolve(args.v46a_oof) or args.v46a_oof,
+        out_root=resolver.resolve(args.out_root) or root / args.out_root,
+        force_rebuild=args.force_rebuild,
+    )
+    print(json.dumps(result, ensure_ascii=False, indent=2))
+    if result["status"] in {"materialized_from_verified_components", "rebuild_required"}:
         raise SystemExit(0)
     if result["status"] == "waiting_for_input":
         raise SystemExit(3)
@@ -607,6 +637,9 @@ def main() -> None:
         return
     if len(sys.argv) > 1 and sys.argv[1] == "m7b-readiness":
         _m7b_readiness(sys.argv[2:])
+        return
+    if len(sys.argv) > 1 and sys.argv[1] == "evaluation-anchor-bootstrap":
+        _evaluation_anchor_bootstrap(sys.argv[2:])
         return
 
     parser = argparse.ArgumentParser()
