@@ -1,0 +1,19 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "additionalProperties": true,
+  "required": [
+    "problem_record_version",
+    "problem_id",
+    "task",
+    "scope_level",
+    "scope_refs",
+    "problem_type",
+    "description",
+    "evidence_level",
+    "confidence",
+    "current_status",
+    "current_claim_hash"
+  ],
+  "title": "AFAC Research Problem Record",
+  "type": "object"
+}

@@ -1,0 +1,27 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "additionalProperties": true,
+  "properties": {
+    "conflict_status": {
+      "enum": [
+        "exact_duplicate",
+        "high_overlap",
+        "partial_overlap",
+        "new_direction",
+        "insufficient_information"
+      ]
+    }
+  },
+  "required": [
+    "conflict_id",
+    "conflict_status",
+    "matched_method_ids",
+    "matched_attempt_ids",
+    "shared_components",
+    "different_components",
+    "conflict_reasons",
+    "reopen_requirements"
+  ],
+  "title": "AFAC Local Method Conflict",
+  "type": "object"
+}

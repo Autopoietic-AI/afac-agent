@@ -1,0 +1,64 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "additionalProperties": true,
+  "properties": {
+    "event_type": {
+      "enum": [
+        "branch_closed",
+        "branch_deferred",
+        "branch_reopened",
+        "claim_retracted",
+        "claim_superseded",
+        "evidence_added",
+        "evidence_contradicted",
+        "experiment_completed",
+        "experiment_registered",
+        "failure_recorded",
+        "feedback_ingested",
+        "hypothesis_created",
+        "hypothesis_rejected",
+        "hypothesis_supported",
+        "method_applied",
+        "method_considered",
+        "method_failed",
+        "method_inconclusive",
+        "method_succeeded",
+        "priority_decreased",
+        "priority_increased",
+        "problem_deferred",
+        "problem_observed",
+        "problem_resolved",
+        "problem_updated",
+        "scope_reclassified",
+        "success_recorded",
+        "taxonomy_registered",
+        "view_superseded"
+      ]
+    },
+    "scope_level": {
+      "enum": [
+        "global",
+        "bucket",
+        "bucket_class",
+        "cross_bucket_class",
+        "error_mechanism"
+      ]
+    }
+  },
+  "required": [
+    "event_version",
+    "event_id",
+    "event_type",
+    "task",
+    "scope_level",
+    "scope_refs",
+    "observations",
+    "outcome_status",
+    "evidence_level",
+    "confidence",
+    "created_at",
+    "input_hashes"
+  ],
+  "title": "AFAC Research Event",
+  "type": "object"
+}

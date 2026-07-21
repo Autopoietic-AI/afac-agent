@@ -1,0 +1,16 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "properties": {
+    "bucket_axis_registry": {
+      "type": "array"
+    }
+  },
+  "required": [
+    "registry_version",
+    "bucket_axis_registry",
+    "axis_value_counts",
+    "coverage_hash"
+  ],
+  "title": "AFAC Bucket Axis Registry",
+  "type": "object"
+}

@@ -1,0 +1,21 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "additionalProperties": true,
+  "required": [
+    "brief_version",
+    "brief_id",
+    "brief_type",
+    "target_problem_ids",
+    "scope_level",
+    "scope_refs",
+    "primary_research_question",
+    "current_evidence",
+    "evidence_gaps",
+    "required_new_information",
+    "success_conditions",
+    "failure_conditions",
+    "stop_conditions"
+  ],
+  "title": "AFAC Research Brief",
+  "type": "object"
+}

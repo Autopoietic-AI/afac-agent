@@ -1,0 +1,12 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "required": [
+    "audit_version",
+    "node_count",
+    "axis_within_audit",
+    "cross_axis_intersections",
+    "coverage_hash"
+  ],
+  "title": "AFAC Bucket Overlap Audit",
+  "type": "object"
+}

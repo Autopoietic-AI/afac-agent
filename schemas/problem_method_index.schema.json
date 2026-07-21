@@ -1,0 +1,12 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "additionalProperties": true,
+  "required": [
+    "index_version",
+    "methods_by_problem",
+    "failures_by_method",
+    "attempt_count"
+  ],
+  "title": "AFAC Problem Method Index",
+  "type": "object"
+}

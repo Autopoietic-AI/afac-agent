@@ -140,3 +140,10 @@ Agent must audit information gain and compliance before model training.
   `config/paths.local.yaml`; no machine-specific absolute path is hard-coded.
 - No champion CSV, online score, OOF anchor, Fold definition, Gate definition,
   closed branch, Project State, or confirmed historical record was changed.
+
+## M6R-A v2 status
+
+M6R-A v2 introduces deterministic hierarchical research memory as an implementation-stage artifact, not a committed milestone yet. It preserves the frozen v53Q-1 Champion, 0.7800 online score, current OOF definition, Fold/Gate definitions, confirmed history, and closed branches. Runtime memory and method-research outputs remain ignored until explicitly promoted by a later controlled step.
+
+Safety boundary: no LLM/API calls, no network research, no Adapter execution, no training, no prediction/submission generation, no Project State or History mutation, and `rounds_used` remains 0.
+M6R-A v2.1 correction records bucket taxonomy migration through append-only events (`taxonomy_registered`, `scope_reclassified`, `view_superseded`) and keeps runtime views generated from the event log. This correction does not alter Champion, State, History, Provider, Shadow Planner, predictions, folds, or gates.

@@ -23,6 +23,7 @@ from .orchestrator import AgentOrchestrator
 from .paths import PathResolver
 from .planning.deterministic_planner import DeterministicPlanner
 from .registry import ToolRegistry
+from .research import ResearchBriefBuilder, ResearchMemoryBuilder
 
 
 def _run_adapter(argv: list[str]) -> None:
@@ -256,6 +257,92 @@ def _shadow_plan(argv: list[str]) -> None:
     raise SystemExit(2)
 
 
+def _research_memory_build(argv: list[str]) -> None:
+    parser = argparse.ArgumentParser(prog="afac_agent.main research-memory-build")
+    parser.add_argument("--project_root", default=".")
+    parser.add_argument("--problem-map", required=True)
+    parser.add_argument("--feedback", action="append", default=[])
+    parser.add_argument("--deterministic-plan", required=True)
+    parser.add_argument("--shadow-comparison", required=True)
+    parser.add_argument("--project-state", default="config/project_state.json")
+    parser.add_argument("--history", default="history/confirmed_experiments_a1.json")
+    parser.add_argument("--research-policy", default="config/research_policy.json")
+    parser.add_argument("--out-root", default="artifacts/research_memory")
+    parser.add_argument("--dry-run", action="store_true")
+    parser.add_argument("--force-rebuild", action="store_true")
+    args = parser.parse_args(argv)
+    resolver = PathResolver(args.project_root)
+    root = resolver.project_root
+    result = ResearchMemoryBuilder(project_root=root).build(
+        problem_map_path=resolver.resolve(args.problem_map) or root / args.problem_map,
+        feedback_paths=[resolver.resolve(path) or root / path for path in args.feedback],
+        deterministic_plan_path=resolver.resolve(args.deterministic_plan) or root / args.deterministic_plan,
+        shadow_comparison_path=resolver.resolve(args.shadow_comparison) or root / args.shadow_comparison,
+        project_state_path=resolver.resolve(args.project_state) or root / args.project_state,
+        history_path=resolver.resolve(args.history) or root / args.history,
+        research_policy_path=resolver.resolve(args.research_policy) or root / args.research_policy,
+        out_root=resolver.resolve(args.out_root) or root / args.out_root,
+        dry_run=args.dry_run,
+        force_rebuild=args.force_rebuild,
+    )
+    print(json.dumps(result, ensure_ascii=False, indent=2))
+    if result["status"] in {"completed", "duplicate", "dry_run"}:
+        raise SystemExit(0)
+    if result["status"] == "waiting_for_input":
+        raise SystemExit(3)
+    raise SystemExit(2)
+
+
+def _research_memory_update(argv: list[str]) -> None:
+    parser = argparse.ArgumentParser(prog="afac_agent.main research-memory-update")
+    parser.add_argument("--project_root", default=".")
+    parser.add_argument("--memory-root", required=True)
+    parser.add_argument("--feedback", required=True)
+    parser.add_argument("--experiment-manifest", required=True)
+    parser.add_argument("--research-policy", default="config/research_policy.json")
+    args = parser.parse_args(argv)
+    resolver = PathResolver(args.project_root)
+    root = resolver.project_root
+    result = ResearchMemoryBuilder(project_root=root).update(
+        memory_root=resolver.resolve(args.memory_root) or root / args.memory_root,
+        feedback_path=resolver.resolve(args.feedback) or root / args.feedback,
+        experiment_manifest_path=resolver.resolve(args.experiment_manifest) or root / args.experiment_manifest,
+        research_policy_path=resolver.resolve(args.research_policy) or root / args.research_policy,
+    )
+    print(json.dumps(result, ensure_ascii=False, indent=2))
+    if result["status"] in {"completed", "duplicate"}:
+        raise SystemExit(0)
+    if result["status"] == "waiting_for_input":
+        raise SystemExit(3)
+    raise SystemExit(2)
+
+
+def _research_brief(argv: list[str]) -> None:
+    parser = argparse.ArgumentParser(prog="afac_agent.main research-brief")
+    parser.add_argument("--project_root", default=".")
+    parser.add_argument("--memory-root", required=True)
+    parser.add_argument("--queue-item", required=True)
+    parser.add_argument("--out-root", default="artifacts/method_research")
+    parser.add_argument("--dry-run", action="store_true")
+    parser.add_argument("--force-rebuild", action="store_true")
+    args = parser.parse_args(argv)
+    resolver = PathResolver(args.project_root)
+    root = resolver.project_root
+    result = ResearchBriefBuilder(project_root=root).build(
+        memory_root=resolver.resolve(args.memory_root) or root / args.memory_root,
+        queue_item_id=args.queue_item,
+        out_root=resolver.resolve(args.out_root) or root / args.out_root,
+        dry_run=args.dry_run,
+        force_rebuild=args.force_rebuild,
+    )
+    print(json.dumps(result, ensure_ascii=False, indent=2))
+    if result["status"] in {"completed", "duplicate", "dry_run", "blocked"}:
+        raise SystemExit(0)
+    if result["status"] == "waiting_for_input":
+        raise SystemExit(3)
+    raise SystemExit(2)
+
+
 def _llm_provider_check(argv: list[str]) -> None:
     parser = argparse.ArgumentParser(prog="afac_agent.main llm-provider-check")
     parser.add_argument("--project_root", default=".")
@@ -327,6 +414,15 @@ def main() -> None:
         return
     if len(sys.argv) > 1 and sys.argv[1] == "llm-provider-check":
         _llm_provider_check(sys.argv[2:])
+        return
+    if len(sys.argv) > 1 and sys.argv[1] == "research-memory-build":
+        _research_memory_build(sys.argv[2:])
+        return
+    if len(sys.argv) > 1 and sys.argv[1] == "research-memory-update":
+        _research_memory_update(sys.argv[2:])
+        return
+    if len(sys.argv) > 1 and sys.argv[1] == "research-brief":
+        _research_brief(sys.argv[2:])
         return
 
     parser = argparse.ArgumentParser()

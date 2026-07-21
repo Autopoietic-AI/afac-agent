@@ -1,0 +1,11 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "additionalProperties": true,
+  "required": [
+    "queue_version",
+    "policy_limits",
+    "items"
+  ],
+  "title": "AFAC Research Queue",
+  "type": "object"
+}

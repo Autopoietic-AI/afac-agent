@@ -1,0 +1,13 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "additionalProperties": true,
+  "required": [
+    "method_id",
+    "method_family",
+    "information_source_type",
+    "new_information_status",
+    "status"
+  ],
+  "title": "AFAC Method Card",
+  "type": "object"
+}

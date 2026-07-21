@@ -1,0 +1,19 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "additionalProperties": true,
+  "required": [
+    "failure_id",
+    "attempt_id",
+    "experiment_id",
+    "scope_level",
+    "scope_refs",
+    "failure_type",
+    "failure_summary",
+    "root_cause_status",
+    "reproducibility",
+    "should_close_branch",
+    "reopen_conditions"
+  ],
+  "title": "AFAC Failure Record",
+  "type": "object"
+}

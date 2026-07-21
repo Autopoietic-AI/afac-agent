@@ -1,0 +1,11 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "additionalProperties": true,
+  "required": [
+    "source_id",
+    "source_type",
+    "verification_status"
+  ],
+  "title": "AFAC Research Source",
+  "type": "object"
+}

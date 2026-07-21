@@ -1,0 +1,21 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "additionalProperties": true,
+  "required": [
+    "analysis_levels",
+    "bucket_taxonomy",
+    "mechanism_taxonomy",
+    "global_claim_policy",
+    "cross_bucket_class_policy",
+    "priority_weights",
+    "max_global_deep_research",
+    "max_bucket_deep_research",
+    "max_bucket_class_deep_research",
+    "allow_internal_model_knowledge_as_source",
+    "allow_unverified_method_promotion",
+    "allow_automatic_branch_reopen",
+    "allow_automatic_experiment_execution"
+  ],
+  "title": "AFAC Research Policy",
+  "type": "object"
+}

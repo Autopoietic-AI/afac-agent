@@ -1,0 +1,20 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "additionalProperties": true,
+  "required": [
+    "attempt_version",
+    "attempt_id",
+    "experiment_id",
+    "method_id",
+    "method_family",
+    "target_scope_level",
+    "target_scope_refs",
+    "information_source_type",
+    "new_information_status",
+    "outcome",
+    "verdict",
+    "attempt_hash"
+  ],
+  "title": "AFAC Method Attempt",
+  "type": "object"
+}

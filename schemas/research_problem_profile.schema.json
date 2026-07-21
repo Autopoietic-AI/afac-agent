@@ -1,0 +1,13 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "additionalProperties": true,
+  "required": [
+    "profile_version",
+    "memory_id",
+    "scope_levels",
+    "execution_blockers",
+    "problem_counts"
+  ],
+  "title": "AFAC Research Problem Profile",
+  "type": "object"
+}

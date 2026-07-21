@@ -188,3 +188,12 @@ and that credentials should come from environment variables.  It does not reuse
 baseline behavior where an LLM directly edits model code, chooses final
 CONTINUE/PIVOT/STOP decisions, executes unregistered commands, generates
 submissions, or treats weak/empty metrics as proof of improvement.
+
+## M6R-A v2 Research Memory Foundation
+
+M6R-A adds a deterministic, read-only research memory layer for hierarchical scientific diagnosis. It separates execution blockers, scientific problems, and evidence gaps, then materializes views from one append-only event log: `research_events.jsonl`. Runtime outputs are written under ignored directories: `artifacts/research_memory/` and `artifacts/method_research/`.
+
+The supported analysis path is Global -> Bucket -> Bucket x Class -> Error Mechanism, with a reverse Cross-Bucket Class audit. Research Queue priority and Top-K brief generation are controlled by `config/research_policy.json`; thresholds and Top-K limits are not hidden in code. This stage does not call LLMs, APIs, adapters, training, prediction, or submission paths. It does not mutate Champion, Project State, or confirmed History.
+
+Framework inspiration record: M6R-A borrows ideas from public baseline-style diagnosis, experiment-memory practices, AIDE-style branch/parent/duplicate concepts, AI-Scientist-style hypothesis/evidence/critique loops, and event-sourcing append-only/materialized-view design. AFAC implements its own Global/Bucket/Bucket-Class decomposition, Cross-Bucket Class audit, mechanism ledger, new-information-source checks, strict OOF safety, frozen Champion boundary, and hierarchical Research Queue. It does not integrate AIDE, AI Scientist, or other framework code, and does not allow LLMs to directly modify code, decide experiments, or execute experiments.
+M6R-A v2.1 correction: bucket scopes are now represented as multi-axis signatures. `connectivity_visibility` (`graph_visible`, `isolated`) is separate from `train_label_reachability` (`one_hop_available`, `exact2_only`, `exact3_4_only`, `no_visible_train_within_4_hops`) and `degree_band`; `class_id` remains an independent analysis axis. Research Queue entries expose component-level priority scores and overlap penalties from `config/research_policy.json`. LocalConflictChecker performs deterministic multi-field conflict checks instead of comparing method names only.

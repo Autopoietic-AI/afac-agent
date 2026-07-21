@@ -1,0 +1,136 @@
+{
+  "affected_count_cap_ratio": 0.25,
+  "affected_count_transform": "capped_ratio",
+  "allow_automatic_branch_reopen": false,
+  "allow_automatic_experiment_execution": false,
+  "allow_internal_model_knowledge_as_source": false,
+  "allow_unverified_method_promotion": false,
+  "analysis_levels": [
+    "global",
+    "bucket",
+    "bucket_class",
+    "cross_bucket_class",
+    "error_mechanism"
+  ],
+  "bucket_axis_policy": {
+    "class_id_is_independent_axis": true,
+    "cross_axis_intersection_allowed": true,
+    "required_axes": [
+      "connectivity_visibility",
+      "train_label_reachability",
+      "degree_band"
+    ],
+    "within_axis_mutual_exclusion_required": true
+  },
+  "bucket_taxonomy": [
+    "isolated",
+    "one_hop_available",
+    "exact2_only",
+    "exact3_4_only",
+    "no_visible_train_within_4_hops",
+    "graph_visible"
+  ],
+  "cross_bucket_class_policy": {
+    "default_status": "uncertain",
+    "single_bucket_class_to_global_class": "forbidden"
+  },
+  "failure_branch_policy": {
+    "distinguish_method_config_scope_information_source": true,
+    "single_failure_closes_method_family": false
+  },
+  "global_claim_policy": {
+    "default_globalization_status": "unverified",
+    "requires_dataset_wide_or_multi_bucket_evidence": true,
+    "single_bucket_claim_globalization": "forbidden"
+  },
+  "high_overlap_topk_penalty": 0.35,
+  "local_conflict_checker": {
+    "compare_method_name_only": false,
+    "enabled": true,
+    "required_fields": [
+      "method_family",
+      "information_source_type",
+      "new_information_status",
+      "bucket_axes",
+      "mechanism_id",
+      "training_objective",
+      "branch_id"
+    ]
+  },
+  "max_bucket_class_deep_research": 1,
+  "max_bucket_deep_research": 2,
+  "max_global_deep_research": 1,
+  "mechanism_taxonomy": [
+    "attribute_insufficiency",
+    "class_imbalance",
+    "neighbor_unreliability",
+    "heterophily",
+    "over_smoothing",
+    "under_propagation",
+    "directionality_loss",
+    "multi_hop_signal_missing",
+    "teacher_signal_not_transferable",
+    "calibration_error",
+    "confidence_routing_error",
+    "candidate_scope_mismatch",
+    "representation_only_change",
+    "information_source_missing",
+    "uniform_smoothing_damage",
+    "multi_hop_signal_opportunity",
+    "other"
+  ],
+  "minimum_evidence_policy": {
+    "missing_threshold_status": "insufficient_policy"
+  },
+  "minimum_sample_policy": {
+    "default_min_sample": null,
+    "missing_threshold_status": "insufficient_policy"
+  },
+  "policy_version": "m6r_a_v2",
+  "priority_component_weights": {
+    "affected_count_component": 0.12,
+    "affected_ratio_component": 0.03,
+    "closed_branch_penalty_component": 1.0,
+    "error_headroom_component": 0.0,
+    "evidence_strength_component": 0.18,
+    "expected_score_impact_component": 0.0,
+    "experiment_cost_component": 0.04,
+    "fold_stability_component": 0.0,
+    "macro_importance_component": 0.0,
+    "method_availability_component": 0.15,
+    "novelty_information_gap_component": 0.22,
+    "overlap_penalty_component": 1.0,
+    "research_cost_component": 0.03,
+    "researchability_component": 0.2,
+    "risk_component": 0.03
+  },
+  "priority_weights": {
+    "affected_count": 0.4,
+    "evidence_strength": 0.25,
+    "method_availability": 0.25,
+    "risk": -0.1
+  },
+  "reopen_policy": {
+    "oracle_gain_auto_reopen": false,
+    "requires_human_approval": true
+  },
+  "require_evidence_refs": true,
+  "require_fold_stability": true,
+  "require_local_conflict_check": true,
+  "require_new_information_analysis": true,
+  "scope_overlap_policy": {
+    "allow_orthogonal_scope_coexistence": true,
+    "require_deduplication_reason": true,
+    "statuses": [
+      "disjoint",
+      "low_overlap",
+      "partial_overlap",
+      "high_overlap",
+      "subset",
+      "superset",
+      "identical",
+      "unknown"
+    ],
+    "suppress_same_level_high_overlap_topk": true
+  }
+}

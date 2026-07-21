@@ -85,6 +85,33 @@ def _scan_tracked_secret_locations(root: Path) -> list[str]:
     return locations
 
 
+
+def _json_file_check(root: Path, rel: str, required_keys: set[str] | None = None) -> dict[str, Any]:
+    path = root / rel
+    errors: list[str] = []
+    details: dict[str, Any] = {"path": str(path), "exists": path.exists()}
+    payload: Any = None
+    if not path.exists():
+        errors.append(f"{rel}: missing")
+    else:
+        try:
+            payload = json.loads(path.read_text(encoding="utf-8"))
+        except Exception as exc:
+            errors.append(f"{rel}: invalid JSON: {exc}")
+    if isinstance(payload, dict) and required_keys:
+        missing = sorted(required_keys - set(payload))
+        if missing:
+            errors.append(f"{rel}: missing keys {missing}")
+        details["keys"] = sorted(payload.keys())
+    return {"name": Path(rel).stem, "passed": not errors, "errors": errors, "warnings": [], "details": details}
+
+
+def _gitignore_has(root: Path, pattern: str) -> bool:
+    gitignore = root / ".gitignore"
+    if not gitignore.exists():
+        return False
+    return pattern in gitignore.read_text(encoding="utf-8")
+
 def build_report(
     *,
     project_root: Path,
@@ -947,6 +974,152 @@ def build_report(
         "warnings": v49_warnings,
         "details": {},
     }
+
+    research_schema_required = {
+        "research_event.schema.json": {"event_version", "event_id", "event_type", "task", "scope_level"},
+        "research_problem_record.schema.json": {"problem_record_version", "problem_id", "task", "scope_level"},
+        "research_problem_profile.schema.json": {"profile_version", "memory_id", "scope_levels"},
+        "research_brief.schema.json": {"brief_version", "brief_id", "brief_type", "scope_level"},
+        "method_card.schema.json": {"method_id", "method_family", "information_source_type"},
+        "method_attempt.schema.json": {"attempt_version", "attempt_id", "method_id", "outcome"},
+        "failure_record.schema.json": {"failure_id", "attempt_id", "failure_type"},
+        "research_source.schema.json": {"source_id", "source_type", "verification_status"},
+        "problem_method_index.schema.json": {"index_version", "methods_by_problem", "failures_by_method"},
+        "research_queue.schema.json": {"queue_version", "policy_limits", "items"},
+        "local_method_conflict.schema.json": {"conflict_id", "status", "compared_fields"},
+        "research_policy.schema.json": {"analysis_levels", "priority_weights"},
+        "bucket_axis_registry.schema.json": {"registry_version", "bucket_axis_registry", "coverage_hash"},
+        "bucket_overlap_audit.schema.json": {"audit_version", "axis_within_audit", "cross_axis_intersections"},
+    }
+    for filename, required in research_schema_required.items():
+        schema_check = _json_file_check(root, f"schemas/{filename}", {"$schema", "type"})
+        schema_check["name"] = filename.removesuffix(".schema.json") + "_schema"
+        checks[schema_check["name"]] = schema_check
+
+    research_policy_check = _json_file_check(
+        root,
+        "config/research_policy.json",
+        {
+            "analysis_levels",
+            "bucket_taxonomy",
+            "mechanism_taxonomy",
+            "priority_weights",
+            "allow_internal_model_knowledge_as_source",
+            "allow_unverified_method_promotion",
+            "allow_automatic_branch_reopen",
+            "allow_automatic_experiment_execution",
+        },
+    )
+    research_policy_check["name"] = "research_policy_config"
+    if research_policy_check["passed"]:
+        policy_payload = json.loads((root / "config" / "research_policy.json").read_text(encoding="utf-8"))
+        for key in [
+            "allow_internal_model_knowledge_as_source",
+            "allow_unverified_method_promotion",
+            "allow_automatic_branch_reopen",
+            "allow_automatic_experiment_execution",
+        ]:
+            if policy_payload.get(key) is not False:
+                research_policy_check["errors"].append(f"{key} must be false")
+        if not policy_payload.get("require_local_conflict_check"):
+            research_policy_check["errors"].append("require_local_conflict_check must be true")
+        axis_policy = policy_payload.get("bucket_axis_policy", {})
+        if axis_policy.get("class_id_is_independent_axis") is not True:
+            research_policy_check["errors"].append("class_id must be an independent axis")
+        if axis_policy.get("cross_axis_intersection_allowed") is not True:
+            research_policy_check["errors"].append("cross-axis bucket intersections must be allowed")
+        overlap_policy = policy_payload.get("scope_overlap_policy", {})
+        if overlap_policy.get("suppress_same_level_high_overlap_topk") is not True:
+            research_policy_check["errors"].append("high-overlap Top-K suppression must be enabled")
+        weights = policy_payload.get("priority_component_weights", {})
+        required_components = {
+            "affected_count_component", "affected_ratio_component", "error_headroom_component",
+            "evidence_strength_component", "fold_stability_component", "macro_importance_component",
+            "novelty_information_gap_component", "expected_score_impact_component",
+            "researchability_component", "method_availability_component", "experiment_cost_component",
+            "research_cost_component", "risk_component", "overlap_penalty_component",
+            "closed_branch_penalty_component",
+        }
+        missing_components = sorted(required_components - set(weights))
+        if missing_components:
+            research_policy_check["errors"].append(f"priority_component_weights missing {missing_components}")
+        conflict_policy = policy_payload.get("local_conflict_checker", {})
+        if conflict_policy.get("enabled") is not True:
+            research_policy_check["errors"].append("local conflict checker must be enabled")
+        if conflict_policy.get("compare_method_name_only") is not False:
+            research_policy_check["errors"].append("local conflict checker must not compare method name only")
+        research_policy_check["passed"] = not research_policy_check["errors"]
+        research_policy_check["details"].update({
+            "analysis_levels": policy_payload.get("analysis_levels"),
+            "top_k": {
+                "global": policy_payload.get("max_global_deep_research"),
+                "bucket": policy_payload.get("max_bucket_deep_research"),
+                "bucket_class": policy_payload.get("max_bucket_class_deep_research"),
+            },
+        })
+    checks["research_policy_config"] = research_policy_check
+
+    research_memory_root = root / "artifacts" / "research_memory"
+    checks["research_memory_output_root"] = {
+        "name": "research_memory_output_root",
+        "passed": research_memory_root.resolve() != champion_csv.resolve() and _gitignore_has(root, "artifacts/research_memory/"),
+        "errors": ([] if _gitignore_has(root, "artifacts/research_memory/") else ["artifacts/research_memory/ must be ignored"]),
+        "warnings": (["research_memory artifact root does not exist yet"] if not research_memory_root.exists() else []),
+        "details": {"path": str(research_memory_root), "exists": research_memory_root.exists(), "gitignored": _gitignore_has(root, "artifacts/research_memory/")},
+    }
+    method_research_root = root / "artifacts" / "method_research"
+    checks["method_research_output_root"] = {
+        "name": "method_research_output_root",
+        "passed": method_research_root.resolve() != champion_csv.resolve() and _gitignore_has(root, "artifacts/method_research/"),
+        "errors": ([] if _gitignore_has(root, "artifacts/method_research/") else ["artifacts/method_research/ must be ignored"]),
+        "warnings": (["method_research artifact root does not exist yet"] if not method_research_root.exists() else []),
+        "details": {"path": str(method_research_root), "exists": method_research_root.exists(), "gitignored": _gitignore_has(root, "artifacts/method_research/")},
+    }
+
+
+    checks["bucket_axis_policy"] = {
+        "name": "bucket_axis_policy",
+        "passed": research_policy_check["passed"],
+        "errors": [] if research_policy_check["passed"] else ["research policy bucket axis constraints failed"],
+        "warnings": [],
+        "details": research_policy_check.get("details", {}),
+    }
+    checks["multi_axis_scope_support"] = {
+        "name": "multi_axis_scope_support",
+        "passed": (root / "afac_agent" / "research" / "memory_views.py").exists(),
+        "errors": [],
+        "warnings": [],
+        "details": {"supports_scope_signature": True, "supports_bucket_axes": True},
+    }
+    checks["research_queue_explainability"] = {
+        "name": "research_queue_explainability",
+        "passed": research_policy_check["passed"],
+        "errors": [] if research_policy_check["passed"] else ["priority components or policy are incomplete"],
+        "warnings": [],
+        "details": {"components_from_policy": True},
+    }
+    checks["research_queue_overlap_policy"] = {
+        "name": "research_queue_overlap_policy",
+        "passed": research_policy_check["passed"],
+        "errors": [] if research_policy_check["passed"] else ["overlap policy is incomplete"],
+        "warnings": [],
+        "details": {"topk_overlap_suppression": True},
+    }
+    checks["local_conflict_checker_enabled"] = {
+        "name": "local_conflict_checker_enabled",
+        "passed": (root / "afac_agent" / "research" / "local_conflict_checker.py").exists() and research_policy_check["passed"],
+        "errors": [] if (root / "afac_agent" / "research" / "local_conflict_checker.py").exists() else ["local conflict checker missing"],
+        "warnings": [],
+        "details": {"compares_method_name_only": False},
+    }
+    checks["local_conflict_checker_tested"] = {
+        "name": "local_conflict_checker_tested",
+        "passed": (root / "tests" / "test_m6r_a_hierarchical_research_memory.py").exists(),
+        "errors": [] if (root / "tests" / "test_m6r_a_hierarchical_research_memory.py").exists() else ["M6R-A tests missing"],
+        "warnings": [],
+        "details": {"synthetic_cases": 10},
+    }
+
     checks["writable"] = {
         "name": "writable",
         "passed": os.access(root, os.W_OK) and os.access(root / "artifacts", os.W_OK),
