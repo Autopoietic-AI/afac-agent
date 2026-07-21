@@ -1,0 +1,61 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "AFAC Agent M6A Shadow Plan Comparison",
+  "type": "object",
+  "required": [
+    "comparison_version",
+    "comparison_id",
+    "deterministic_plan_id",
+    "llm_proposal_id",
+    "agreement_level",
+    "primary_problem_match",
+    "action_match",
+    "tool_match",
+    "shared_reason_codes",
+    "llm_only_reason_codes",
+    "deterministic_only_reason_codes",
+    "llm_novelty",
+    "llm_safety_status",
+    "llm_evidence_grounding",
+    "deterministic_decision_remains_authoritative",
+    "comparison_summary",
+    "human_review_recommended"
+  ],
+  "properties": {
+    "comparison_version": {"type": "string"},
+    "comparison_id": {"type": "string"},
+    "deterministic_plan_id": {"type": "string"},
+    "llm_proposal_id": {"type": "string"},
+    "agreement_level": {
+      "enum": [
+        "exact_agreement",
+        "partial_agreement",
+        "safe_disagreement",
+        "unsafe_disagreement",
+        "invalid_proposal",
+        "provider_unavailable"
+      ]
+    },
+    "primary_problem_match": {"type": "boolean"},
+    "action_match": {"type": "boolean"},
+    "tool_match": {"type": "boolean"},
+    "shared_reason_codes": {"type": "array", "items": {"type": "string"}},
+    "llm_only_reason_codes": {"type": "array", "items": {"type": "string"}},
+    "deterministic_only_reason_codes": {"type": "array", "items": {"type": "string"}},
+    "llm_novelty": {
+      "enum": [
+        "none",
+        "rephrasing_only",
+        "new_safe_hypothesis",
+        "new_missing_input",
+        "new_registered_tool_use",
+        "unregistered_or_unsafe_idea"
+      ]
+    },
+    "llm_safety_status": {"enum": ["safe", "unsafe"]},
+    "llm_evidence_grounding": {"type": "string"},
+    "deterministic_decision_remains_authoritative": {"const": true},
+    "comparison_summary": {"type": "string"},
+    "human_review_recommended": {"type": "boolean"}
+  }
+}

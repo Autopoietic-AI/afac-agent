@@ -10,6 +10,7 @@ from pathlib import Path
 
 from .adapters.runner import AdapterRunner
 from .feedback.builder import FeedbackBuilder
+from .llm.shadow_planner import LLMShadowPlanner
 from .orchestrator import AgentOrchestrator
 from .paths import PathResolver
 from .planning.deterministic_planner import DeterministicPlanner
@@ -185,6 +186,64 @@ def _plan_next(argv: list[str]) -> None:
     raise SystemExit(2)
 
 
+def _shadow_plan(argv: list[str]) -> None:
+    parser = argparse.ArgumentParser(prog="afac_agent.main shadow-plan")
+    parser.add_argument("--project_root", default=".")
+    parser.add_argument("--deterministic-plan", required=True)
+    parser.add_argument("--problem-map", required=True)
+    parser.add_argument("--feedback", action="append", default=[])
+    parser.add_argument("--tool-registry", default="config/tool_registry.json")
+    parser.add_argument("--project-state", default="config/project_state.json")
+    parser.add_argument("--history", default="history/confirmed_experiments_a1.json")
+    parser.add_argument("--planner-policy", default="config/planner_policy.json")
+    parser.add_argument("--llm-policy", default="config/llm_shadow_policy.json")
+    parser.add_argument("--provider", default="mock", choices=["mock", "local_ollama"])
+    parser.add_argument("--provider-config", default="")
+    parser.add_argument("--mock-mode", default="agree")
+    parser.add_argument("--out-root", default="artifacts/llm_shadow_runs")
+    parser.add_argument("--dry-run", action="store_true")
+    parser.add_argument("--force-rebuild", action="store_true")
+    args = parser.parse_args(argv)
+
+    resolver = PathResolver(args.project_root)
+    root = resolver.project_root
+    result = LLMShadowPlanner(project_root=root).run(
+        deterministic_plan_path=(
+            resolver.resolve(args.deterministic_plan)
+            or root / args.deterministic_plan
+        ),
+        problem_map_path=resolver.resolve(args.problem_map) or root / args.problem_map,
+        feedback_paths=[
+            resolver.resolve(path) or root / path
+            for path in args.feedback
+        ],
+        tool_registry_path=resolver.resolve(args.tool_registry) or root / args.tool_registry,
+        project_state_path=resolver.resolve(args.project_state) or root / args.project_state,
+        history_path=resolver.resolve(args.history) or root / args.history,
+        planner_policy_path=resolver.resolve(args.planner_policy) or root / args.planner_policy,
+        llm_policy_path=resolver.resolve(args.llm_policy) or root / args.llm_policy,
+        provider_name=args.provider,
+        provider_config=args.provider_config,
+        mock_mode=args.mock_mode,
+        out_root=resolver.resolve(args.out_root) or root / args.out_root,
+        dry_run=args.dry_run,
+        force_rebuild=args.force_rebuild,
+    )
+    print(json.dumps(result, ensure_ascii=False, indent=2))
+    if result["status"] in {
+        "completed",
+        "blocked",
+        "invalid_output",
+        "provider_unavailable",
+        "timeout",
+        "dry_run",
+    }:
+        raise SystemExit(0)
+    if result["status"] == "waiting_for_input":
+        raise SystemExit(3)
+    raise SystemExit(2)
+
+
 def main() -> None:
     if len(sys.argv) > 1 and sys.argv[1] == "run-adapter":
         _run_adapter(sys.argv[2:])
@@ -194,6 +253,9 @@ def main() -> None:
         return
     if len(sys.argv) > 1 and sys.argv[1] == "plan-next":
         _plan_next(sys.argv[2:])
+        return
+    if len(sys.argv) > 1 and sys.argv[1] == "shadow-plan":
+        _shadow_plan(sys.argv[2:])
         return
 
     parser = argparse.ArgumentParser()

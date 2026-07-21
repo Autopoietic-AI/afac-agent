@@ -1,0 +1,41 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "AFAC Agent M6A LLM Shadow Policy",
+  "type": "object",
+  "required": [
+    "policy_version",
+    "allowed_actions",
+    "forbidden_actions",
+    "allowed_tool_risk_levels",
+    "max_calls",
+    "timeout_seconds",
+    "max_prompt_chars",
+    "max_output_chars",
+    "allow_research_request",
+    "allow_training_proposal",
+    "allow_prediction_proposal",
+    "force_human_approval_for_training",
+    "force_human_approval_for_prediction",
+    "force_auto_execution_false",
+    "prompt_injection_policy",
+    "raw_response_retention_policy"
+  ],
+  "properties": {
+    "policy_version": {"type": "string"},
+    "allowed_actions": {"type": "array", "items": {"type": "string"}},
+    "forbidden_actions": {"type": "array", "items": {"type": "string"}},
+    "allowed_tool_risk_levels": {"type": "array", "items": {"type": "string"}},
+    "max_calls": {"type": "integer", "minimum": 1, "maximum": 2},
+    "timeout_seconds": {"type": "integer", "minimum": 1, "maximum": 120},
+    "max_prompt_chars": {"type": "integer"},
+    "max_output_chars": {"type": "integer"},
+    "allow_research_request": {"type": "boolean"},
+    "allow_training_proposal": {"type": "boolean"},
+    "allow_prediction_proposal": {"type": "boolean"},
+    "force_human_approval_for_training": {"const": true},
+    "force_human_approval_for_prediction": {"const": true},
+    "force_auto_execution_false": {"const": true},
+    "prompt_injection_policy": {"type": "object"},
+    "raw_response_retention_policy": {"type": "object"}
+  }
+}

@@ -13,6 +13,7 @@ __pycache__/
 config/paths.local.yaml
 config/paths.local.*
 !config/paths.local.example.yaml
+config/llm.local.json
 
 # Temporary files and local logs
 tmp/
@@ -35,6 +36,7 @@ artifacts/adapter_runs/
 artifacts/feedback_runs/
 artifacts/evaluation_runs/
 artifacts/plans/
+artifacts/llm_shadow_runs/
 
 # Large local competition/model assets must stay outside git unless explicitly curated.
 data/

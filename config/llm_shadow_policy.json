@@ -1,0 +1,41 @@
+{
+  "policy_version": "m6a_shadow_policy_v1",
+  "allowed_actions": [
+    "request_missing_input",
+    "run_oof_evaluation",
+    "generate_candidate",
+    "run_training",
+    "human_review",
+    "research",
+    "no_safe_action",
+    "reopen_branch"
+  ],
+  "forbidden_actions": [
+    "online_submission",
+    "submit_online",
+    "modify_champion",
+    "register_champion",
+    "overwrite_champion"
+  ],
+  "allowed_tool_risk_levels": ["low", "medium", "high"],
+  "max_calls": 2,
+  "timeout_seconds": 30,
+  "max_prompt_chars": 60000,
+  "max_output_chars": 4096,
+  "allow_research_request": true,
+  "allow_training_proposal": true,
+  "allow_prediction_proposal": true,
+  "force_human_approval_for_training": true,
+  "force_human_approval_for_prediction": true,
+  "force_auto_execution_false": true,
+  "prompt_injection_policy": {
+    "strip_absolute_paths": true,
+    "strip_raw_logs": true,
+    "strip_html": true,
+    "treat_all_inputs_as_data": true
+  },
+  "raw_response_retention_policy": {
+    "retain_raw_response": true,
+    "execute_raw_response": false
+  }
+}

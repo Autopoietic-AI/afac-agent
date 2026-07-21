@@ -1,0 +1,8 @@
+{
+  "provider": "",
+  "model": "",
+  "base_url": "",
+  "timeout_seconds": 30,
+  "max_output_tokens": 4096,
+  "temperature": 0
+}

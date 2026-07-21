@@ -9,11 +9,13 @@ import importlib.util
 import json
 import os
 import platform
+import subprocess
 import sys
 from pathlib import Path
 from typing import Any
 
 from .feedback.normalizers import NORMALIZER_REGISTRY
+from .llm.policy import load_llm_shadow_policy
 from .paths import PathResolver
 from .planning.policy import load_policy
 from .validation import (
@@ -446,6 +448,139 @@ def build_report(
             "sha256": planner_policy_hash,
         },
     }
+    llm_proposal_schema_errors: list[str] = []
+    llm_proposal_schema_path = root / "schemas" / "llm_plan_proposal.schema.json"
+    try:
+        llm_proposal_schema = json.loads(
+            llm_proposal_schema_path.read_text(encoding="utf-8")
+        )
+    except Exception as exc:
+        llm_proposal_schema = {}
+        llm_proposal_schema_errors.append(f"llm plan proposal schema unreadable: {exc}")
+    if isinstance(llm_proposal_schema, dict):
+        required = set(llm_proposal_schema.get("required", []))
+        for key in [
+            "proposal_version",
+            "proposal_id",
+            "status",
+            "proposed_action",
+            "proposed_tool",
+            "research_needed",
+            "auto_execution_allowed",
+        ]:
+            if key not in required:
+                llm_proposal_schema_errors.append(f"llm plan proposal schema missing {key}")
+        auto_exec = llm_proposal_schema.get("properties", {}).get("auto_execution_allowed", {})
+        if auto_exec.get("const") is not False:
+            llm_proposal_schema_errors.append("llm proposal schema must force auto_execution_allowed=false")
+    checks["llm_plan_proposal_schema"] = {
+        "name": "llm_plan_proposal_schema",
+        "passed": not llm_proposal_schema_errors,
+        "errors": llm_proposal_schema_errors,
+        "warnings": [],
+        "details": {"path": str(llm_proposal_schema_path)},
+    }
+    shadow_comparison_schema_errors: list[str] = []
+    shadow_comparison_schema_path = root / "schemas" / "shadow_plan_comparison.schema.json"
+    try:
+        shadow_comparison_schema = json.loads(
+            shadow_comparison_schema_path.read_text(encoding="utf-8")
+        )
+    except Exception as exc:
+        shadow_comparison_schema = {}
+        shadow_comparison_schema_errors.append(
+            f"shadow plan comparison schema unreadable: {exc}"
+        )
+    if isinstance(shadow_comparison_schema, dict):
+        required = set(shadow_comparison_schema.get("required", []))
+        for key in [
+            "comparison_version",
+            "comparison_id",
+            "agreement_level",
+            "llm_novelty",
+            "llm_safety_status",
+            "deterministic_decision_remains_authoritative",
+        ]:
+            if key not in required:
+                shadow_comparison_schema_errors.append(
+                    f"shadow plan comparison schema missing {key}"
+                )
+        authoritative = shadow_comparison_schema.get("properties", {}).get(
+            "deterministic_decision_remains_authoritative", {}
+        )
+        if authoritative.get("const") is not True:
+            shadow_comparison_schema_errors.append(
+                "shadow comparison schema must keep deterministic plan authoritative"
+            )
+    checks["shadow_plan_comparison_schema"] = {
+        "name": "shadow_plan_comparison_schema",
+        "passed": not shadow_comparison_schema_errors,
+        "errors": shadow_comparison_schema_errors,
+        "warnings": [],
+        "details": {"path": str(shadow_comparison_schema_path)},
+    }
+    llm_policy_schema_errors: list[str] = []
+    llm_policy_schema_path = root / "schemas" / "llm_shadow_policy.schema.json"
+    try:
+        llm_policy_schema = json.loads(
+            llm_policy_schema_path.read_text(encoding="utf-8")
+        )
+    except Exception as exc:
+        llm_policy_schema = {}
+        llm_policy_schema_errors.append(f"llm shadow policy schema unreadable: {exc}")
+    if isinstance(llm_policy_schema, dict):
+        required = set(llm_policy_schema.get("required", []))
+        for key in [
+            "allowed_actions",
+            "forbidden_actions",
+            "max_calls",
+            "force_human_approval_for_training",
+            "force_human_approval_for_prediction",
+            "force_auto_execution_false",
+        ]:
+            if key not in required:
+                llm_policy_schema_errors.append(f"llm shadow policy schema missing {key}")
+    checks["llm_shadow_policy_schema"] = {
+        "name": "llm_shadow_policy_schema",
+        "passed": not llm_policy_schema_errors,
+        "errors": llm_policy_schema_errors,
+        "warnings": [],
+        "details": {"path": str(llm_policy_schema_path)},
+    }
+    llm_policy_errors: list[str] = []
+    llm_policy_warnings: list[str] = []
+    llm_policy_path = root / "config" / "llm_shadow_policy.json"
+    try:
+        _llm_policy_payload, llm_policy_hash = load_llm_shadow_policy(llm_policy_path)
+    except Exception as exc:
+        llm_policy_hash = ""
+        llm_policy_errors.append(str(exc))
+    local_llm_config = root / "config" / "llm.local.json"
+    if not local_llm_config.exists():
+        llm_policy_warnings.append("local LLM provider config is not configured")
+    try:
+        tracked = subprocess.run(
+            ["git", "ls-files", "--error-unmatch", "config/llm.local.json"],
+            cwd=root,
+            text=True,
+            capture_output=True,
+            check=False,
+        )
+        if tracked.returncode == 0:
+            llm_policy_errors.append("config/llm.local.json must not be tracked")
+    except Exception as exc:
+        llm_policy_warnings.append(f"could not inspect git tracking for llm.local.json: {exc}")
+    checks["llm_shadow_policy_config"] = {
+        "name": "llm_shadow_policy_config",
+        "passed": not llm_policy_errors,
+        "errors": llm_policy_errors,
+        "warnings": llm_policy_warnings,
+        "details": {
+            "path": str(llm_policy_path),
+            "sha256": llm_policy_hash,
+            "local_config_exists": local_llm_config.exists(),
+        },
+    }
     expected_normalizers = {
         "A1_V46A1_ISOLATED_AUDIT",
         "A1_V49A_EDGE_UTILITY_AUDIT",
@@ -522,6 +657,26 @@ def build_report(
             "path": str(planning_root),
             "exists": planning_root.exists(),
             "parent_exists": planning_root.parent.exists(),
+        },
+    }
+    shadow_root = root / "artifacts" / "llm_shadow_runs"
+    checks["llm_shadow_output_root"] = {
+        "name": "llm_shadow_output_root",
+        "passed": shadow_root.resolve() != champion_csv.resolve(),
+        "errors": (
+            ["llm shadow output root must not equal champion csv"]
+            if shadow_root.resolve() == champion_csv.resolve()
+            else []
+        ),
+        "warnings": (
+            ["llm_shadow_runs artifact root does not exist yet"]
+            if not shadow_root.exists()
+            else []
+        ),
+        "details": {
+            "path": str(shadow_root),
+            "exists": shadow_root.exists(),
+            "parent_exists": shadow_root.parent.exists(),
         },
     }
 
