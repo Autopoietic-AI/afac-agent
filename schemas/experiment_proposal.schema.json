@@ -1,0 +1,41 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "AFAC M6 Experiment Proposal",
+  "type": "object",
+  "additionalProperties": true,
+  "required": [
+    "proposal_id",
+    "target_problem_ids",
+    "target_scope",
+    "target_bucket_axes",
+    "target_classes",
+    "target_mechanisms",
+    "parent_candidate",
+    "baseline",
+    "core_hypothesis",
+    "expected_new_information",
+    "selected_method_components",
+    "source_refs",
+    "local_evidence_refs",
+    "feature_or_signal_changes",
+    "model_changes",
+    "training_changes",
+    "routing_or_gate_changes",
+    "adapter_or_tool",
+    "required_inputs",
+    "missing_inputs",
+    "minimal_experiment",
+    "OOF_evaluation_plan",
+    "success_conditions",
+    "failure_conditions",
+    "stop_conditions",
+    "round_cost",
+    "risk_level"
+  ],
+  "properties": {
+    "proposal_id": {"type": "string"},
+    "round_cost": {"type": ["integer", "string"]},
+    "risk_level": {"type": "string"},
+    "adapter_or_tool": {"type": "string"}
+  }
+}

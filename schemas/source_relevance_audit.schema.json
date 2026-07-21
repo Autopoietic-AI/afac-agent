@@ -1,0 +1,16 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "AFAC M6 Source Relevance Audit",
+  "type": "object",
+  "additionalProperties": true,
+  "required": [
+    "audit_version",
+    "items",
+    "view_hash"
+  ],
+  "properties": {
+    "audit_version": {"type": "string"},
+    "items": {"type": "array"},
+    "view_hash": {"type": "string"}
+  }
+}

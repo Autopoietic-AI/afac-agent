@@ -1,0 +1,26 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "AFAC M6 Decision Core Critic Review",
+  "type": "object",
+  "additionalProperties": true,
+  "required": [
+    "verdict",
+    "critical_issues",
+    "required_revisions",
+    "unsupported_claims",
+    "closed_branch_conflicts",
+    "missing_evidence",
+    "minimal_safe_revision",
+    "audit_scores"
+  ],
+  "properties": {
+    "verdict": {"enum": ["approve", "revise", "reject"]},
+    "critical_issues": {"type": "array"},
+    "required_revisions": {"type": "array"},
+    "unsupported_claims": {"type": "array"},
+    "closed_branch_conflicts": {"type": "array"},
+    "missing_evidence": {"type": "array"},
+    "minimal_safe_revision": {"type": "object"},
+    "audit_scores": {"type": "object"}
+  }
+}

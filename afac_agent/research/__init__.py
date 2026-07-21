@@ -11,6 +11,12 @@ from .method_research import (
     SourceVerifier,
 )
 from .live_method_research import LiveCachedMethodResearchRunner, ProviderRegistry
+from .decision_core import (
+    DecisionCoreRunner,
+    MethodQualityGate,
+    MockDecisionLLM,
+    SourceProblemRelevanceValidator,
+)
 from .memory_views import ResearchMemoryBuilder
 from .research_brief import ResearchBriefBuilder
 
@@ -26,4 +32,8 @@ __all__ = [
     "MethodResearchRunner",
     "LiveCachedMethodResearchRunner",
     "ProviderRegistry",
+    "SourceProblemRelevanceValidator",
+    "MethodQualityGate",
+    "DecisionCoreRunner",
+    "MockDecisionLLM",
 ]

@@ -42,6 +42,7 @@ artifacts/live_method_research/
 artifacts/method_research_runs/
 artifacts/method_research/
 artifacts/research_memory/
+artifacts/decision_core_runs/
 
 # Large local competition/model assets must stay outside git unless explicitly curated.
 data/

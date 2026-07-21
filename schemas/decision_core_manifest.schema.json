@@ -1,0 +1,31 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "AFAC M6 Decision Core Manifest",
+  "type": "object",
+  "additionalProperties": true,
+  "required": [
+    "run_version",
+    "run_id",
+    "read_only",
+    "calls_llm",
+    "llm_call_count",
+    "executes_adapter",
+    "trains_model",
+    "generates_prediction",
+    "counts_as_experiment_round",
+    "mutates_project_state",
+    "mutates_predictions",
+    "view_hash",
+    "artifacts"
+  ],
+  "properties": {
+    "read_only": {"const": true},
+    "executes_adapter": {"const": false},
+    "trains_model": {"const": false},
+    "generates_prediction": {"const": false},
+    "counts_as_experiment_round": {"const": false},
+    "mutates_project_state": {"const": false},
+    "mutates_predictions": {"const": false},
+    "artifacts": {"type": "object"}
+  }
+}

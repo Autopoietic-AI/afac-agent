@@ -998,6 +998,10 @@ def build_report(
         "live_method_research_run.schema.json": {"run_version", "run_id", "network_mode", "qwen_call_count"},
         "research_provider_registry.schema.json": {"registry_version", "providers", "provider_count"},
         "research_query.schema.json": {"query_id", "research_question", "query_text"},
+        "source_relevance_audit.schema.json": {"audit_version", "items", "view_hash"},
+        "experiment_proposal.schema.json": {"proposal_id", "target_problem_ids", "core_hypothesis", "round_cost"},
+        "critic_review.schema.json": {"verdict", "critical_issues", "minimal_safe_revision"},
+        "decision_core_manifest.schema.json": {"run_version", "run_id", "artifacts", "counts_as_experiment_round"},
     }
     for filename, required in research_schema_required.items():
         schema_check = _json_file_check(root, f"schemas/{filename}", {"$schema", "type"})
@@ -1135,6 +1139,14 @@ def build_report(
         "warnings": (["live_method_research artifact root does not exist yet"] if not live_method_root.exists() else []),
         "details": {"path": str(live_method_root), "exists": live_method_root.exists(), "gitignored": _gitignore_has(root, "artifacts/live_method_research/")},
     }
+    decision_core_root = root / "artifacts" / "decision_core_runs"
+    checks["decision_core_output_root"] = {
+        "name": "decision_core_output_root",
+        "passed": decision_core_root.resolve() != champion_csv.resolve() and _gitignore_has(root, "artifacts/decision_core_runs/"),
+        "errors": ([] if _gitignore_has(root, "artifacts/decision_core_runs/") else ["artifacts/decision_core_runs/ must be ignored"]),
+        "warnings": (["decision_core_runs artifact root does not exist yet"] if not decision_core_root.exists() else []),
+        "details": {"path": str(decision_core_root), "exists": decision_core_root.exists(), "gitignored": _gitignore_has(root, "artifacts/decision_core_runs/")},
+    }
 
     method_research_module = root / "afac_agent" / "research" / "method_research.py"
     method_research_text = method_research_module.read_text(encoding="utf-8") if method_research_module.exists() else ""
@@ -1209,6 +1221,42 @@ def build_report(
         "errors": [] if live_module.exists() else ["live method research module missing"],
         "warnings": [],
         "details": {"adapter_training_prediction_disabled": True},
+    }
+    decision_core_module = root / "afac_agent" / "research" / "decision_core.py"
+    decision_core_text = decision_core_module.read_text(encoding="utf-8") if decision_core_module.exists() else ""
+    decision_core_classes_ok = all(
+        token in decision_core_text
+        for token in [
+            "class SourceProblemRelevanceValidator",
+            "class MethodQualityGate",
+            "class DecisionCoreRunner",
+            "class MockDecisionLLM",
+        ]
+    )
+    checks["decision_core_module"] = {
+        "name": "decision_core_module",
+        "passed": decision_core_module.exists() and decision_core_classes_ok,
+        "errors": [] if (decision_core_module.exists() and decision_core_classes_ok) else ["decision_core.py missing required classes"],
+        "warnings": [],
+        "details": {"module": str(decision_core_module)},
+    }
+    decision_core_safety_ok = all(
+        token in decision_core_text
+        for token in [
+            "executes_adapter",
+            "trains_model",
+            "generates_prediction",
+            "counts_as_experiment_round",
+            "mutates_project_state",
+            "mutates_predictions",
+        ]
+    )
+    checks["decision_core_safety"] = {
+        "name": "decision_core_safety",
+        "passed": decision_core_safety_ok,
+        "errors": [] if decision_core_safety_ok else ["decision core manifest must declare no adapter/training/prediction/project mutation/round use"],
+        "warnings": [],
+        "details": {"module": str(decision_core_module)},
     }
 
 
