@@ -23,7 +23,7 @@ from .orchestrator import AgentOrchestrator
 from .paths import PathResolver
 from .planning.deterministic_planner import DeterministicPlanner
 from .registry import ToolRegistry
-from .research import ResearchBriefBuilder, ResearchMemoryBuilder
+from .research import MethodResearchRunner, ResearchBriefBuilder, ResearchMemoryBuilder
 
 
 def _run_adapter(argv: list[str]) -> None:
@@ -343,6 +343,36 @@ def _research_brief(argv: list[str]) -> None:
     raise SystemExit(2)
 
 
+def _method_research_local(argv: list[str]) -> None:
+    parser = argparse.ArgumentParser(prog="afac_agent.main method-research-local")
+    parser.add_argument("--project_root", default=".")
+    parser.add_argument("--research-brief", required=True)
+    parser.add_argument("--research-memory-root", required=True)
+    parser.add_argument("--source-manifest", required=True)
+    parser.add_argument("--research-policy", default="config/research_policy.json")
+    parser.add_argument("--out-root", default="artifacts/method_research_runs")
+    parser.add_argument("--dry-run", action="store_true")
+    parser.add_argument("--force-rebuild", action="store_true")
+    args = parser.parse_args(argv)
+    resolver = PathResolver(args.project_root)
+    root = resolver.project_root
+    result = MethodResearchRunner(project_root=root).run(
+        research_brief=resolver.resolve(args.research_brief) or root / args.research_brief,
+        research_memory_root=resolver.resolve(args.research_memory_root) or root / args.research_memory_root,
+        source_manifest=resolver.resolve(args.source_manifest) or root / args.source_manifest,
+        research_policy=resolver.resolve(args.research_policy) or root / args.research_policy,
+        out_root=resolver.resolve(args.out_root) or root / args.out_root,
+        dry_run=args.dry_run,
+        force_rebuild=args.force_rebuild,
+    )
+    print(json.dumps(result, ensure_ascii=False, indent=2))
+    if result["status"] in {"completed", "duplicate", "dry_run"}:
+        raise SystemExit(0)
+    if result["status"] == "waiting_for_input":
+        raise SystemExit(3)
+    raise SystemExit(2)
+
+
 def _llm_provider_check(argv: list[str]) -> None:
     parser = argparse.ArgumentParser(prog="afac_agent.main llm-provider-check")
     parser.add_argument("--project_root", default=".")
@@ -423,6 +453,9 @@ def main() -> None:
         return
     if len(sys.argv) > 1 and sys.argv[1] == "research-brief":
         _research_brief(sys.argv[2:])
+        return
+    if len(sys.argv) > 1 and sys.argv[1] == "method-research-local":
+        _method_research_local(sys.argv[2:])
         return
 
     parser = argparse.ArgumentParser()

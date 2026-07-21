@@ -1,0 +1,12 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "additionalProperties": true,
+  "required": [
+    "extraction_record_id",
+    "method_id",
+    "extraction_mode",
+    "status"
+  ],
+  "title": "AFAC Method Extraction Record",
+  "type": "object"
+}

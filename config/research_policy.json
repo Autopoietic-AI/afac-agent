@@ -86,6 +86,25 @@
     "default_min_sample": null,
     "missing_threshold_status": "insufficient_policy"
   },
+  "method_research_llm_enabled": false,
+  "method_research_network_enabled": false,
+  "method_research_ranking_weights": {
+    "closed_branch_penalty": 1.0,
+    "compute_cost": 0.04,
+    "conflict_penalty": 1.0,
+    "deployment_risk": 0.03,
+    "implementation_availability": 0.1,
+    "implementation_cost": 0.05,
+    "leakage_risk": 0.08,
+    "local_history_novelty": 0.18,
+    "mechanism_fit": 0.08,
+    "new_information_value": 0.16,
+    "problem_fit": 0.12,
+    "scope_fit": 0.12,
+    "source_maturity": 0.06,
+    "source_verification": 0.16
+  },
+  "method_research_top_k": 2,
   "policy_version": "m6r_a_v2",
   "priority_component_weights": {
     "affected_count_component": 0.12,

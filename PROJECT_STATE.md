@@ -147,3 +147,18 @@ M6R-A v2 introduces deterministic hierarchical research memory as an implementat
 
 Safety boundary: no LLM/API calls, no network research, no Adapter execution, no training, no prediction/submission generation, no Project State or History mutation, and `rounds_used` remains 0.
 M6R-A v2.1 correction records bucket taxonomy migration through append-only events (`taxonomy_registered`, `scope_reclassified`, `view_superseded`) and keeps runtime views generated from the event log. This correction does not alter Champion, State, History, Provider, Shadow Planner, predictions, folds, or gates.
+
+## M6R-B1 Source-Grounded Method Research Status
+
+M6R-B1 establishes local source-grounded method research infrastructure:
+Source Manifest, LocalSourcePackProvider, SourceVerifier, deterministic
+SourceChunker, non-LLM Method Card extraction from structured fixtures or
+explicit templates, MethodCardValidator, LocalConflictChecker integration, and
+policy-weighted MethodRanker. It remains read-only and local-only. It does not
+call LLM/API/network paths, execute Adapters, train, generate predictions,
+consume rounds, mutate Project State or History, or promote methods to a formal
+knowledge base. `network_enabled=false` is a M6R-B1 implementation boundary,
+not a permanent Research Agent policy. M6R-B2 will introduce `live_cached`,
+`cache_only`, and `disabled` modes: automatic tests stay `disabled`, real
+research defaults to `live_cached`, and network/provider failure degrades to
+`cache_only`. M6R-B2 is reserved for source-grounded semantic extraction.

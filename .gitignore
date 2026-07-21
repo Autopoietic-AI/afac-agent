@@ -37,6 +37,7 @@ artifacts/feedback_runs/
 artifacts/evaluation_runs/
 artifacts/plans/
 artifacts/llm_shadow_runs/
+artifacts/method_research_runs/
 artifacts/method_research/
 artifacts/research_memory/
 

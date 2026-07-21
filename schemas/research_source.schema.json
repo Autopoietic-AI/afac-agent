@@ -4,6 +4,9 @@
   "required": [
     "source_id",
     "source_type",
+    "title",
+    "authors_or_organization",
+    "year",
     "verification_status"
   ],
   "title": "AFAC Research Source",

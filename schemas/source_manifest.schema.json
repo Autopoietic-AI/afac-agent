@@ -1,0 +1,10 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "additionalProperties": true,
+  "required": [
+    "manifest_version",
+    "sources"
+  ],
+  "title": "AFAC Source Manifest",
+  "type": "object"
+}

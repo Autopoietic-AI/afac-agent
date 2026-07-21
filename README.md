@@ -197,3 +197,18 @@ The supported analysis path is Global -> Bucket -> Bucket x Class -> Error Mecha
 
 Framework inspiration record: M6R-A borrows ideas from public baseline-style diagnosis, experiment-memory practices, AIDE-style branch/parent/duplicate concepts, AI-Scientist-style hypothesis/evidence/critique loops, and event-sourcing append-only/materialized-view design. AFAC implements its own Global/Bucket/Bucket-Class decomposition, Cross-Bucket Class audit, mechanism ledger, new-information-source checks, strict OOF safety, frozen Champion boundary, and hierarchical Research Queue. It does not integrate AIDE, AI Scientist, or other framework code, and does not allow LLMs to directly modify code, decide experiments, or execute experiments.
 M6R-A v2.1 correction: bucket scopes are now represented as multi-axis signatures. `connectivity_visibility` (`graph_visible`, `isolated`) is separate from `train_label_reachability` (`one_hop_available`, `exact2_only`, `exact3_4_only`, `no_visible_train_within_4_hops`) and `degree_band`; `class_id` remains an independent analysis axis. Research Queue entries expose component-level priority scores and overlap penalties from `config/research_policy.json`. LocalConflictChecker performs deterministic multi-field conflict checks instead of comparing method names only.
+
+## M6R-B1 Source-Grounded Method Research Foundation
+
+M6R-B1 adds a local, deterministic source-grounded method-research pipeline:
+Research Brief -> Local Source Pack -> Source Verification -> deterministic
+chunking -> Method Card validation -> LocalConflictChecker -> policy-weighted
+ranking. Runtime outputs are ignored under `artifacts/method_research_runs/`.
+This stage does not call LLMs, APIs, network search, Adapters, training,
+prediction, or submission paths, and it does not promote methods into a formal
+knowledge base. `network_enabled=false` describes only this local foundation
+stage, not a permanent ban on networked research. M6R-B2 will add
+`live_cached`, `cache_only`, and `disabled` modes: automated tests use
+`disabled`; real research defaults to `live_cached`; provider/network failures
+fall back to `cache_only`. M6R-B2 will handle semantic extraction from ordinary
+papers or repositories under separate approval.

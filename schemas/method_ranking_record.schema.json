@@ -1,0 +1,16 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "additionalProperties": true,
+  "required": [
+    "ranking_record_id",
+    "method_id",
+    "ranking_components",
+    "raw_score",
+    "penalty_total",
+    "final_score",
+    "rank",
+    "selection_status"
+  ],
+  "title": "AFAC Method Ranking Record",
+  "type": "object"
+}

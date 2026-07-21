@@ -990,6 +990,11 @@ def build_report(
         "research_policy.schema.json": {"analysis_levels", "priority_weights"},
         "bucket_axis_registry.schema.json": {"registry_version", "bucket_axis_registry", "coverage_hash"},
         "bucket_overlap_audit.schema.json": {"audit_version", "axis_within_audit", "cross_axis_intersections"},
+        "source_manifest.schema.json": {"manifest_version", "sources"},
+        "source_verification.schema.json": {"verification_version", "records", "summary"},
+        "method_extraction_record.schema.json": {"extraction_record_id", "method_id", "extraction_mode"},
+        "method_ranking_record.schema.json": {"ranking_record_id", "method_id", "ranking_components"},
+        "method_research_run.schema.json": {"run_version", "run_id", "artifacts"},
     }
     for filename, required in research_schema_required.items():
         schema_check = _json_file_check(root, f"schemas/{filename}", {"$schema", "type"})
@@ -1048,6 +1053,20 @@ def build_report(
             research_policy_check["errors"].append("local conflict checker must be enabled")
         if conflict_policy.get("compare_method_name_only") is not False:
             research_policy_check["errors"].append("local conflict checker must not compare method name only")
+        if policy_payload.get("method_research_network_enabled") is not False:
+            research_policy_check["errors"].append("method research network must be disabled by default")
+        if policy_payload.get("method_research_llm_enabled") is not False:
+            research_policy_check["errors"].append("method research LLM must be disabled by default")
+        ranking_weights = policy_payload.get("method_research_ranking_weights", {})
+        required_method_weights = {
+            "problem_fit", "scope_fit", "mechanism_fit", "source_verification", "source_maturity",
+            "new_information_value", "local_history_novelty", "implementation_availability",
+            "compute_cost", "implementation_cost", "leakage_risk", "deployment_risk",
+            "conflict_penalty", "closed_branch_penalty",
+        }
+        missing_method_weights = sorted(required_method_weights - set(ranking_weights))
+        if missing_method_weights:
+            research_policy_check["errors"].append(f"method_research_ranking_weights missing {missing_method_weights}")
         research_policy_check["passed"] = not research_policy_check["errors"]
         research_policy_check["details"].update({
             "analysis_levels": policy_payload.get("analysis_levels"),
@@ -1074,6 +1093,67 @@ def build_report(
         "errors": ([] if _gitignore_has(root, "artifacts/method_research/") else ["artifacts/method_research/ must be ignored"]),
         "warnings": (["method_research artifact root does not exist yet"] if not method_research_root.exists() else []),
         "details": {"path": str(method_research_root), "exists": method_research_root.exists(), "gitignored": _gitignore_has(root, "artifacts/method_research/")},
+    }
+
+    method_research_runs_root = root / "artifacts" / "method_research_runs"
+    checks["method_research_runs_output_root"] = {
+        "name": "method_research_runs_output_root",
+        "passed": method_research_runs_root.resolve() != champion_csv.resolve() and _gitignore_has(root, "artifacts/method_research_runs/"),
+        "errors": ([] if _gitignore_has(root, "artifacts/method_research_runs/") else ["artifacts/method_research_runs/ must be ignored"]),
+        "warnings": (["method_research_runs artifact root does not exist yet"] if not method_research_runs_root.exists() else []),
+        "details": {"path": str(method_research_runs_root), "exists": method_research_runs_root.exists(), "gitignored": _gitignore_has(root, "artifacts/method_research_runs/")},
+    }
+
+    method_research_module = root / "afac_agent" / "research" / "method_research.py"
+    method_research_text = method_research_module.read_text(encoding="utf-8") if method_research_module.exists() else ""
+    checks["source_provider_contract"] = {
+        "name": "source_provider_contract",
+        "passed": all(token in method_research_text for token in ["class SourceProvider", "class WebSearchProvider", "disabled"]),
+        "errors": [] if method_research_module.exists() else ["method_research.py missing"],
+        "warnings": [],
+        "details": {"network_enabled_default": False},
+    }
+    checks["local_source_provider"] = {
+        "name": "local_source_provider",
+        "passed": "class LocalSourcePackProvider" in method_research_text,
+        "errors": [] if "class LocalSourcePackProvider" in method_research_text else ["LocalSourcePackProvider missing"],
+        "warnings": [],
+        "details": {"network_enabled": False},
+    }
+    checks["source_verifier"] = {
+        "name": "source_verifier",
+        "passed": "class SourceVerifier" in method_research_text and "verified_local_content" in method_research_text,
+        "errors": [] if "class SourceVerifier" in method_research_text else ["SourceVerifier missing"],
+        "warnings": [],
+        "details": {"unverified_promotion_allowed": False, "synthetic_formal_promotion_allowed": False},
+    }
+    checks["source_chunker"] = {
+        "name": "source_chunker",
+        "passed": "class SourceChunker" in method_research_text,
+        "errors": [] if "class SourceChunker" in method_research_text else ["SourceChunker missing"],
+        "warnings": [],
+        "details": {"deterministic": True},
+    }
+    checks["method_card_validator"] = {
+        "name": "method_card_validator",
+        "passed": "class MethodCardValidator" in method_research_text and "source_refs" in method_research_text,
+        "errors": [] if "class MethodCardValidator" in method_research_text else ["MethodCardValidator missing"],
+        "warnings": [],
+        "details": {"requires_source_refs": True},
+    }
+    checks["method_ranker"] = {
+        "name": "method_ranker",
+        "passed": "class MethodRanker" in method_research_text and research_policy_check["passed"],
+        "errors": [] if "class MethodRanker" in method_research_text else ["MethodRanker missing"],
+        "warnings": [],
+        "details": {"weights_from_policy": True},
+    }
+    checks["network_disabled_by_default"] = {
+        "name": "network_disabled_by_default",
+        "passed": research_policy_check["passed"],
+        "errors": [] if research_policy_check["passed"] else ["research policy safety failed"],
+        "warnings": [],
+        "details": {"method_research_network_enabled": False, "method_research_llm_enabled": False},
     }
 
 
