@@ -1,0 +1,55 @@
+{
+  "policy_version": "m5a_conservative_v1",
+  "evidence_rank": [
+    "full_anchor_oof_comparison",
+    "verified_self_contained_oof",
+    "unverified_self_contained_oof",
+    "signal_evidence",
+    "expert_scope",
+    "structure_only",
+    "artifact_integrity"
+  ],
+  "action_priority": [
+    "request_missing_input",
+    "accept_reference",
+    "run_oof_evaluation",
+    "run_integrity_audit",
+    "request_policy",
+    "human_review",
+    "keep_branch_closed",
+    "generate_candidate",
+    "run_training",
+    "stop_branch",
+    "reject_candidate"
+  ],
+  "risk_policy": {
+    "default_risk_level": "low",
+    "prediction_mutation_risk": "high",
+    "training_risk": "high",
+    "submission_risk": "critical"
+  },
+  "budget_policy": {
+    "respect_project_budget": true,
+    "planner_counts_as_round": false
+  },
+  "duplicate_policy": {
+    "block_duplicate_execution": true,
+    "block_duplicate_feedback": true,
+    "defer_materialized_candidate_generation": true
+  },
+  "missing_input_policy": {
+    "prefer_request_missing_input": true,
+    "missing_input_status": "waiting_for_input"
+  },
+  "human_approval_policy": {
+    "training_requires_human_approval": true,
+    "prediction_artifact_requires_human_approval": true,
+    "online_submission_requires_human_approval": true,
+    "closed_branch_reopen_requires_human_approval": true
+  },
+  "branch_reopen_policy": {
+    "auto_reopen_closed_branch": false,
+    "requires_human_approval": true
+  },
+  "promotion_policy_refs": []
+}

@@ -15,6 +15,7 @@ from typing import Any
 
 from .feedback.normalizers import NORMALIZER_REGISTRY
 from .paths import PathResolver
+from .planning.policy import load_policy
 from .validation import (
     reports_to_checks,
     validate_a1_data_profile_dir,
@@ -372,6 +373,79 @@ def build_report(
         "warnings": [],
         "details": {"path": str(oof_eval_schema_path)},
     }
+    plan_schema_errors: list[str] = []
+    plan_schema_path = root / "schemas" / "plan_decision.schema.json"
+    try:
+        plan_schema = json.loads(plan_schema_path.read_text(encoding="utf-8"))
+    except Exception as exc:
+        plan_schema = {}
+        plan_schema_errors.append(f"plan decision schema unreadable: {exc}")
+    if isinstance(plan_schema, dict):
+        required = set(plan_schema.get("required", []))
+        for key in [
+            "planner_version",
+            "plan_id",
+            "status",
+            "selected_action",
+            "ranked_actions",
+            "blocked_actions",
+            "deferred_actions",
+            "input_hashes",
+            "policy_hash",
+        ]:
+            if key not in required:
+                plan_schema_errors.append(f"plan decision schema missing {key}")
+    checks["plan_decision_schema"] = {
+        "name": "plan_decision_schema",
+        "passed": not plan_schema_errors,
+        "errors": plan_schema_errors,
+        "warnings": [],
+        "details": {"path": str(plan_schema_path)},
+    }
+    planner_policy_schema_errors: list[str] = []
+    planner_policy_schema_path = root / "schemas" / "planner_policy.schema.json"
+    try:
+        planner_policy_schema = json.loads(
+            planner_policy_schema_path.read_text(encoding="utf-8")
+        )
+    except Exception as exc:
+        planner_policy_schema = {}
+        planner_policy_schema_errors.append(f"planner policy schema unreadable: {exc}")
+    if isinstance(planner_policy_schema, dict):
+        required = set(planner_policy_schema.get("required", []))
+        for key in [
+            "evidence_rank",
+            "action_priority",
+            "human_approval_policy",
+            "branch_reopen_policy",
+            "promotion_policy_refs",
+        ]:
+            if key not in required:
+                planner_policy_schema_errors.append(f"planner policy schema missing {key}")
+    checks["planner_policy_schema"] = {
+        "name": "planner_policy_schema",
+        "passed": not planner_policy_schema_errors,
+        "errors": planner_policy_schema_errors,
+        "warnings": [],
+        "details": {"path": str(planner_policy_schema_path)},
+    }
+    planner_policy_errors: list[str] = []
+    planner_policy_path = root / "config" / "planner_policy.json"
+    try:
+        _policy_payload, planner_policy_hash = load_policy(planner_policy_path)
+    except Exception as exc:
+        planner_policy_hash = ""
+        planner_policy_errors.append(str(exc))
+    checks["planner_policy_config"] = {
+        "name": "planner_policy_config",
+        "passed": not planner_policy_errors,
+        "errors": planner_policy_errors,
+        "warnings": [],
+        "details": {
+            "path": str(planner_policy_path),
+            "sha256": planner_policy_hash,
+        },
+    }
     expected_normalizers = {
         "A1_V46A1_ISOLATED_AUDIT",
         "A1_V49A_EDGE_UTILITY_AUDIT",
@@ -428,6 +502,26 @@ def build_report(
             "path": str(evaluation_root),
             "exists": evaluation_root.exists(),
             "parent_exists": evaluation_root.parent.exists(),
+        },
+    }
+    planning_root = root / "artifacts" / "plans"
+    checks["planning_output_root"] = {
+        "name": "planning_output_root",
+        "passed": planning_root.resolve() != champion_csv.resolve(),
+        "errors": (
+            ["planning output root must not equal champion csv"]
+            if planning_root.resolve() == champion_csv.resolve()
+            else []
+        ),
+        "warnings": (
+            ["plans artifact root does not exist yet"]
+            if not planning_root.exists()
+            else []
+        ),
+        "details": {
+            "path": str(planning_root),
+            "exists": planning_root.exists(),
+            "parent_exists": planning_root.parent.exists(),
         },
     }
 
