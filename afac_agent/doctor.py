@@ -1002,6 +1002,7 @@ def build_report(
         "experiment_proposal.schema.json": {"proposal_id", "target_problem_ids", "core_hypothesis", "round_cost"},
         "critic_review.schema.json": {"verdict", "critical_issues", "minimal_safe_revision"},
         "decision_core_manifest.schema.json": {"run_version", "run_id", "artifacts", "counts_as_experiment_round"},
+        "m7_dry_run_manifest.schema.json": {"run_version", "run_id", "status", "artifacts", "round_consumed"},
     }
     for filename, required in research_schema_required.items():
         schema_check = _json_file_check(root, f"schemas/{filename}", {"$schema", "type"})
@@ -1147,6 +1148,14 @@ def build_report(
         "warnings": (["decision_core_runs artifact root does not exist yet"] if not decision_core_root.exists() else []),
         "details": {"path": str(decision_core_root), "exists": decision_core_root.exists(), "gitignored": _gitignore_has(root, "artifacts/decision_core_runs/")},
     }
+    m7_root = root / "artifacts" / "m7_dry_runs"
+    checks["m7_dry_run_output_root"] = {
+        "name": "m7_dry_run_output_root",
+        "passed": m7_root.resolve() != champion_csv.resolve() and _gitignore_has(root, "artifacts/m7_dry_runs/"),
+        "errors": ([] if _gitignore_has(root, "artifacts/m7_dry_runs/") else ["artifacts/m7_dry_runs/ must be ignored"]),
+        "warnings": (["m7_dry_runs artifact root does not exist yet"] if not m7_root.exists() else []),
+        "details": {"path": str(m7_root), "exists": m7_root.exists(), "gitignored": _gitignore_has(root, "artifacts/m7_dry_runs/")},
+    }
 
     method_research_module = root / "afac_agent" / "research" / "method_research.py"
     method_research_text = method_research_module.read_text(encoding="utf-8") if method_research_module.exists() else ""
@@ -1257,6 +1266,29 @@ def build_report(
         "errors": [] if decision_core_safety_ok else ["decision core manifest must declare no adapter/training/prediction/project mutation/round use"],
         "warnings": [],
         "details": {"module": str(decision_core_module)},
+    }
+    m7_module = root / "afac_agent" / "m7_dry_run.py"
+    m7_text = m7_module.read_text(encoding="utf-8") if m7_module.exists() else ""
+    m7_safety_ok = all(
+        token in m7_text
+        for token in [
+            "class M7DryRunOrchestrator",
+            "executes_adapter",
+            "trains_model",
+            "generates_prediction",
+            "creates_submission",
+            "counts_as_experiment_round",
+            "experiment_executed",
+            "round_consumed",
+            "execution_allowed",
+        ]
+    )
+    checks["m7_dry_run_safety"] = {
+        "name": "m7_dry_run_safety",
+        "passed": m7_module.exists() and m7_safety_ok,
+        "errors": [] if (m7_module.exists() and m7_safety_ok) else ["m7 dry-run module must declare no execution/training/prediction/submission/round use"],
+        "warnings": [],
+        "details": {"module": str(m7_module)},
     }
 
 

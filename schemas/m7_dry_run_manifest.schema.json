@@ -1,0 +1,47 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "AFAC M7A Single-Round Dry Run Manifest",
+  "type": "object",
+  "additionalProperties": true,
+  "required": [
+    "run_version",
+    "run_id",
+    "status",
+    "read_only",
+    "executes_adapter",
+    "trains_model",
+    "generates_prediction",
+    "creates_submission",
+    "mutates_project_state",
+    "mutates_history",
+    "counts_as_experiment_round",
+    "experiment_executed",
+    "feedback_observed",
+    "prediction_generated",
+    "round_consumed",
+    "artifacts"
+  ],
+  "properties": {
+    "status": {
+      "enum": [
+        "completed_dry_run",
+        "waiting_for_input",
+        "ready_for_human_approval",
+        "blocked",
+        "invalid"
+      ]
+    },
+    "read_only": {"const": true},
+    "executes_adapter": {"const": false},
+    "trains_model": {"const": false},
+    "generates_prediction": {"const": false},
+    "creates_submission": {"const": false},
+    "mutates_project_state": {"const": false},
+    "mutates_history": {"const": false},
+    "counts_as_experiment_round": {"const": false},
+    "experiment_executed": {"const": false},
+    "feedback_observed": {"const": false},
+    "prediction_generated": {"const": false},
+    "round_consumed": {"const": false}
+  }
+}

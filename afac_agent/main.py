@@ -19,6 +19,7 @@ from .llm.providers import (
     redact_secret,
 )
 from .llm.shadow_planner import LLMShadowPlanner
+from .m7_dry_run import M7DryRunOrchestrator
 from .orchestrator import AgentOrchestrator
 from .paths import PathResolver
 from .planning.deterministic_planner import DeterministicPlanner
@@ -449,6 +450,32 @@ def _decision_core_run(argv: list[str]) -> None:
     raise SystemExit(2)
 
 
+def _m7_dry_run(argv: list[str]) -> None:
+    parser = argparse.ArgumentParser(prog="afac_agent.main m7-dry-run")
+    parser.add_argument("--project_root", default=".")
+    parser.add_argument("--decision-run", required=True)
+    parser.add_argument("--project-state", default="config/project_state.json")
+    parser.add_argument("--tool-registry", default="config/tool_registry.json")
+    parser.add_argument("--out-root", default="artifacts/m7_dry_runs")
+    parser.add_argument("--force-rebuild", action="store_true")
+    args = parser.parse_args(argv)
+    resolver = PathResolver(args.project_root)
+    root = resolver.project_root
+    result = M7DryRunOrchestrator(project_root=root).run(
+        decision_run=resolver.resolve(args.decision_run) or root / args.decision_run,
+        project_state=resolver.resolve(args.project_state) or root / args.project_state,
+        tool_registry=resolver.resolve(args.tool_registry) or root / args.tool_registry,
+        out_root=resolver.resolve(args.out_root) or root / args.out_root,
+        force_rebuild=args.force_rebuild,
+    )
+    print(json.dumps(result, ensure_ascii=False, indent=2))
+    if result["status"] in {"completed_dry_run", "ready_for_human_approval", "blocked", "invalid"}:
+        raise SystemExit(0)
+    if result["status"] == "waiting_for_input":
+        raise SystemExit(3)
+    raise SystemExit(2)
+
+
 def _llm_provider_check(argv: list[str]) -> None:
     parser = argparse.ArgumentParser(prog="afac_agent.main llm-provider-check")
     parser.add_argument("--project_root", default=".")
@@ -538,6 +565,9 @@ def main() -> None:
         return
     if len(sys.argv) > 1 and sys.argv[1] == "decision-core-run":
         _decision_core_run(sys.argv[2:])
+        return
+    if len(sys.argv) > 1 and sys.argv[1] == "m7-dry-run":
+        _m7_dry_run(sys.argv[2:])
         return
 
     parser = argparse.ArgumentParser()
