@@ -1,0 +1,69 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "A1 Closed Loop Manifest",
+  "type": "object",
+  "required": [
+    "manifest_version",
+    "run_id",
+    "status",
+    "max_scientific_rounds",
+    "scientific_rounds_used",
+    "uses_test_truth",
+    "creates_submission",
+    "generates_test_prediction",
+    "online_champion_mutated",
+    "mutates_project_state",
+    "mutates_confirmed_history",
+    "best_candidate_id",
+    "fusion_candidate_status",
+    "stop_reason",
+    "artifacts"
+  ],
+  "properties": {
+    "manifest_version": {
+      "const": "a1_autonomous_scientific_closed_loop_v1"
+    },
+    "run_id": {
+      "type": "string",
+      "minLength": 16
+    },
+    "status": {
+      "enum": ["completed", "waiting_for_input", "failed", "duplicate"]
+    },
+    "max_scientific_rounds": {
+      "type": "integer",
+      "minimum": 1,
+      "maximum": 3
+    },
+    "scientific_rounds_used": {
+      "type": "integer",
+      "minimum": 0,
+      "maximum": 3
+    },
+    "uses_test_truth": {
+      "const": false
+    },
+    "creates_submission": {
+      "const": false
+    },
+    "generates_test_prediction": {
+      "const": false
+    },
+    "online_champion_mutated": {
+      "const": false
+    },
+    "mutates_project_state": {
+      "const": false
+    },
+    "mutates_confirmed_history": {
+      "const": false
+    },
+    "candidate_a1_csv_generated": {
+      "const": false
+    },
+    "artifacts": {
+      "type": "object"
+    }
+  },
+  "additionalProperties": true
+}

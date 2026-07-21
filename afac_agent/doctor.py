@@ -1006,6 +1006,7 @@ def build_report(
         "m7b_readiness_manifest.schema.json": {"run_version", "run_id", "status", "artifacts", "anchor_status"},
         "evaluation_anchor_bootstrap_manifest.schema.json": {"manifest_version", "run_id", "status", "historical_v53q1_oof_status"},
         "fusion_manifest.schema.json": {"manifest_version", "run_id", "status", "artifacts", "counts_as_experiment_round"},
+        "a1_closed_loop_manifest.schema.json": {"manifest_version", "run_id", "status", "artifacts", "scientific_rounds_used"},
     }
     for filename, required in research_schema_required.items():
         schema_check = _json_file_check(root, f"schemas/{filename}", {"$schema", "type"})
@@ -1182,6 +1183,14 @@ def build_report(
         "errors": ([] if _gitignore_has(root, "artifacts/fusion_runs/") else ["artifacts/fusion_runs/ must be ignored"]),
         "warnings": (["fusion_runs artifact root does not exist yet"] if not fusion_root.exists() else []),
         "details": {"path": str(fusion_root), "exists": fusion_root.exists(), "gitignored": _gitignore_has(root, "artifacts/fusion_runs/")},
+    }
+    a1_closed_loop_root = root / "artifacts" / "a1_closed_loop_runs"
+    checks["a1_closed_loop_output_root"] = {
+        "name": "a1_closed_loop_output_root",
+        "passed": a1_closed_loop_root.resolve() != champion_csv.resolve() and _gitignore_has(root, "artifacts/a1_closed_loop_runs/"),
+        "errors": ([] if _gitignore_has(root, "artifacts/a1_closed_loop_runs/") else ["artifacts/a1_closed_loop_runs/ must be ignored"]),
+        "warnings": (["a1_closed_loop_runs artifact root does not exist yet"] if not a1_closed_loop_root.exists() else []),
+        "details": {"path": str(a1_closed_loop_root), "exists": a1_closed_loop_root.exists(), "gitignored": _gitignore_has(root, "artifacts/a1_closed_loop_runs/")},
     }
     eval_anchor_dir = evaluation_anchor_root / "A1_EVAL_ANCHOR_V1"
     eval_manifest_path = eval_anchor_dir / "A1_EVAL_ANCHOR_V1_manifest.json"
@@ -1507,6 +1516,31 @@ def build_report(
         "errors": [] if (fusion_module.exists() and fusion_safety_ok) else ["fusion controller must declare portfolio/fusion contracts and no training/Test/submission/round use"],
         "warnings": [],
         "details": {"module": str(fusion_module)},
+    }
+    closed_loop_module = root / "afac_agent" / "a1_closed_loop.py"
+    closed_loop_text = closed_loop_module.read_text(encoding="utf-8") if closed_loop_module.exists() else ""
+    closed_loop_safety_ok = all(
+        token in closed_loop_text
+        for token in [
+            "class A1ClosedLoopRunner",
+            "MAX_SCIENTIFIC_ROUNDS",
+            "uses_test_truth",
+            "creates_submission",
+            "generates_test_prediction",
+            "online_champion_mutated",
+            "mutates_project_state",
+            "mutates_confirmed_history",
+            "scientific_rounds_used",
+            "ResearchEventStore",
+            "safe_resume_point",
+        ]
+    )
+    checks["a1_closed_loop_safety"] = {
+        "name": "a1_closed_loop_safety",
+        "passed": closed_loop_module.exists() and closed_loop_safety_ok,
+        "errors": [] if (closed_loop_module.exists() and closed_loop_safety_ok) else ["A1 closed loop must declare round budget, safety flags, append-only memory, and resume points"],
+        "warnings": [],
+        "details": {"module": str(closed_loop_module)},
     }
 
 

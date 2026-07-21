@@ -8,6 +8,7 @@ import json
 import sys
 from pathlib import Path
 
+from .a1_closed_loop import run_a1_closed_loop
 from .adapters.runner import AdapterRunner
 from .feedback.builder import FeedbackBuilder
 from .fusion_controller import run_fusion_controller
@@ -563,6 +564,38 @@ def _fusion_controller(argv: list[str]) -> None:
         force_rebuild=args.force_rebuild,
     )
     print(json.dumps(result, ensure_ascii=False, indent=2))
+
+
+def _a1_closed_loop(argv: list[str]) -> None:
+    parser = argparse.ArgumentParser(prog="afac_agent.main a1-closed-loop")
+    parser.add_argument("--project_root", default=".")
+    parser.add_argument("--anchor-dir", default="artifacts/evaluation_anchor/A1_EVAL_ANCHOR_V1")
+    parser.add_argument("--v43c-oof", required=True)
+    parser.add_argument("--v46a-oof", required=True)
+    parser.add_argument("--project-state", default="config/project_state.json")
+    parser.add_argument("--tool-registry", default="config/tool_registry.json")
+    parser.add_argument("--research-policy", default="config/research_policy.json")
+    parser.add_argument("--out-root", default="artifacts/a1_closed_loop_runs")
+    parser.add_argument("--max-rounds", type=int, default=3)
+    parser.add_argument("--max-wall-clock-seconds", type=int, default=7200)
+    parser.add_argument("--force-rebuild", action="store_true")
+    args = parser.parse_args(argv)
+    resolver = PathResolver(args.project_root)
+    root = resolver.project_root
+    result = run_a1_closed_loop(
+        project_root=root,
+        anchor_dir=resolver.resolve(args.anchor_dir) or root / args.anchor_dir,
+        v43c_oof=resolver.resolve(args.v43c_oof) or args.v43c_oof,
+        v46a_oof=resolver.resolve(args.v46a_oof) or args.v46a_oof,
+        project_state=resolver.resolve(args.project_state) or root / args.project_state,
+        tool_registry=resolver.resolve(args.tool_registry) or root / args.tool_registry,
+        research_policy=resolver.resolve(args.research_policy) or root / args.research_policy,
+        out_root=resolver.resolve(args.out_root) or root / args.out_root,
+        max_rounds=args.max_rounds,
+        max_wall_clock_seconds=args.max_wall_clock_seconds,
+        force_rebuild=args.force_rebuild,
+    )
+    print(json.dumps(result, ensure_ascii=False, indent=2))
     if result["status"] in {"completed", "failed"}:
         raise SystemExit(0)
     if result["status"] == "waiting_for_input":
@@ -671,6 +704,9 @@ def main() -> None:
         return
     if len(sys.argv) > 1 and sys.argv[1] == "fusion-controller":
         _fusion_controller(sys.argv[2:])
+        return
+    if len(sys.argv) > 1 and sys.argv[1] == "a1-closed-loop":
+        _a1_closed_loop(sys.argv[2:])
         return
 
     parser = argparse.ArgumentParser()

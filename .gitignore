@@ -47,6 +47,7 @@ artifacts/decision_core_runs/
 artifacts/m7_dry_runs/
 artifacts/m7b_readiness/
 artifacts/fusion_runs/
+artifacts/a1_closed_loop_runs/
 
 # Large local competition/model assets must stay outside git unless explicitly curated.
 data/

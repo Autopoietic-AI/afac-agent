@@ -162,3 +162,40 @@ not a permanent Research Agent policy. M6R-B2 will introduce `live_cached`,
 `cache_only`, and `disabled` modes: automatic tests stay `disabled`, real
 research defaults to `live_cached`, and network/provider failure degrades to
 `cache_only`. M6R-B2 is reserved for source-grounded semantic extraction.
+
+## A1 Autonomous Scientific Closed Loop v1 Status
+
+A1 Closed Loop v1 adds a bounded real closed-loop runner for A1. The v1
+execution boundary is deliberately narrow: it can select and execute the
+registered Fusion Controller over verified OOF assets, record strict OOF
+feedback, append an internal research event, update runtime memory views, write
+`trajectory_A1.json`, update a runtime best-candidate registry, and make an
+automatic stop/continue decision.
+
+Safety boundary:
+
+- max scientific rounds: `3`;
+- first real execution uses offline OOF fusion only;
+- no Test truth, online submission, Test prediction CSV, Online Champion
+  mutation, Project State JSON mutation, confirmed history mutation, Fold/Gate
+  mutation, or unregistered Adapter execution;
+- runtime artifacts are written under `artifacts/a1_closed_loop_runs/` and are
+  ignored by Git;
+- the existing `class_weighted_blend_base_composed` fusion candidate starts as
+  `portfolio_candidate` and may become `accepted_portfolio`, but is not allowed
+  to replace the Online Champion automatically.
+
+Latest verified runtime:
+
+- run id: `a3f0c67c984e0fafc7c97ca9`;
+- actual scientific rounds used: `1`;
+- round 1 selected `class_weighted_blend_base_composed` through the Fusion
+  Controller;
+- Overall gain: `+0.000818107444777727`;
+- Macro gain: `-0.0009359488044727859`;
+- positive folds: `4/5`;
+- rescue/damage/net: `38 / 29 / +9`;
+- final status: `accepted_portfolio`;
+- stop reason:
+  `macro_protection_prevents_direct_promotion_and_repeating_same_information_source_is_low_value`;
+- `candidate_A1.csv` was not generated.
