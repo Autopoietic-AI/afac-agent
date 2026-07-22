@@ -199,3 +199,22 @@ Latest verified runtime:
 - stop reason:
   `macro_protection_prevents_direct_promotion_and_repeating_same_information_source_is_low_value`;
 - `candidate_A1.csv` was not generated.
+
+## A2 Task Integration and Evaluation Foundation Status
+
+- A2 integration module `afac_agent.a2` added (TaskAdapter, Data Profiler,
+  Evaluator, Fold validation, dual anchors, portfolio, fusion operators,
+  complementarity audit, integration dry-run).
+- A2 fold protocol `AFAC_A2_FOLD_V1` validated against the explicit
+  `runs/stageA/train_folds.csv`; folds are never re-split.
+- A2 Online Deployment Anchor: `A2_ONLINE_CHAMPION_05093` (identity only,
+  online score `0.5093`; never an offline OOF artifact).
+- A2 Offline Evaluation Anchor: `A2_EVAL_ANCHOR_V1` materialized from the
+  verified v42c-DIN OOF route (`runs/C2_v42_merged/oof_scores_full.npz`);
+  `deployment_equivalent=false`; Test scores are never used as OOF.
+- A2 integration dry-run status: `ready_for_experiment_design`;
+  `scientific_rounds_used=0`; no training, no GPU, no Test prediction, no
+  submission, no LLM, no network.
+- Runtime artifacts: `artifacts/a2_integration/` (ignored by Git).
+- No A1 champion, online score, OOF anchor, Fold definition, Gate definition,
+  closed branch, Project State JSON, or confirmed history was changed.

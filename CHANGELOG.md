@@ -1,5 +1,43 @@
 # CHANGELOG
 
+## 2026-07-22 - A2 Task Integration and Evaluation Foundation
+
+- Added `afac_agent.a2` package: read-only A2 TaskAdapter (uid/iid validation,
+  history sequence parsing, Test user order, Top10 legality, Test truth
+  isolation), A2 Data Profiler with len0/1/2/exact_len3/4+, history/novel and
+  retrieval-vs-ranking bucket registry, and A2 Evaluator (NDCG@10, HitRate@10,
+  MRR@10, Candidate Recall, Target Rank, bucket breakdowns, Rescue/Damage/Net,
+  Changed User Count, Change Precision).
+- Added AFAC_A2_FOLD_V1 validation for the explicit `train_folds.csv`
+  assignment (each train user exactly once, no Test users, legal folds,
+  explicit user order, stable hash, auditable per-fold distributions). Folds
+  are never re-split.
+- Added A2 dual anchors: `A2_ONLINE_CHAMPION_05093` (deployment identity only,
+  never an OOF artifact) and `A2_EVAL_ANCHOR_V1` (materialized from the
+  verified v42c-DIN OOF route; deployment_equivalent=false).
+- Added A2 asset portfolio registration with strict OOF/Test scope isolation;
+  assets without explicit local artifacts are `declared_unmaterialized`,
+  never fabricated.
+- Added recommendation fusion operators (score_blend, rank_fusion,
+  candidate_union, bucket_route, topk_protected_rerank,
+  slot_protected_rerank, retriever_ranker_composition) with strict outer-fold
+  cross-fit for learned parameters; oracle union recall is diagnostic only.
+- Added A2 complementarity audit (retriever coverage A-only/B-only, rank
+  rescue/damage/net, Len and history/novel buckets, topK ranges,
+  candidate-set-change vs fixed-set-rerank separation).
+- Added `python -m afac_agent.main a2-integration` dry-run chaining
+  Profile → Scientific Queue → Portfolio → Complementarity → Fusion Planner
+  → M6B → M6C → M5 → Execution/Evaluation/Trajectory Previews. No training,
+  no GPU, no Test prediction, no submission, no LLM, no network, and
+  A2 scientific_rounds_used stays 0.
+- Added 21 A2 tests covering validation, metrics, failure separation, buckets,
+  fold integrity, OOF/Test isolation, operators, cross-fit, anchor identity,
+  and dry-run safety.
+
+No A1 champion CSV, online score, Fold definition, Gate definition, OOF
+anchor, Project State, closed branch, confirmed history, or A2 scientific
+round was changed.
+
 ## 2026-07-20 - M3A Tool Adapter Foundation
 
 - Added the minimal M3A Tool Adapter protocol and AdapterRunner.

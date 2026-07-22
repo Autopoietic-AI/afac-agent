@@ -67,3 +67,5 @@ lightning_logs/
 *.pt
 *.pth
 *.ckpt
+
+artifacts/a2_integration/

@@ -2,10 +2,10 @@
 
 ## Current module
 
-- Module: Unified Model Portfolio & Fusion Controller
+- Module: A2 Task Integration + Evaluation Foundation + Existing Asset Integration + A2 Dry-run
 - Commit status: this file is part of the module commit; use `git rev-parse HEAD` after commit for the immutable commit id.
-- Previous frozen baseline: `e170b82a20d84e54a19643378530caf528e81203`
-- Scope: offline A1 OOF portfolio registration, complementarity audit, bounded fusion planning, deterministic report package.
+- Previous frozen baseline: `e82c01842138502be70b6d2ea8ed1d7d09ead3fe` (A1 Autonomous Scientific Closed Loop v1)
+- Scope: A2 TaskAdapter, Data Profiler, Evaluator, AFAC_A2_FOLD_V1 validation, dual anchors, asset portfolio, ranking fusion operators, complementarity audit, full dry-run. No training, no Test prediction, no submission.
 
 ## Frozen facts
 
@@ -77,3 +77,34 @@ Use the Fusion Controller report package as offline evidence for the next strict
 - Best runtime portfolio candidate: `class_weighted_blend_base_composed`
 - Fusion candidate final status: `accepted_portfolio`
 - Stop reason: `macro_protection_prevents_direct_promotion_and_repeating_same_information_source_is_low_value`
+
+## A2 Integration status
+
+- Module: A2 Task Integration + Evaluation Foundation (dry-run only).
+- A2 data root and runs root: external, supplied via CLI (`--a2-data-dir`, `--a2-runs-root`), never hard-coded.
+- A2 fold protocol: `AFAC_A2_FOLD_V1`, validated from `runs/stageA/train_folds.csv` (each train user exactly once, no Test users, folds 0-4, explicit order, stable hash).
+- A2 Online Deployment Anchor: `A2_ONLINE_CHAMPION_05093` (identity only; online score `0.5093`; never an OOF artifact).
+- A2 Offline Evaluation Anchor: `A2_EVAL_ANCHOR_V1`, materialized from verified v42c-DIN OOF (`runs/C2_v42_merged/oof_scores_full.npz`); `deployment_equivalent=false`.
+- Anchor offline metrics (v42c OOF): NDCG@10 `0.5924893069425867`, HitRate@10 `0.819125`, MRR@10 `0.520807996031746`, Candidate Recall `1.0`.
+- Registered verified OOF assets: `A2_V42C_DIN_OOF`, `A2_V48A_SASREC_OOF`.
+- Declared unmaterialized assets (explicit artifact required before OOF use): V23 Top10, C_all Novel, DCN-Mix, LambdaRank, Len0 experts, Len3 experts, 0.5093 composition.
+- Fusion planner best offline candidate: `score_blend_v42_v48` (accepted; NDCG@10 gain `+0.007551445340384433`, rescue/damage/net `815/522/293`).
+- A2 scientific_rounds_used: `0`.
+- Dry-run status: `ready_for_experiment_design`.
+- Runtime artifacts: `artifacts/a2_integration/` (ignored by Git).
+
+## Unique blocking item
+
+- None for the integration dry-run. The final A2 real closed loop additionally requires explicit materialized artifacts for the declared assets above (V23 Top10 candidate set first) plus explicit next-module approval.
+
+## Next main version
+
+- Final A2 real closed loop (experiment execution). Do not start without explicit approval and explicit asset paths.
+
+## Key run commands
+
+```powershell
+python -m afac_agent.main a2-integration --project_root . --a2-data-dir "C:\Users\李天皓\agent比赛\A推荐\A推荐" --a2-runs-root "C:\Users\李天皓\agent比赛\model_pro\versions\v49_featurebank" --force-rebuild
+python -m pytest -p no:cacheprovider -q --basetemp "C:/tmp/afac_a2_integration"
+python -m afac_agent.doctor --project_root .
+```
