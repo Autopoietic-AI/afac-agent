@@ -218,3 +218,19 @@ Latest verified runtime:
 - Runtime artifacts: `artifacts/a2_integration/` (ignored by Git).
 - No A1 champion, online score, OOF anchor, Fold definition, Gate definition,
   closed branch, Project State JSON, or confirmed history was changed.
+
+## B1 Data-First Autonomous Classification Closed Loop Status
+
+- Task: `B1_NODE_CLASSIFICATION`; task family: `node_classification`; stage: `B`.
+- Data root: `C:\Users\李天皓\agent比赛\B分类`; B2 data root registered but isolated.
+- Transfer gate: `cross_task_prior_mode=advisory_only`; A1 model weights/OOF/predictions/Fold forbidden direct transfer.
+- Data Intelligence: completed and `verified` (run id `657a4bfbf22d525350d28642`); primary problem identified as `node_classification_with_moderate_graph_and_feature_signals`.
+- Fold: `AFAC_B1_FOLD_V1` stratified 5-fold with degree-matched, propensity-matched, low-degree and test-like panels.
+- Closed loop: completed in `43.66s` using 3 scientific rounds; run id `e95368a24e0780e65e92aceb`.
+- Round 1 (`data_grounded_exploit`): feature LR/MLP, undirected LP, neighbor-mean LR.
+- Round 2 (`adjacent_explore`): APPNP-LR, directed-out LP, directed-in LP, APPNP-MLP.
+- Round 3 (`global_or_fusion_explore`): probability/logit/class-weighted blends and node-level gate over top LP candidates.
+- Best scientific & deployment candidate: `B1_LP_DIRECTED_OUT` (standard accuracy `0.4907`, macro `0.3838`).
+- Evaluation anchor: `B1_EVAL_ANCHOR_V1` materialized from `B1_LP_DIRECTED_OUT` OOF.
+- Submission: `artifacts/b1_runs/e95368a24e0780e65e92aceb/TO_UPLOAD/candidate_B1.csv` generated; 1530 rows; audit passed; not uploaded.
+- A1/A2 assets remain frozen; B1 `scientific_rounds_used=3` is independent of A1/A2 round counters.

@@ -108,3 +108,31 @@ python -m afac_agent.main a2-integration --project_root . --a2-data-dir "C:\User
 python -m pytest -p no:cacheprovider -q --basetemp "C:/tmp/afac_a2_integration"
 python -m afac_agent.doctor --project_root .
 ```
+
+## B1 Data-First Autonomous Classification Closed Loop Status
+
+- Module: B1 node classification (B榜节点分类); independent namespace from A1/A2.
+- Data root: `C:\Users\李天皓\agent比赛\B分类`.
+- B2 (B榜推荐) path registered but not read; no B2 data entered B1 pipeline.
+- Data Intelligence status: `verified`; run id `657a4bfbf22d525350d28642`.
+- Fold protocol: `AFAC_B1_FOLD_V1` (stratified 5-fold, seed 2026, stable hash).
+- Validation panels: `B1_STANDARD_PANEL`, `B1_DEGREE_MATCHED_PANEL`, `B1_PROPENSITY_MATCHED_PANEL`, `B1_LOW_DEGREE_PANEL`, `B1_TEST_LIKE_PANEL`.
+- Closed loop status: `completed`; run id `e95368a24e0780e65e92aceb`; wall clock `43.66s`; `scientific_rounds_used=3`.
+- Evaluation anchor: `B1_EVAL_ANCHOR_V1` materialized from `B1_LP_DIRECTED_OUT`.
+- Best scientific candidate: `B1_LP_DIRECTED_OUT` (macro accuracy `0.3838`).
+- Best deployment candidate: `B1_LP_DIRECTED_OUT` (standard accuracy `0.4907`).
+- Submission: `artifacts/b1_runs/e95368a24e0780e65e92aceb/TO_UPLOAD/candidate_B1.csv` (1530 rows, label range 0-7, audit passed).
+- No A1/A2 Champion, Anchor, Fold, history, or scientific-round records modified.
+- No Test truth used; no external public B1 labels/edges/checkpoints used; no automatic platform upload.
+
+### Key run commands (B1)
+
+```powershell
+python -m afac_agent.main b1-closed-loop --project_root . --data-root "C:\Users\李天皓\agent比赛\B分类" --out-root artifacts/b1_runs --force-rebuild
+python -m pytest -p no:cacheprovider -q --basetemp "C:/tmp/afac_b1_post"
+python -m afac_agent.doctor --project_root .
+```
+
+### Next main version
+
+- B1 follow-up rounds or B2 (B榜推荐) only after explicit approval and asset path confirmation.

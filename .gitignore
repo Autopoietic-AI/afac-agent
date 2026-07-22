@@ -69,3 +69,4 @@ lightning_logs/
 *.ckpt
 
 artifacts/a2_integration/
+artifacts/b1_runs/

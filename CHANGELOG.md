@@ -1,5 +1,45 @@
 # CHANGELOG
 
+## 2026-07-22 - B1 Data-First Autonomous Classification Closed Loop
+
+- Added `afac_agent.b1` package: generic `NodeClassificationTaskAdapter`
+  parameterized over node/feature/class counts; reads B1.npz, validates
+  train/test isolation, hidden Test truth, and official sample-submission order.
+- Added B1 Data Intelligence orchestrator with integrity audit, feature geometry
+  (density, PCA variance, effective rank, feature shift), graph regime
+  (directed-out/in/undirected views, PageRank, degree assortativity,
+  connectivity), label-graph reliability (homophily, class-conditioned
+  homophily, hop reliability, degree buckets), train/test propensity shift
+  audit, and A1 transferability matrix.
+- Added `AFAC_B1_FOLD_V1` stratified 5-fold with degree-matched,
+  propensity-matched, low-degree and test-like validation panels.
+- Added B1 CPU-only models: feature LR (with StandardScaler), small MLP,
+  iterative label propagation, APPNP-like smoothing + LR, and neighbor-mean
+  feature augmentation + LR.
+- Added `B1Evaluator` with standard/degree/propensity/low-degree/test-like
+  panels, per-class accuracy, fold stability, and rescue/damage/change metrics;
+  fixed per-class accuracy computation to report recall per class rather than
+  class frequency.
+- Added cross-fit fusion operators (probability blend, logit blend,
+  class-weighted blend) and cross-fit node-level gate with single-class-target
+  fallback.
+- Added `B1ClosedLoopRunner` enforcing max 3 scientific rounds, 2-hour wall
+  clock, single-process/single-GPU budget, automatic best scientific/deployment
+  selection, full-train retrain, Test inference, `candidate_B1.csv` generation,
+  `TO_UPLOAD` packaging, and `trajectory_B1.json`.
+- Added CLI `python -m afac_agent.main b1-closed-loop`.
+- Added 11 B1 synthetic tests covering adapter parameterization, namespace
+  isolation, transfer gate, Data Intelligence gate, fold integrity, OOF/Test
+  isolation, fusion operators, gate fallback, submission format, and A1/A2
+  no-regression.
+- Real B1 run completed: run id `e95368a24e0780e65e92aceb`, 3 rounds,
+  wall clock `43.66s`, best candidate `B1_LP_DIRECTED_OUT`
+  (standard accuracy `0.4907`, macro `0.3838`), submission `candidate_B1.csv`
+  generated and audited, not uploaded.
+
+No A1/A2 Champion, Anchor, Fold, history, scientific-round counters, or
+Project State was modified. B2 (B榜推荐) path was not read.
+
 ## 2026-07-22 - A2 Task Integration and Evaluation Foundation
 
 - Added `afac_agent.a2` package: read-only A2 TaskAdapter (uid/iid validation,

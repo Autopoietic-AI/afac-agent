@@ -10,6 +10,7 @@ from pathlib import Path
 
 from .a1_closed_loop import run_a1_closed_loop
 from .a2.integration import run_a2_integration
+from .b1.closed_loop import run_b1_closed_loop
 from .adapters.runner import AdapterRunner
 from .feedback.builder import FeedbackBuilder
 from .fusion_controller import run_fusion_controller
@@ -604,6 +605,33 @@ def _a1_closed_loop(argv: list[str]) -> None:
     raise SystemExit(2)
 
 
+def _b1_closed_loop(argv: list[str]) -> None:
+    parser = argparse.ArgumentParser(prog="afac_agent.main b1-closed-loop")
+    parser.add_argument("--project_root", default=".")
+    parser.add_argument("--data-root", required=True)
+    parser.add_argument("--out-root", default="artifacts/b1_runs")
+    parser.add_argument("--max-wall-clock-seconds", type=int, default=7200)
+    parser.add_argument("--max-rounds", type=int, default=3)
+    parser.add_argument("--force-rebuild", action="store_true")
+    args = parser.parse_args(argv)
+    resolver = PathResolver(args.project_root)
+    root = resolver.project_root
+    result = run_b1_closed_loop(
+        project_root=root,
+        data_root=args.data_root,
+        out_root=resolver.resolve(args.out_root) or root / args.out_root,
+        max_wall_clock_seconds=args.max_wall_clock_seconds,
+        max_rounds=args.max_rounds,
+        force_rebuild=args.force_rebuild,
+    )
+    print(json.dumps(result, ensure_ascii=False, indent=2))
+    if result["status"] in {"completed", "duplicate", "validation_failed"}:
+        raise SystemExit(0)
+    if result["status"] in {"waiting_for_input", "waiting_for_data_intelligence"}:
+        raise SystemExit(3)
+    raise SystemExit(2)
+
+
 def _a2_integration(argv: list[str]) -> None:
     parser = argparse.ArgumentParser(prog="afac_agent.main a2-integration")
     parser.add_argument("--project_root", default=".")
@@ -736,6 +764,9 @@ def main() -> None:
         return
     if len(sys.argv) > 1 and sys.argv[1] == "a2-integration":
         _a2_integration(sys.argv[2:])
+        return
+    if len(sys.argv) > 1 and sys.argv[1] == "b1-closed-loop":
+        _b1_closed_loop(sys.argv[2:])
         return
 
     parser = argparse.ArgumentParser()
