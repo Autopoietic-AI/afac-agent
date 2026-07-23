@@ -266,10 +266,15 @@ def instantiate_model(
     view: str = "undirected_union",
     **kwargs: Any,
 ) -> B1Model:
-    A = adj if view == "undirected_union" else (
-        adj + adj.T if view == "directed_out" else adj + adj.T
-    )
-    A = A.tocsr()
+    if view == "directed_out":
+        A = adj
+    elif view == "directed_in":
+        A = adj.T.tocsr()
+    elif view == "undirected_union":
+        A = (adj + adj.T).tocsr()
+        A.data = np.ones_like(A.data)
+    else:
+        raise ValueError(f"unknown view: {view}")
     if model_family == "feature_logistic":
         return FeatureLogistic(model_id=model_id, n_classes=n_classes, C=kwargs.get("C", 1.0))
     if model_family == "feature_mlp":

@@ -70,3 +70,7 @@ lightning_logs/
 
 artifacts/a2_integration/
 artifacts/b1_runs/
+artifacts/b1_repair/
+artifacts/b2_runs/
+artifacts/b_dual_task_runs/
+tmpafac_*/

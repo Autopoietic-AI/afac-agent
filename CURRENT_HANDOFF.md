@@ -109,7 +109,70 @@ python -m pytest -p no:cacheprovider -q --basetemp "C:/tmp/afac_a2_integration"
 python -m afac_agent.doctor --project_root .
 ```
 
-## B1 Data-First Autonomous Classification Closed Loop Status
+## B1 Repair / V2 Autonomous Classification Closed Loop Status
+
+- Module: B1 node classification (B榜节点分类) repair and V2 loop; independent namespace from A1/A2/B2.
+- Data root: `C:\Users\李天皓\agent比赛\B分类`; no B2 data entered B1 pipeline.
+- Closed loop status: `completed`; run id `c5e33663d37c6e49004e8213`; wall clock within 2-hour budget; `scientific_rounds_used=3`.
+- Best scientific candidate: `B1_LP_UNDIRECTED_ALPHA7`.
+- Best deployment candidate: `B1_LP_UNDIRECTED_ALPHA7` (standard accuracy `0.4964`, macro accuracy `0.3941`).
+- Submission: `artifacts/b1_runs/c5e33663d37c6e49004e8213/TO_UPLOAD/candidate_B1_v2.csv` (audit passed).
+- Evaluation anchor: `B1_EVAL_ANCHOR_V2` materialized from `B1_LP_UNDIRECTED_ALPHA7`.
+- Reference canonical first B1 run: `e95368a24e0780e65e92aceb` (online score `0.37908`, offline standard `0.49069`, gap `0.11161`).
+- No A1/A2/B2 Champion, Anchor, Fold, history, or scientific-round records modified.
+- No Test truth used; no external public B1 labels/edges/checkpoints used; no automatic platform upload.
+
+### Key run commands (B1 V2)
+
+```powershell
+python -m afac_agent.main b1-closed-loop --project_root . --data-root "C:\Users\李天皓\agent比赛\B分类" --out-root artifacts/b1_runs --max-wall-clock-seconds 7200 --max-rounds 3 --force-rebuild
+```
+
+## B2 Data-First Autonomous Recommendation Closed Loop Status
+
+- Module: B2 sequence recommendation (B榜推荐); independent namespace from A1/A2/B1.
+- Data root: `C:\Users\李天皓\agent比赛\B推荐`; actual files discovered under `C:\Users\李天皓\agent比赛\B推荐\B推荐\`.
+- Data Intelligence status: `verified`; run id `8e96fac363943d65f1c1947d`.
+- Fold protocol: `AFAC_B2_FOLD_V1` (stratified user-group-aware 5-fold, seed 2026, stable hash).
+- Validation panels: `B2_STANDARD_PANEL`, `B2_SHORT_HISTORY_PANEL`, `B2_EXACT_LEN3_PANEL`, `B2_LEN4_PLUS_PANEL`, `B2_HISTORY_TARGET_PANEL`, `B2_NOVEL_TARGET_PANEL`, `B2_LONG_TAIL_PANEL`, `B2_TEST_LIKE_PANEL`, `B2_TOP10_BOUNDARY_PANEL`.
+- Closed loop status: `completed`; run id `fcf5ad3dbcdf9700dd644eff`; wall clock `1807.57s` (within 2-hour budget); `scientific_rounds_used=3`.
+- Best scientific candidate: `B2_HISTORY_RECALL` (NDCG@10 `0.15482521769229524`, HitRate@10 `0.25146856642919635`, MRR@10 `0.12341284720362335`).
+- Best deployment candidate: `B2_HISTORY_RECALL`.
+- Round 1 (`retrieval_foundation`): popularity, history recall, item-item co-occurrence, last-item transition, score blends.
+- Round 2 (`ranking_explore`): candidate ranker (logistic) with batched cooc features.
+- Round 3 (`bucket_and_rerank_explore`): bucket rerank blending ranker and retrieval by sequence length.
+- Submission: `artifacts/b2_runs/fcf5ad3dbcdf9700dd644eff/TO_UPLOAD/candidate_B2.csv` (10000 rows, Top10, legal iids, test user order preserved, audit passed).
+- Evaluation anchor: `B2_EVAL_ANCHOR_V1` materialized from `B2_HISTORY_RECALL` OOF.
+- Online anchor: `B2_ONLINE_ANCHOR` (status `no_submission_yet`).
+- No A1/A2/B1 Champion, Anchor, Fold, history, or scientific-round records modified.
+- No Test truth used; no A2 model weights/OOF/Fold/candidates used for B2; no automatic platform upload.
+
+### Key run commands (B2)
+
+```powershell
+python -m afac_agent.main b2-closed-loop --project_root . --data-root "C:\Users\李天皓\agent比赛\B推荐" --out-root artifacts/b2_runs --max-wall-clock-seconds 7200 --max-rounds 3
+python -m pytest -p no:cacheprovider -q --basetemp "C:/tmp/afac_b2_post"
+python -m afac_agent.doctor --project_root .
+```
+
+### Next main version
+
+- B2 follow-up rounds or dual-task packaging only after explicit approval.
+
+## B1 + B2 Dual-Task Master Run Status
+
+- Master run id: `86f75dbc66d25382eb0c6a24`.
+- Canonical first B1 run: `e95368a24e0780e65e92aceb` (online score `0.37908`, offline standard `0.49069`, gap `0.11161`).
+- B1 V2 run: `c5e33663d37c6e49004e8213` (best `B1_LP_UNDIRECTED_ALPHA7`, standard `0.4964`, macro `0.3941`).
+- B2 first run: `fcf5ad3dbcdf9700dd644eff` (best `B2_HISTORY_RECALL`, NDCG@10 `0.1548`).
+- Master artifacts: `artifacts/b_dual_task_runs/86f75dbc66d25382eb0c6a24/`.
+- TO_UPLOAD:
+  - `artifacts/b_dual_task_runs/86f75dbc66d25382eb0c6a24/TO_UPLOAD/B1/candidate_B1_v2.csv`
+  - `artifacts/b_dual_task_runs/86f75dbc66d25382eb0c6a24/TO_UPLOAD/B2/candidate_B2.csv`
+- Cross-task isolation: A1/A2/B1 frozen assets not modified; B1 and B2 data/anchors/folds/submissions isolated; no Test truth used.
+- No automatic platform upload.
+
+## B1 Data-First Autonomous Classification Closed Loop Status (Canonical First Run)
 
 - Module: B1 node classification (B榜节点分类); independent namespace from A1/A2.
 - Data root: `C:\Users\李天皓\agent比赛\B分类`.
@@ -125,14 +188,10 @@ python -m afac_agent.doctor --project_root .
 - No A1/A2 Champion, Anchor, Fold, history, or scientific-round records modified.
 - No Test truth used; no external public B1 labels/edges/checkpoints used; no automatic platform upload.
 
-### Key run commands (B1)
+### Key run commands (B1 canonical first run)
 
 ```powershell
 python -m afac_agent.main b1-closed-loop --project_root . --data-root "C:\Users\李天皓\agent比赛\B分类" --out-root artifacts/b1_runs --force-rebuild
 python -m pytest -p no:cacheprovider -q --basetemp "C:/tmp/afac_b1_post"
 python -m afac_agent.doctor --project_root .
 ```
-
-### Next main version
-
-- B1 follow-up rounds or B2 (B榜推荐) only after explicit approval and asset path confirmation.

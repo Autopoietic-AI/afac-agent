@@ -27,8 +27,8 @@ from .fold import AFAC_B1_FOLD_V1, build_folds, build_panels
 from .models import instantiate_model
 from .task_adapter import NodeClassificationTaskAdapter
 
-B1_CLOSED_LOOP_VERSION = "b1_autonomous_classification_loop_v1"
-B1_EVAL_ANCHOR_ID = "B1_EVAL_ANCHOR_V1"
+B1_CLOSED_LOOP_VERSION = "b1_autonomous_classification_loop_v2"
+B1_EVAL_ANCHOR_ID = "B1_EVAL_ANCHOR_V2"
 B1_ONLINE_ANCHOR_ID = "B1_ONLINE_ANCHOR"
 
 
@@ -120,9 +120,11 @@ class B1ClosedLoopRunner:
             folds=folds,
             evaluator=evaluator,
             configs=[
-                {"model_id": "B1_FEATURE_LR", "model_family": "feature_logistic", "view": "undirected_union", "C": 1.0},
-                {"model_id": "B1_FEATURE_MLP", "model_family": "feature_mlp", "view": "undirected_union", "hidden": (256, 128)},
+                {"model_id": "B1_FEATURE_LR_C1", "model_family": "feature_logistic", "view": "undirected_union", "C": 1.0},
+                {"model_id": "B1_FEATURE_LR_C01", "model_family": "feature_logistic", "view": "undirected_union", "C": 0.1},
+                {"model_id": "B1_FEATURE_MLP", "model_family": "feature_mlp", "view": "undirected_union", "hidden": (512, 256, 128)},
                 {"model_id": "B1_LP_UNDIRECTED", "model_family": "label_propagation", "view": "undirected_union", "alpha": 0.9},
+                {"model_id": "B1_LP_UNDIRECTED_ALPHA7", "model_family": "label_propagation", "view": "undirected_union", "alpha": 0.7},
                 {"model_id": "B1_NEIGHBOR_LR", "model_family": "neighbor_logistic", "view": "undirected_union"},
             ],
         )
@@ -136,10 +138,11 @@ class B1ClosedLoopRunner:
         if self.rounds_used < self.max_rounds and self.remaining_seconds() > 600:
             # Choose configs based on Round 1: use best view
             configs2 = [
-                {"model_id": "B1_APPNP_LR", "model_family": "appnp_logistic", "view": "undirected_union", "alpha": 0.2, "K": 10},
                 {"model_id": "B1_LP_DIRECTED_OUT", "model_family": "label_propagation", "view": "directed_out", "alpha": 0.9},
                 {"model_id": "B1_LP_DIRECTED_IN", "model_family": "label_propagation", "view": "directed_in", "alpha": 0.9},
-                {"model_id": "B1_APPNP_MLP", "model_family": "appnp_logistic", "view": "undirected_union", "alpha": 0.2, "K": 10, "base": "mlp"},
+                {"model_id": "B1_APPNP_LR", "model_family": "appnp_logistic", "view": "undirected_union", "alpha": 0.3, "K": 10},
+                {"model_id": "B1_APPNP_DIRECTED_OUT", "model_family": "appnp_logistic", "view": "directed_out", "alpha": 0.3, "K": 10},
+                {"model_id": "B1_NEIGHBOR_DIRECTED_OUT", "model_family": "neighbor_logistic", "view": "directed_out"},
             ]
             round2 = self._run_round(
                 out_dir=out_dir,
@@ -170,10 +173,10 @@ class B1ClosedLoopRunner:
 
         # ---- Trajectory / Memory / Manifest ----
         trajectory = self._build_trajectory(run_id, round1, round2, round3, best_sci, best_dep)
-        traj_path = out_dir / "trajectory_B1.json"
+        traj_path = out_dir / "trajectory_B1_v2.json"
         traj_path.write_text(json_dumps(_json_safe(trajectory)) + "\n", encoding="utf-8")
 
-        report = out_dir / "B1_CLOSED_LOOP_REPORT.md"
+        report = out_dir / "B1_CLOSED_LOOP_V2_REPORT.md"
         report.write_text(self._report(run_id, best_sci, best_dep, self.rounds_used), encoding="utf-8")
 
         manifest = {
@@ -430,9 +433,9 @@ class B1ClosedLoopRunner:
         return max(eligible, key=lambda c: (c["metrics"]["macro_accuracy"], c["metrics"]["overall_accuracy"]))
 
     def _materialize_anchor(self, out_dir: Path, candidate: dict[str, Any], dataset: Any, folds: Any, input_hashes: dict[str, str]) -> None:
-        anchor_dir = out_dir / "B1_EVAL_ANCHOR_V1"
+        anchor_dir = out_dir / "B1_EVAL_ANCHOR_V2"
         anchor_dir.mkdir(parents=True, exist_ok=True)
-        oof_path = anchor_dir / "B1_EVAL_ANCHOR_V1_oof.npz"
+        oof_path = anchor_dir / "B1_EVAL_ANCHOR_V2_oof.npz"
         np.savez(
             oof_path,
             train_idx=folds.train_idx,
@@ -452,7 +455,7 @@ class B1ClosedLoopRunner:
             "metrics": candidate["metrics"],
             "input_hashes": input_hashes,
         }
-        (anchor_dir / "B1_EVAL_ANCHOR_V1_manifest.json").write_text(json_dumps(_json_safe(manifest)) + "\n", encoding="utf-8")
+        (anchor_dir / "B1_EVAL_ANCHOR_V2_manifest.json").write_text(json_dumps(_json_safe(manifest)) + "\n", encoding="utf-8")
 
     def _select_final_candidates(self) -> tuple[dict[str, Any], dict[str, Any]]:
         if not self.candidates:
@@ -482,7 +485,7 @@ class B1ClosedLoopRunner:
 
         to_upload = out_dir / "TO_UPLOAD"
         to_upload.mkdir(parents=True, exist_ok=True)
-        sub_path = to_upload / "candidate_B1.csv"
+        sub_path = to_upload / "candidate_B1_v2.csv"
         with sub_path.open("w", encoding="utf-8", newline="") as fh:
             writer = csv.writer(fh)
             writer.writerow(["test_idx", "label"])
@@ -529,7 +532,7 @@ class B1ClosedLoopRunner:
 
     def _report(self, run_id: str, best_sci: dict, best_dep: dict, rounds_used: int) -> str:
         return "\n".join([
-            "# B1 Autonomous Classification Closed Loop Report",
+            "# B1 Autonomous Classification Closed Loop V2 Report",
             "",
             f"run_id: `{run_id}`",
             f"scientific_rounds_used: `{rounds_used}`",

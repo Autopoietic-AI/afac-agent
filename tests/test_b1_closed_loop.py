@@ -219,13 +219,13 @@ def test_closed_loop_does_not_use_b2_and_respects_budget(b1_world):
     assert result["status"] == "completed"
     assert result["scientific_rounds_used"] <= 2
     out = b1_world["project"] / "artifacts" / "b1_runs" / result["run_id"]
-    assert (out / "B1_CLOSED_LOOP_REPORT.md").is_file()
-    assert (out / "trajectory_B1.json").is_file()
-    assert (out / "TO_UPLOAD" / "candidate_B1.csv").is_file()
+    assert (out / "B1_CLOSED_LOOP_V2_REPORT.md").is_file()
+    assert (out / "trajectory_B1_v2.json").is_file()
+    assert (out / "TO_UPLOAD" / "candidate_B1_v2.csv").is_file()
     # no b2 data in any artifact path or content
     assert not any("B2_data" in str(p) for p in out.rglob("*"))
-    # candidate_B1.csv valid
-    rows = list(csv.DictReader((out / "TO_UPLOAD" / "candidate_B1.csv").open(encoding="utf-8")))
+    # candidate_B1_v2.csv valid
+    rows = list(csv.DictReader((out / "TO_UPLOAD" / "candidate_B1_v2.csv").open(encoding="utf-8")))
     assert len(rows) == ds.n_nodes - ds.train_idx.size
     assert all(int(r["label"]) in range(ds.n_classes) for r in rows)
 

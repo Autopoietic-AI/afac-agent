@@ -1,5 +1,48 @@
 # CHANGELOG
 
+## 2026-07-23 - B1 Repair + B2 First Autonomous Dual-Task Closed Loop
+
+- Added `afac_agent.b1.repair`: scientific validity repair module with raw graph
+  direction audit, prediction asset audit, homophily repair, fold label leakage
+  audit, propensity semantics audit, effective rank audit, and offline-to-online
+  gap audit.
+- Fixed `afac_agent/b1/models.py` graph view construction bug: `directed_out`
+  and `directed_in` now correctly use `adj` and `adj.T` instead of both being
+  `adj + adj.T`.
+- Re-audited `B1_EVAL_ANCHOR_V1` and materialized `B1_EVAL_ANCHOR_V2` from the
+  repaired `undirected_union` label propagation candidate.
+- B1 V2 closed loop completed: run id `c5e33663d37c6e49004e8213`, 3 rounds,
+  wall clock `75.60s`, best candidate `B1_LP_UNDIRECTED_ALPHA7`
+  (standard accuracy `0.4964`, macro `0.3941`), submission
+  `candidate_B1_v2.csv` generated and audited, not uploaded.
+- Added `afac_agent.b2` package: generic `B2TaskAdapter`, Data Intelligence,
+  `AFAC_B2_FOLD_V1` with nine validation panels, `B2Evaluator` with
+  retrieval/ranking failure split, and CPU-only retrieval/ranking models
+  (popularity, history recall, item-item co-occurrence, last-item transition,
+  score blend, candidate ranker).
+- Added `B2ClosedLoopRunner` enforcing max 3 scientific rounds, 2-hour wall
+  clock, single-process/single-GPU budget, automatic best scientific/deployment
+  selection, full-train retrain, Test inference, `candidate_B2.csv` generation,
+  `TO_UPLOAD` packaging, and `trajectory_B2.json`.
+- Added CLI `python -m afac_agent.main b2-closed-loop`.
+- Added `afac_agent.dual_task_master` to create master manifest, task sequence,
+  resource budget, cross-task isolation audit, dual-task report, and combined
+  TO_UPLOAD bundles for B1 and B2.
+- Added synthetic tests: `tests/test_b1_repair.py` and
+  `tests/test_b2_integration.py` covering B1 repair semantics and B2 adapter,
+  fold, evaluator, models, closed loop, namespace isolation, and A1/A2/B1
+  no-regression.
+- B2 first closed loop completed: run id `fcf5ad3dbcdf9700dd644eff`, 3 rounds,
+  wall clock `1807.57s`, best candidate `B2_HISTORY_RECALL`
+  (NDCG@10 `0.1548`, HitRate@10 `0.2515`, MRR@10 `0.1234`), submission
+  `candidate_B2.csv` generated and audited, not uploaded.
+- Dual-task master run: `86f75dbc66d25382eb0c6a24` with TO_UPLOAD/B1 and
+  TO_UPLOAD/B2.
+- Full test suite: 207 passed; Doctor: PASS.
+
+No A1/A2/B1 Champion, Anchor, Fold, history, scientific-round counters, or
+Project State was modified. No automatic platform upload.
+
 ## 2026-07-22 - B1 Data-First Autonomous Classification Closed Loop
 
 - Added `afac_agent.b1` package: generic `NodeClassificationTaskAdapter`

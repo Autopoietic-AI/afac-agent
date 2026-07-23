@@ -234,3 +234,40 @@ Latest verified runtime:
 - Evaluation anchor: `B1_EVAL_ANCHOR_V1` materialized from `B1_LP_DIRECTED_OUT` OOF.
 - Submission: `artifacts/b1_runs/e95368a24e0780e65e92aceb/TO_UPLOAD/candidate_B1.csv` generated; 1530 rows; audit passed; not uploaded.
 - A1/A2 assets remain frozen; B1 `scientific_rounds_used=3` is independent of A1/A2 round counters.
+
+## B1 Scientific Validity Repair and V2 Closed Loop Status
+
+- Repair run id: `706050e5c14bdd8341e3631b`; output under `artifacts/b1_repair/706050e5c14bdd8341e3631b/`.
+- Repair audits completed: raw graph direction audit, prediction asset audit, homophily repair, fold label leakage audit, propensity semantics audit, effective rank audit, offline-to-online gap audit.
+- Key fix: `afac_agent/b1/models.py` graph view construction bug where `directed_out` and `directed_in` were both incorrectly set to `adj + adj.T`; repaired to use true `adj` and `adj.T` respectively.
+- Old `B1_EVAL_ANCHOR_V1` re-audited and found to correspond to the repaired `undirected_union` view; new `B1_EVAL_ANCHOR_V2` materialized from `B1_LP_UNDIRECTED_ALPHA7`.
+- V2 closed loop: run id `c5e33663d37c6e49004e8213`; wall clock `75.60s`; `scientific_rounds_used=3`.
+- Best scientific & deployment candidate: `B1_LP_UNDIRECTED_ALPHA7` (standard accuracy `0.4964`, macro `0.3941`).
+- Submission: `artifacts/b1_runs/c5e33663d37c6e49004e8213/TO_UPLOAD/candidate_B1_v2.csv`; 1530 rows; audit passed; not uploaded.
+- Canonical first B1 run registered online score `0.37908` (offline standard `0.49069`, absolute gap `0.11161`); identity verified by run manifest and candidate sha256.
+- A1/A2/B1 frozen assets remain unchanged.
+
+## B2 Data-First Autonomous Recommendation Closed Loop Status
+
+- Task: `B2_RECOMMENDATION`; task family: `sequence_recommendation`; stage: `B`.
+- Data root: `C:\Users\李天皓\agent比赛\B推荐`; actual files discovered under `C:\Users\李天皓\agent比赛\B推荐\B推荐\`.
+- Transfer gate: `cross_task_prior_mode=advisory_only`; A2 model weights/OOF/Fold/candidates forbidden direct transfer.
+- Data Intelligence: completed and `verified` (run id `8e96fac363943d65f1c1947d`); primary problem `sparse_sequence_recommendation`, secondary problems include long-tail dominance, cold-start users, train/test shift, low history recall ceiling.
+- Fold: `AFAC_B2_FOLD_V1` stratified user-group-aware 5-fold with standard, short-history, exact-len3, len4+, history-target, novel-target, long-tail, test-like and top10-boundary panels.
+- Closed loop: completed in `1807.57s` using 3 scientific rounds; run id `fcf5ad3dbcdf9700dd644eff`.
+- Round 1 (`retrieval_foundation`): popularity, history recall, item-item co-occurrence, last-item transition, score blends.
+- Round 2 (`ranking_explore`): candidate ranker (logistic) with user/item/history features and batched cooc computation.
+- Round 3 (`bucket_and_rerank_explore`): bucket rerank blending ranker and retrieval by sequence length.
+- Best scientific & deployment candidate: `B2_HISTORY_RECALL` (NDCG@10 `0.15482521769229524`, HitRate@10 `0.25146856642919635`, MRR@10 `0.12341284720362335`).
+- Evaluation anchor: `B2_EVAL_ANCHOR_V1` materialized from `B2_HISTORY_RECALL` OOF.
+- Submission: `artifacts/b2_runs/fcf5ad3dbcdf9700dd644eff/TO_UPLOAD/candidate_B2.csv`; 10000 rows; audit passed; not uploaded.
+- A1/A2/B1 frozen assets remain unchanged; B2 `scientific_rounds_used=3` is independent.
+
+## B1 + B2 Dual-Task Master Run Status
+
+- Master run id: `86f75dbc66d25382eb0c6a24` under `artifacts/b_dual_task_runs/`.
+- Master manifest, task sequence, resource budget, cross-task isolation audit, and dual-task report generated.
+- TO_UPLOAD bundles created for B1 (`candidate_B1_v2.csv`) and B2 (`candidate_B2.csv`).
+- Total B1+B2 wall clock well within the 14400s combined budget; peak GPU memory 0 GB (CPU-only runs).
+- No A1/A2/B1 Champion, Anchor, Fold, history, or scientific-round records modified.
+- No Test truth used; no automatic platform upload.
