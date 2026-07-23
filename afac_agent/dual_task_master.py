@@ -177,8 +177,8 @@ def create_dual_task_master_run(
         "b1_data_used_for_b2": False,
         "b2_data_used_for_b1": False,
         "a2_model_weights_used_for_b2": False,
-        "test_truth_used_b1": bool(b1_manifest.get("uses_test_truth", False)) is False,
-        "test_truth_used_b2": bool(b2_manifest.get("uses_test_truth", False)) is False,
+        "test_truth_not_used_b1": bool(b1_manifest.get("uses_test_truth", False)) is False,
+        "test_truth_not_used_b2": bool(b2_manifest.get("uses_test_truth", False)) is False,
         "namespace_isolation": {
             "B1_fold": "AFAC_B1_FOLD_V1",
             "B2_fold": "AFAC_B2_FOLD_V1",
