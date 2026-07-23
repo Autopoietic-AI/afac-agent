@@ -1,5 +1,54 @@
 # CHANGELOG
 
+## 2026-07-23 - v2 Runtime Wiring, LLM Orchestration and False-Completion Repair
+
+Root cause repaired: the only CLI entry ever wired was the legacy v1
+deterministic runner, so a "v2 formal run" was actually a byte-identical v1
+replay (`fcf5ad3dbcdf9700dd644eff`, candidate sha256 equal to the v1 run)
+returning `status=completed` with zero LLM calls.  The directory
+`artifacts/v2_formal_runs/b2/fcf5ad3dbcdf9700dd644eff` is preserved as
+evidence and marked `invalid_v2_replay` (INVALID_V2_REPLAY_AUDIT.json /
+INVALID_V2_REPLAY_REPORT.md).  CLI wiring audit:
+`artifacts/v2_runtime_repair/v2_runtime_repair_d41fee9/`.
+
+- Added `afac_agent/v2/execution_identity.py`: `input_fingerprint`
+  (data/fold/config/metric-contract hashes, cache-compatible) vs
+  `execution_id` (fingerprint + code commit + branch + orchestrator/planner
+  versions + contract hashes + execution nonce + start time; unique per
+  execution; secrets never enter any hash).
+- Added `afac_agent/v2/llm_ledger.py`: LLM call contract — every call
+  appended to `llm_calls.jsonl` with prompt/response hashes, latency, token
+  counts, retry count and sanitized errors; secrets are redacted.
+- Added `afac_agent/v2/legacy_replay_detector.py`: flags v1 manifests,
+  missing orchestrator/planner/LLM fields, missing Problem/M6B/M6C
+  artifacts and v1 run-id collisions as `invalid_replay`.
+- Added `afac_agent/v2/completion_contract.py`: v2 run manifest spec and
+  the strict completion contract (27 formal conditions, reduced smoke set);
+  failed contracts downgrade `completed` to `incomplete`.
+- Added `afac_agent/v2/orchestrator.py`: `V2AutonomousResearchOrchestrator`
+  with the full PRECHECK → … → COMPLETED state machine.  Deterministic code
+  computes stats, runs M5 gates and executes whitelisted cheap diagnostics;
+  the LLM only synthesizes problems, writes M6B proposals, performs M6C
+  counterfactual review and explains postmortems.  `--require-llm` blocks
+  (`blocked_missing_llm` / `blocked_llm_error`) instead of silently
+  completing; deterministic fallback only with an explicit flag and ends in
+  `degraded_deterministic_fallback`.
+- CLI separation (`afac_agent/main.py`): new `v2-run` (real v2 entrypoint)
+  and `legacy-b2-closed-loop`; `b2-closed-loop` is now a loud legacy alias.
+  Legacy commands refuse out-roots containing `v2_formal_runs` unless
+  `--allow-legacy-output` is passed.
+- Supervisor extended with v2 identity fields (execution_id, planner_mode,
+  llm_calls_count, cache_status, problem/proposal/critic) and the dashboard
+  shows a green V2 badge or a red LEGACY EXECUTION banner.
+- Added `tests/test_v2_runtime.py` (28 tests): CLI separation, identity,
+  ledger contract + secret redaction, replay detection, M5 non-bypass,
+  completion contract, end-to-end smoke with a fake provider.
+- Real-LLM B2 orchestration smoke passed: execution_id
+  `9f668c3fe1986001d2744b16a0b807c9c628e88c083f193aef06fd4e655a3661`,
+  status `completed_smoke`, 4 real LLM calls (problem synthesis, M6B, M6C,
+  postmortem — all mode=llm), wall clock 187s, completion contract passed,
+  no deployment and no formal submission generated.
+
 ## 2026-07-23 - AFAC Self-Evolving Research Agent v2.0 (Competition Full Edition)
 
 Built on the frozen v1.6 baseline (`30efa2c`, branch `feat/afac-v2-full`).

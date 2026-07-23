@@ -20,6 +20,35 @@ Run the four task smokes (minutes each, never a full loop):
 python -m afac_agent.v2.smokes --task all
 ```
 
+Real v2 orchestrated runs (with LLM problem synthesis, M6B proposals and
+M6C counterfactual critic, strict M5 gates and a completion contract):
+
+```bash
+# 5-minute orchestration smoke (no deployment, no formal submission)
+python -u -m afac_agent.main v2-run --task B2 \
+  --data-root "C:/Users/李天皓/agent比赛/B推荐" \
+  --out-root "artifacts/v2_smoke_runs/b2" \
+  --max-wall-clock-seconds 300 --require-llm --force-new-execution \
+  --smoke --smoke-max-users 512 --smoke-max-items 1000 --no-deployment
+
+# formal run (NOT started yet)
+python -u -m afac_agent.main v2-run --task B2 \
+  --data-root "C:/Users/李天皓/agent比赛/B推荐" \
+  --out-root "artifacts/v2_runs/b2" \
+  --max-wall-clock-seconds 7200 --require-llm --force-new-execution
+```
+
+Legacy reproduction only (v1 deterministic runner, no LLM; refuses
+`v2_formal_runs` out-roots unless `--allow-legacy-output`):
+
+```bash
+python -m afac_agent.main legacy-b2-closed-loop --data-root <path> --out-root artifacts/b2_runs
+```
+
+`b2-closed-loop` remains as a loud legacy alias — its output is never a v2
+run.  Real LLM runs require a well-formed `DASHSCOPE_API_KEY` (raw `sk-…`
+value) and `AFAC_BAILIAN_BASE_URL` in the environment.
+
 ## Quick start
 
 The package is self-contained for history import and champion registration.

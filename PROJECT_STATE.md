@@ -1,5 +1,14 @@
 # PROJECT_STATE.md
 
+## AFAC v2.0 Runtime (P0 repair)
+
+- v2 orchestrator wired: `python -m afac_agent.main v2-run --task B2 ...` → `V2AutonomousResearchOrchestrator` (real state machine, LLM ledger, M5 gates, strict completion contract).
+- Legacy/v2 CLI fully separated: `legacy-b2-closed-loop` (reproduction), `b2-closed-loop` (loud legacy alias), `v2-run` (real v2).
+- `artifacts/v2_formal_runs/b2/fcf5ad3dbcdf9700dd644eff` marked `invalid_v2_replay` (v1 byte-identical replay, false completion).
+- Execution identity: `input_fingerprint` (cache) vs `execution_id` (unique per execution, commit + nonce).
+- Real-LLM smoke passed: execution_id `9f668c3fe1986001d2744b16a0b807c9c628e88c083f193aef06fd4e655a3661`, `completed_smoke`, 4 real LLM calls, completion contract passed.
+- Formal B2 two-hour v2 run: NOT started.
+
 ## AFAC v2.0 (Competition Full Edition)
 
 - Branch: `feat/afac-v2-full`, built on frozen v1.6 baseline `30efa2c`.

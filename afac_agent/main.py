@@ -633,15 +633,40 @@ def _b1_closed_loop(argv: list[str]) -> None:
     raise SystemExit(2)
 
 
-def _b2_closed_loop(argv: list[str]) -> None:
-    parser = argparse.ArgumentParser(prog="afac_agent.main b2-closed-loop")
+def _legacy_out_root_guard(out_root: str, allow_legacy_output: bool) -> str | None:
+    """Refuse legacy runs writing into v2 formal directories (replay shield)."""
+    if "v2_formal_runs" in str(out_root).replace("\\", "/") and not allow_legacy_output:
+        return (
+            "REFUSED: out-root contains 'v2_formal_runs'. Legacy deterministic runners "
+            "must not write into v2 formal directories. Use 'v2-run' for real v2 runs, "
+            "'legacy-b2-closed-loop' with a legacy out-root for reproduction, or pass "
+            "--allow-legacy-output explicitly."
+        )
+    return None
+
+
+def _b2_closed_loop(argv: list[str], *, legacy_alias: bool = False) -> None:
+    parser = argparse.ArgumentParser(prog="afac_agent.main legacy-b2-closed-loop")
     parser.add_argument("--project_root", default=".")
     parser.add_argument("--data-root", required=True)
     parser.add_argument("--out-root", default="artifacts/b2_runs")
     parser.add_argument("--max-wall-clock-seconds", type=int, default=7200)
     parser.add_argument("--max-rounds", type=int, default=3)
     parser.add_argument("--force-rebuild", action="store_true")
+    parser.add_argument("--allow-legacy-output", action="store_true")
     args = parser.parse_args(argv)
+    guard_error = _legacy_out_root_guard(args.out_root, args.allow_legacy_output)
+    if guard_error:
+        print(json.dumps({"status": "refused", "reason": guard_error}, ensure_ascii=False, indent=2))
+        raise SystemExit(2)
+    if legacy_alias:
+        warning = (
+            "WARNING: 'b2-closed-loop' is the LEGACY v1 deterministic runner "
+            "(b2_autonomous_recommendation_loop_v1). It performs NO LLM calls, NO problem "
+            "selection, NO M6B/M6C/M5, and its result is NOT a v2 run. "
+            "Use 'v2-run --task B2' for real v2 executions."
+        )
+        print(warning, file=sys.stderr)
     resolver = PathResolver(args.project_root)
     root = resolver.project_root
     result = run_b2_closed_loop(
@@ -652,11 +677,67 @@ def _b2_closed_loop(argv: list[str]) -> None:
         max_rounds=args.max_rounds,
         force_rebuild=args.force_rebuild,
     )
+    if legacy_alias:
+        result["legacy_alias_warning"] = "b2-closed-loop is a legacy alias; NOT a v2 run"
     print(json.dumps(result, ensure_ascii=False, indent=2))
     if result["status"] in {"completed", "duplicate", "validation_failed"}:
         raise SystemExit(0)
     if result["status"] in {"waiting_for_input", "waiting_for_data_intelligence"}:
         raise SystemExit(3)
+    raise SystemExit(2)
+
+
+def _v2_run(argv: list[str]) -> None:
+    """Real v2 entrypoint: V2AutonomousResearchOrchestrator (never the legacy runner)."""
+    from .v2.orchestrator import V2AutonomousResearchOrchestrator
+
+    parser = argparse.ArgumentParser(prog="afac_agent.main v2-run")
+    parser.add_argument("--project_root", default=".")
+    parser.add_argument("--task", required=True, choices=["B1", "B2"])
+    parser.add_argument("--data-root", required=True)
+    parser.add_argument("--out-root", default="artifacts/v2_runs")
+    parser.add_argument("--max-wall-clock-seconds", type=float, default=7200.0)
+    parser.add_argument("--require-llm", action="store_true", default=True)
+    parser.add_argument("--no-require-llm", dest="require_llm", action="store_false")
+    parser.add_argument("--allow-deterministic-fallback", action="store_true")
+    parser.add_argument("--force-new-execution", action="store_true")
+    parser.add_argument("--resume-execution-id", default="")
+    parser.add_argument("--smoke", action="store_true")
+    parser.add_argument("--smoke-max-users", type=int, default=512)
+    parser.add_argument("--smoke-max-items", type=int, default=1000)
+    parser.add_argument("--smoke-max-seconds", type=float, default=300.0)
+    parser.add_argument("--no-deployment", action="store_true")
+    parser.add_argument("--dry-run-orchestration", action="store_true")
+    parser.add_argument("--provider", default=ALIYUN_BAILIAN_PROVIDER)
+    parser.add_argument("--provider-config", default="")
+    args = parser.parse_args(argv)
+    resolver = PathResolver(args.project_root)
+    root = resolver.project_root
+    orchestrator = V2AutonomousResearchOrchestrator(
+        project_root=root,
+        task=args.task,
+        data_root=args.data_root,
+        out_root=resolver.resolve(args.out_root) or root / args.out_root,
+        max_wall_clock_seconds=args.max_wall_clock_seconds,
+        require_llm=args.require_llm,
+        allow_deterministic_fallback=args.allow_deterministic_fallback,
+        force_new_execution=args.force_new_execution,
+        resume_execution_id=args.resume_execution_id or None,
+        smoke=args.smoke,
+        smoke_max_users=args.smoke_max_users,
+        smoke_max_items=args.smoke_max_items,
+        smoke_max_seconds=args.smoke_max_seconds,
+        no_deployment=args.no_deployment,
+        dry_run_orchestration=args.dry_run_orchestration,
+        provider_name=args.provider,
+        provider_config=args.provider_config,
+    )
+    result = orchestrator.run()
+    print(json.dumps(result, ensure_ascii=False, indent=2, default=str))
+    if result["status"] in {"completed", "completed_smoke"}:
+        raise SystemExit(0)
+    if result["status"] in {"blocked_missing_llm", "blocked_llm_error"}:
+        raise SystemExit(4)
     raise SystemExit(2)
 
 
@@ -797,7 +878,13 @@ def main() -> None:
         _b1_closed_loop(sys.argv[2:])
         return
     if len(sys.argv) > 1 and sys.argv[1] == "b2-closed-loop":
+        _b2_closed_loop(sys.argv[2:], legacy_alias=True)
+        return
+    if len(sys.argv) > 1 and sys.argv[1] == "legacy-b2-closed-loop":
         _b2_closed_loop(sys.argv[2:])
+        return
+    if len(sys.argv) > 1 and sys.argv[1] == "v2-run":
+        _v2_run(sys.argv[2:])
         return
 
     parser = argparse.ArgumentParser()

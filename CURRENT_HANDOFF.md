@@ -2,7 +2,29 @@
 
 ## Current module
 
-- Module: AFAC Self-Evolving Research Agent v2.0 (Competition Full Edition)
+- Module: v2 Runtime Wiring, LLM Orchestration and False-Completion Repair (P0)
+- Branch: `feat/afac-v2-full`
+- Previous frozen baseline: `d41fee95abce61aa314f1c08f69db8a31d472252` (v2.0 architecture build)
+- Scope: invalid-replay marking, CLI wiring audit, v2 orchestrator (real state machine), execution identity, LLM call ledger, legacy replay detector, strict completion contract, CLI separation, runtime tests.
+
+## Invalid v2 replay (root cause and disposition)
+
+- Directory: `artifacts/v2_formal_runs/b2/fcf5ad3dbcdf9700dd644eff` — preserved as evidence, marked `invalid_v2_replay` (INVALID_V2_REPLAY_AUDIT.json / INVALID_V2_REPLAY_REPORT.md).
+- Root cause: the only CLI entry was the legacy v1 deterministic runner; its `run_id` is a data-only hash, so the "v2 formal run" reproduced the v1 run byte-for-byte (candidate sha256 `b705d15f…` identical) and falsely returned `status=completed` with zero LLM calls.
+- CLI wiring audit: `artifacts/v2_runtime_repair/v2_runtime_repair_d41fee9/` (legacy/expected call graphs, gap analysis, CLI_WIRING_AUDIT.md).
+
+## New v2 runtime contract
+
+- Real v2 entry: `python -m afac_agent.main v2-run --task B2 --data-root <path> --out-root <path> --require-llm --force-new-execution [--smoke ...]`.
+- Legacy reproduction: `python -m afac_agent.main legacy-b2-closed-loop ...` (refuses `v2_formal_runs` out-roots without `--allow-legacy-output`).
+- `b2-closed-loop` is a loud legacy alias only — never a v2 run.
+- `input_fingerprint` (cache identity) is strictly separated from `execution_id` (unique per execution, includes code commit + nonce).
+- LLM contract: M6B/M6C (+ problem synthesis, postmortem) are real provider calls recorded in `llm_calls.jsonl`; `--require-llm` blocks instead of silently completing.
+- Strict completion contract: missing any of Problem Node / M6B / M6C / M5 / Genome / Budget / No-op audit / Postmortem / LLM ledger downgrades `completed` to `incomplete`.
+- Runtime smoke with real LLM: COMPLETED — execution_id `9f668c3fe1986001d2744b16a0b807c9c628e88c083f193aef06fd4e655a3661`, status `completed_smoke`, 4 real LLM calls (problem synthesis, M6B, M6C, postmortem; all mode=llm), wall clock 187s, union pool recall@100 0.466 vs popularity parent 0.233, no deployment, no formal submission.
+- Formal two-hour B2 v2 run has NOT started.
+
+## Previous module (v2.0 architecture, committed d8775fd + d41fee9)
 - Branch: `feat/afac-v2-full`
 - Commit status: this file is part of the module commit; use `git rev-parse HEAD` after commit for the immutable commit id.
 - Previous frozen baseline: `30efa2cbb4264630e0e1e984d55e3fffeba354e1` (B1 Repair + B Dual-Task Autonomous Loops, v1.6)

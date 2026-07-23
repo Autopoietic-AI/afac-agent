@@ -74,4 +74,8 @@ artifacts/b1_repair/
 artifacts/b2_runs/
 artifacts/b_dual_task_runs/
 artifacts/v2_smokes/
+artifacts/v2_formal_runs/
+artifacts/v2_runtime_repair/
+artifacts/v2_smoke_runs/
+artifacts/v2_runs/
 tmpafac_*/

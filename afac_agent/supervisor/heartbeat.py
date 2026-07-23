@@ -48,6 +48,17 @@ class HeartbeatState:
     estimated_completion: str = ""
     safe_resume_point: str = ""
     stall_status: str = "ok"
+    # v2 runtime identity fields (optional; empty for legacy runs)
+    execution_id: str = ""
+    input_fingerprint: str = ""
+    orchestrator_version: str = ""
+    planner_mode: str = ""
+    llm_calls_count: int = 0
+    current_problem_id: str = ""
+    current_proposal_id: str = ""
+    current_critic_status: str = ""
+    cache_status: str = ""
+    legacy_mode: bool = False
 
 
 class HeartbeatWriter:

@@ -28,6 +28,8 @@ td.k { color: #666; white-space: nowrap; }
 .stall-ok { color: #1a7f37; font-weight: bold; }
 .stall-suspected_stall { color: #b35900; font-weight: bold; }
 .stall-stalled { color: #c00; font-weight: bold; }
+.v2-badge { background: #1a7f37; color: #fff; padding: 0.3em 0.8em; border-radius: 4px; font-weight: bold; }
+.legacy-banner { background: #c00; color: #fff; padding: 0.6em 1em; border-radius: 4px; font-weight: bold; font-size: 1.1em; }
 ul { margin: 0.3em 0; padding-left: 1.4em; }
 """
 
@@ -54,6 +56,16 @@ def render_dashboard(
     else:
         exp_html = "<p>No completed experiments yet.</p>"
     metric = json.dumps(state.latest_metric, ensure_ascii=False, sort_keys=True) if state.latest_metric else "n/a"
+    if state.legacy_mode:
+        identity_html = '<div class="legacy-banner">LEGACY EXECUTION — NOT A V2 RUN</div>'
+    elif state.orchestrator_version:
+        identity_html = (
+            f'<div class="v2-badge">V2 RUN — orchestrator {_esc(state.orchestrator_version)}'
+            f" | planner {_esc(state.planner_mode or 'n/a')}"
+            f" | llm calls {state.llm_calls_count}</div>"
+        )
+    else:
+        identity_html = '<div class="legacy-banner">LEGACY EXECUTION — NOT A V2 RUN</div>'
     return f"""<!DOCTYPE html>
 <html lang="en">
 <head>
@@ -64,13 +76,23 @@ def render_dashboard(
 </head>
 <body>
 <h1>AFAC Run Dashboard</h1>
+{identity_html}
 <div class="card"><h2>Run</h2>
 <table>
 <tr><td class="k">Run ID</td><td>{_esc(state.run_id)}</td></tr>
+<tr><td class="k">Execution ID</td><td>{_esc(state.execution_id or 'n/a')}</td></tr>
+<tr><td class="k">Input fingerprint</td><td>{_esc(state.input_fingerprint or 'n/a')}</td></tr>
+<tr><td class="k">Orchestrator</td><td>{_esc(state.orchestrator_version or 'legacy')}</td></tr>
+<tr><td class="k">Planner mode</td><td>{_esc(state.planner_mode or 'n/a')}</td></tr>
+<tr><td class="k">LLM calls</td><td>{state.llm_calls_count}</td></tr>
+<tr><td class="k">Cache status</td><td>{_esc(state.cache_status or 'n/a')}</td></tr>
 <tr><td class="k">Task</td><td>{_esc(state.task)}</td></tr>
 <tr><td class="k">Status</td><td>{_esc(state.status)}</td></tr>
 <tr><td class="k">Current stage</td><td>{_esc(state.stage)}</td></tr>
 <tr><td class="k">Substage</td><td>{_esc(state.substage)}</td></tr>
+<tr><td class="k">Current problem</td><td>{_esc(state.current_problem_id or 'n/a')}</td></tr>
+<tr><td class="k">Current proposal</td><td>{_esc(state.current_proposal_id or 'n/a')}</td></tr>
+<tr><td class="k">Critic status</td><td>{_esc(state.current_critic_status or 'n/a')}</td></tr>
 <tr><td class="k">Current experiment</td><td>{_esc(state.current_experiment)}</td></tr>
 <tr><td class="k">Current model</td><td>{_esc(state.current_model)}</td></tr>
 </table></div>
