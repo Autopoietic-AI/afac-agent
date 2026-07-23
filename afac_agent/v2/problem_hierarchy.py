@@ -80,7 +80,7 @@ class ProblemHierarchy:
             return node.node_id
         if parent_id is None:
             if node.level != int(ProblemLevel.TASK):
-                raise ValueError("only task-level nodes may be roots")
+                raise ValueError("only top-level task nodes may be roots")
             self.root_ids.append(node.node_id)
         else:
             parent = self.nodes.get(parent_id)
@@ -113,7 +113,7 @@ class ProblemHierarchy:
 
     @staticmethod
     def target_score(node: ProblemNode) -> float:
-        """Rank score: expected value per unit of risk-adjusted compute."""
+        """Rank score: expected value per unit of compute, adjusted for risk."""
         return (node.headroom * node.expected_information_gain) / max(
             EPSILON, node.compute_cost * (1.0 + node.validation_risk)
         )

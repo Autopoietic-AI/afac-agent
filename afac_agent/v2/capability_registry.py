@@ -29,7 +29,7 @@ class OperatorRecord:
     deployment_ready: bool = True
     scientific_priority: float = 0.0  # higher = more valuable scientifically
     missing_dependency: list[str] = field(default_factory=list)
-    tasks: list[str] = field(default_factory=list)  # empty = task-agnostic
+    tasks: list[str] = field(default_factory=list)  # empty = applies to every task
 
     def __post_init__(self) -> None:
         if not self.operator_id:
