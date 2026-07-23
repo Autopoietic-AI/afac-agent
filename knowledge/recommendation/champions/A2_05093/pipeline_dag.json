@@ -1,0 +1,49 @@
+{
+  "edges": [
+    {
+      "from": "V23_Anchor",
+      "guard": "Top10 membership is frozen; the anchor candidate set is never regenerated or re-selected.",
+      "to": "v42c_DIN_Len3_Top7_Rerank"
+    },
+    {
+      "from": "v42c_DIN_Len3_Top7_Rerank",
+      "guard": "Only exact Len3 users are touched; rerank stays strictly inside the original V23 Top7; alpha fixed at 0.50.",
+      "to": "C_all_Novel_Rerank"
+    },
+    {
+      "from": "C_all_Novel_Rerank",
+      "guard": "Only Novel slots are reranked; alpha fixed at 0.50; history items are never demoted or removed.",
+      "to": "Position10_External_Admission"
+    },
+    {
+      "from": "Position10_External_Admission",
+      "guard": "At most one external item may be admitted, only at position 10; all other positions are protected.",
+      "to": "Submission"
+    }
+  ],
+  "manifest_version": "a2_champion_pipeline_dag_v1",
+  "nodes": [
+    {
+      "id": "V23_Anchor",
+      "principle": "anchor_first",
+      "role": "Fixed, teammate-verified V23 Top10 candidate set; the immutable starting point."
+    },
+    {
+      "id": "v42c_DIN_Len3_Top7_Rerank",
+      "principle": "bucket_specialist",
+      "role": "v42c-DIN bucket specialist reranks exact Len3 users strictly inside the original V23 Top7 (alpha=0.50)."
+    },
+    {
+      "id": "C_all_Novel_Rerank",
+      "principle": "novel_only_rerank",
+      "role": "C_all specialist reranks Novel slots only (alpha=0.50); everything else is a protected residual."
+    },
+    {
+      "id": "Position10_External_Admission",
+      "principle": "boundary_admission",
+      "role": "Boundary admission: at most one external item enters, only at position 10."
+    }
+  ],
+  "protected_residual": "History items, non-Len3 users, and Top10 membership are protected at every stage.",
+  "source_consensus_gate": "Any new source must pass a consensus gate against the frozen anchor before it can influence the ranking."
+}

@@ -1,0 +1,28 @@
+{
+  "allocation_failures": [
+    {
+      "detail": "Dense full user x item score matrix materialized in float64 (the default dtype) triggered a 3.35GiB allocation failure mid-round.",
+      "evidence_ref": "artifacts/b2_runs/fcf5ad3dbcdf9700dd644eff/trajectory_B2.json",
+      "root_cause": "float64 full-matrix default instead of memory-safe sparse candidate tables",
+      "size_gib": 3.35,
+      "task": "B2"
+    }
+  ],
+  "manifest_version": "v1_6_memory_failures_v1",
+  "premature_stops": [
+    {
+      "budget_seconds": 7200,
+      "detail": "Fixed 3-round cap ended the loop with ~99% of the budget unused.",
+      "evidence_ref": "artifacts/b1_runs/c5e33663d37c6e49004e8213/run_manifest.json",
+      "task": "B1",
+      "wall_clock_seconds": 75.6
+    },
+    {
+      "budget_seconds": 7200,
+      "detail": "Loop ended after 3 rounds with ~75% of the budget unused.",
+      "evidence_ref": "artifacts/b2_runs/fcf5ad3dbcdf9700dd644eff/run_manifest.json",
+      "task": "B2",
+      "wall_clock_seconds": 1807.57
+    }
+  ]
+}

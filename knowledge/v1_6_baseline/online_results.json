@@ -1,0 +1,89 @@
+{
+  "allowed_uses": [
+    "validation_calibration",
+    "direction_confidence",
+    "deployment_risk",
+    "submission_budgeting"
+  ],
+  "entries": [
+    {
+      "absolute_gap": 0.11161,
+      "allowed_uses": [
+        "validation_calibration",
+        "direction_confidence",
+        "deployment_risk",
+        "submission_budgeting"
+      ],
+      "forbidden_uses": [
+        "node_level_correction",
+        "item_level_correction",
+        "test_label_inference"
+      ],
+      "identity_status": "verified",
+      "offline_standard_score": 0.49069,
+      "online_score": 0.37908,
+      "relative_gap": 0.22746,
+      "score_type": "competition_scalar_feedback",
+      "submitted_file_path": "artifacts/b1_runs/e95368a24e0780e65e92aceb/TO_UPLOAD/candidate_B1.csv",
+      "submitted_file_sha256": "f5c7d2abeb13ef855b7d6af8604059ee428d3501e26aa26fa1b0d887a4430aae",
+      "submitted_run_id": "e95368a24e0780e65e92aceb",
+      "task": "B1_V1"
+    },
+    {
+      "absolute_gap": 0.11667,
+      "allowed_uses": [
+        "validation_calibration",
+        "direction_confidence",
+        "deployment_risk",
+        "submission_budgeting"
+      ],
+      "forbidden_uses": [
+        "node_level_correction",
+        "item_level_correction",
+        "test_label_inference"
+      ],
+      "identity_status": "verified",
+      "notes": "offline standard confirmed from B1_CLOSED_LOOP_V2_REPORT.md: 0.49640522875816995 (master_manifest rounds to 0.4964)",
+      "offline_standard_score": 0.49641,
+      "online_score": 0.37974,
+      "relative_gap": 0.23503,
+      "score_type": "competition_scalar_feedback",
+      "submitted_file_path": "artifacts/b1_runs/c5e33663d37c6e49004e8213/TO_UPLOAD/candidate_B1_v2.csv",
+      "submitted_file_sha256": "9678e1fecbae9a68e8d0a8c5d987ad22a84b87a6b38a870340e8544259e18bed",
+      "submitted_run_id": "c5e33663d37c6e49004e8213",
+      "task": "B1_V2"
+    },
+    {
+      "absolute_gap": 0.08642,
+      "allowed_uses": [
+        "validation_calibration",
+        "direction_confidence",
+        "deployment_risk",
+        "submission_budgeting"
+      ],
+      "forbidden_uses": [
+        "node_level_correction",
+        "item_level_correction",
+        "test_label_inference"
+      ],
+      "identity_status": "verified",
+      "offline_hit_rate_at_10": 0.2515,
+      "offline_mrr_at_10": 0.1234,
+      "offline_ndcg_at_10": 0.1548,
+      "online_score": 0.06838,
+      "relative_gap": 0.55827,
+      "score_type": "competition_scalar_feedback",
+      "submitted_file_path": "artifacts/b2_runs/fcf5ad3dbcdf9700dd644eff/TO_UPLOAD/candidate_B2.csv",
+      "submitted_file_sha256": "b705d15fc6e57274fa3e35086e84c67e2e381a81b4e56daa3ae241530d41e39d",
+      "submitted_run_id": "fcf5ad3dbcdf9700dd644eff",
+      "task": "B2_V1"
+    }
+  ],
+  "forbidden_uses": [
+    "node_level_correction",
+    "item_level_correction",
+    "test_label_inference"
+  ],
+  "manifest_version": "v1_6_online_results_v1",
+  "score_type": "competition_scalar_feedback"
+}

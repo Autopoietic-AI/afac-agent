@@ -1,0 +1,27 @@
+{
+  "entries": [
+    {
+      "evidence_ref": "artifacts/b1_runs/c5e33663d37c6e49004e8213/run_manifest.json",
+      "policy": "round refunded, excluded from portfolio",
+      "round": "round_03",
+      "summary": "B1 node-level gate changed zero predictions; the round produced no new information.",
+      "task": "B1",
+      "type": "node_gate_no_op"
+    },
+    {
+      "evidence_ref": "artifacts/b2_runs/fcf5ad3dbcdf9700dd644eff/run_manifest.json",
+      "policy": "round refunded, excluded from portfolio",
+      "summary": "B2 Score Blend degenerated to the Popularity signal; blending added no new information.",
+      "task": "B2",
+      "type": "degenerate_to_popularity"
+    },
+    {
+      "evidence_ref": "artifacts/b2_runs/fcf5ad3dbcdf9700dd644eff/run_manifest.json",
+      "policy": "round refunded, excluded from portfolio",
+      "summary": "B2 Bucket Rerank degenerated to the Popularity ordering instead of bucket-specific orderings.",
+      "task": "B2",
+      "type": "degenerate_to_popularity"
+    }
+  ],
+  "manifest_version": "v1_6_no_op_rounds_v1"
+}

@@ -1,0 +1,12 @@
+{
+  "contract": "safety_contract",
+  "manifest_version": "a2_champion_safety_contract_v1",
+  "rules": [
+    "History protection: history items are never demoted, removed, or re-scored by any reranker.",
+    "Non-Len3 protection: users outside the exact Len3 bucket are never modified.",
+    "Fallback: if any stage fails or violates a guard, keep the parent (V23 anchor) output unchanged.",
+    "Frozen hashes: anchor manifests and submitted artifacts are hash-frozen; any hash mismatch invalidates the deployment record.",
+    "The champion strategy is frozen; improvements require a new anchored branch, never in-place edits."
+  ],
+  "transfer_policy": "These safety patterns are portable; A2 user ids, item ids, scores, checkpoints, and weights are not and must never enter B2."
+}

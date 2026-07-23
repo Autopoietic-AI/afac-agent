@@ -1,0 +1,13 @@
+{
+  "contract": "evaluation_contract",
+  "fold_protocol": "AFAC_A2_FOLD_V1",
+  "manifest_version": "a2_champion_evaluation_contract_v1",
+  "rules": [
+    "Offline evaluation is OOF only under AFAC_A2_FOLD_V1 with an explicit user order and explicit candidate set.",
+    "Test scores are never used as OOF, never averaged into offline metrics, and never guide candidate selection.",
+    "Assets are never selected by mtime or latest-file heuristics; only explicit, hash-verified assets qualify.",
+    "The online score (0.5093) is competition scalar feedback: usable for validation_calibration, direction_confidence, deployment_risk, submission_budgeting only.",
+    "Online feedback must never drive node-level correction, item-level correction, or test-label inference."
+  ],
+  "source_consensus_gate": "A new score source may influence evaluation only after passing a consensus check against the frozen anchor sources."
+}

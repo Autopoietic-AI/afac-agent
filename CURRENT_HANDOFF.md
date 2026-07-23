@@ -2,8 +2,24 @@
 
 ## Current module
 
-- Module: A2 Task Integration + Evaluation Foundation + Existing Asset Integration + A2 Dry-run
+- Module: AFAC Self-Evolving Research Agent v2.0 (Competition Full Edition)
+- Branch: `feat/afac-v2-full`
 - Commit status: this file is part of the module commit; use `git rev-parse HEAD` after commit for the immutable commit id.
+- Previous frozen baseline: `30efa2cbb4264630e0e1e984d55e3fffeba354e1` (B1 Repair + B Dual-Task Autonomous Loops, v1.6)
+- Scope: v1.6 baseline/postmortem knowledge package, Run Supervisor, Metric Semantics Gate, No-op Detector, Dynamic Budget Scheduler, Unified Data Intelligence, Validation Reality Manager, Problem Hierarchy, Competition Intelligence + MLE-STAR, Global Exploration Controller, Hierarchical Model Constructor, Capability Registry, Memory-safe Executor, full classification and recommendation operator spaces, A2 Champion Architecture Package, portfolio/parent rules, online feedback registration, four task smokes. No full two-hour loop was started.
+
+## v2.0 key facts
+
+- pytest: `313 passed` (207 v1.6 baseline + 106 new v2.0 tests); Doctor: PASS.
+- Four smokes passed: A1 classification, A2 recommendation, B1 classification (real B分类 data, LP held-out accuracy `0.2549`), B2 recommendation (real B推荐 data, pool recall@100 `0.4233`, sparse candidate table only).
+- v1.6 online results registered with verified submission identity: B1 V1 `0.37908`, B1 V2 `0.37974`, B2 V1 `0.06838`.
+- v1.6 postmortem package: `knowledge/v1_6_baseline/`; A2 champion package: `knowledge/recommendation/champions/A2_05093/`.
+- Smoke outputs: `artifacts/v2_smokes/` (gitignored).
+- Frozen hashes verified unchanged before/after smokes (`config/project_state.json`, `history/confirmed_experiments_a1.json`, `artifacts/A1_v53q1_transition_stable_edge_h2_SAFE.csv`).
+
+## Previous module (v1.6, frozen)
+
+- Module: A2 Task Integration + Evaluation Foundation + Existing Asset Integration + A2 Dry-run
 - Previous frozen baseline: `e82c01842138502be70b6d2ea8ed1d7d09ead3fe` (A1 Autonomous Scientific Closed Loop v1)
 - Scope: A2 TaskAdapter, Data Profiler, Evaluator, AFAC_A2_FOLD_V1 validation, dual anchors, asset portfolio, ranking fusion operators, complementarity audit, full dry-run. No training, no Test prediction, no submission.
 

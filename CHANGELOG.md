@@ -1,5 +1,71 @@
 # CHANGELOG
 
+## 2026-07-23 - AFAC Self-Evolving Research Agent v2.0 (Competition Full Edition)
+
+Built on the frozen v1.6 baseline (`30efa2c`, branch `feat/afac-v2-full`).
+No A1/A2/B1/B2 frozen asset, champion, anchor, fold, history, or trajectory
+was modified.
+
+- Added `knowledge/v1_6_baseline/`: baseline manifest, verified online results
+  (B1 V1 `0.37908`, B1 V2 `0.37974`, B2 V1 `0.06838` with sha256-verified
+  submission identity), B1/B2 postmortems, capability/validation/metric
+  semantics gaps, no-op round records, memory failures, and the v2 initial
+  priority queue.
+- Added `knowledge/recommendation/champions/A2_05093/`: A2 champion
+  architecture package (pipeline DAG, data view / candidate set / model
+  permission / evaluation / safety contracts, lineage, closed routes).
+  Only portable principles transfer (anchor_first, bucket_specialist,
+  protected_residual, novel_only_rerank, boundary_admission,
+  source_consensus_gate); A2 ids/scores/weights are forbidden in B2.
+- Added `afac_agent/supervisor/`: Run Supervisor with heartbeat.json,
+  STATUS.md, run_events.jsonl, unbuffered.log, self-contained dashboard.html,
+  stall detection, and resume manager.
+- Added `afac_agent/v2/metric_semantics.py`: pool recall @20/50/100/200
+  separated from top-10 metrics, mutually exclusive error decomposition
+  (top10_success + in_pool_outside_top10 + missing_from_candidate_pool = 1),
+  panel membership-hash audit with duplicate-panel detection.
+- Added `afac_agent/v2/noop_detector.py`: prediction/argmax hashes, changed
+  fraction, score diffs, source contribution; no-op experiments refund the
+  scientific round and are excluded from the portfolio.
+- Added `afac_agent/v2/validation_reality.py`: offline/online anchors,
+  submission identity, offline-online gap, panel calibration, deployment
+  confidence, required B1/B2 panel sets.
+- Added `afac_agent/v2/budget_scheduler.py`: fidelity ladder
+  (static_audit/cached_replay/cheap_diagnostic/single_fold/full_oof/
+  deployment), ROI scheduling, continuation past 3 rounds while budget and
+  positive-ROI candidates remain, premature-stop detection.
+- Added `afac_agent/v2/problem_hierarchy.py`,
+  `afac_agent/v2/model_genome.py` (L0-L9 genome, Parent + One Primary Change +
+  Optional Safety Adjustment), `afac_agent/v2/capability_registry.py`
+  (scientific best vs available best vs selected, availability bias,
+  waiting_for_adapter), `afac_agent/v2/exploration_controller.py`
+  (exploit/adjacent/global explore with stagnation, local-optimum,
+  availability/anchor/scope/validation bias and premature-stop detectors),
+  `afac_agent/v2/competition_intelligence.py` (solution/method/failure/
+  validation cards + MLE-STAR loop).
+- Added `afac_agent/v2/memory_safe.py`: SparseCandidateTable, chunked
+  scoring, TopK streaming, Memory Preflight (dense float64 user-item
+  matrices above budget are never allowed).
+- Added `afac_agent/v2/operators/classification.py`: feature ops (linear,
+  GBDT, residual MLP, PCA low-rank, prototype), graph ops (LP, SGC, APPNP,
+  degraded GraphSAGE/GCN, heterophily GNN registered unavailable), seven
+  graph views with content hashes, strict cross-fit fusion ops, operator
+  catalog.
+- Added `afac_agent/v2/operators/recommendation.py`: R0-R8 pipeline with
+  greenfield and champion-preserving modes, 15 retrievers, candidate union
+  with source_count/RRF, true candidate-table ranker (sklearn GBDT backend;
+  lightgbm LambdaRank gap honestly recorded), stable top-10 anchor, bucket
+  expert router, TopK/history-slot/novel-only protection, position-10
+  admission (at most one external item), fallback-keep-parent.
+- Added `afac_agent/v2/portfolio.py` (incumbent-default parent rule with
+  M5-style rejection of unjustified non-incumbent parents) and
+  `afac_agent/v2/online_feedback.py` (online feedback guardrails).
+- Added `afac_agent/v2/data_intelligence.py`: unified deterministic
+  classification/recommendation data intelligence with LLM-mutation guard.
+- Added `afac_agent/v2/smokes.py`: four task smokes (A1/A2/B1/B2), each
+  bounded to minutes, all passing with frozen hashes unchanged.
+- Added 106 synthetic tests (313 passed total, doctor PASS).
+
 ## 2026-07-23 - B1 Repair + B2 First Autonomous Dual-Task Closed Loop
 
 - Added `afac_agent.b1.repair`: scientific validity repair module with raw graph

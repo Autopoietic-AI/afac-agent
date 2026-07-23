@@ -1,0 +1,56 @@
+{
+  "evidence_refs": [
+    "artifacts/b2_runs/fcf5ad3dbcdf9700dd644eff/run_manifest.json",
+    "artifacts/b2_runs/fcf5ad3dbcdf9700dd644eff/B2_CLOSED_LOOP_V1_REPORT.md",
+    "artifacts/b2_runs/fcf5ad3dbcdf9700dd644eff/trajectory_B2.json"
+  ],
+  "known_issues": [
+    {
+      "id": "B2-ISSUE-1",
+      "issue": "History Recall only covers history targets",
+      "detail": "The champion candidate B2_HISTORY_RECALL can only rank items already in a user's history."
+    },
+    {
+      "id": "B2-ISSUE-2",
+      "issue": "Novel targets are the majority and History Recall scores 0 there",
+      "detail": "Most test targets are novel items; on that majority slice the deployed model has zero recall."
+    },
+    {
+      "id": "B2-ISSUE-3",
+      "issue": "candidate_recall@10 and hit_rate@10 are semantically identical",
+      "detail": "The evaluator computes both with the same computation, so they cannot be used as independent signals."
+    },
+    {
+      "id": "B2-ISSUE-4",
+      "issue": "Retrieval and ranking failure are not mutually exclusive",
+      "detail": "The failure attribution does not separate pool-miss from rank-miss; diagnoses can double-count."
+    },
+    {
+      "id": "B2-ISSUE-5",
+      "issue": "Score Blend degenerated to Popularity",
+      "detail": "The blended score collapsed onto the popularity signal; blending added nothing."
+    },
+    {
+      "id": "B2-ISSUE-6",
+      "issue": "Candidate Ranker was not a true candidate-level LambdaRank",
+      "detail": "No candidate-level learning-to-rank model (e.g. lightgbm) was available; the ranker was a heuristic stand-in."
+    },
+    {
+      "id": "B2-ISSUE-7",
+      "issue": "Bucket Rerank degenerated to Popularity",
+      "detail": "Bucket-specialist reranking reproduced the popularity ordering instead of bucket-specific orderings."
+    },
+    {
+      "id": "B2-ISSUE-8",
+      "issue": "Dense full user x item matrix caused a 3.35GiB allocation failure",
+      "detail": "Materializing the dense score matrix in float64 blew the memory budget mid-round."
+    },
+    {
+      "id": "B2-ISSUE-9",
+      "issue": "Premature stop",
+      "detail": "Loop stopped at 1807.57s of the 7200s budget (wall_clock_seconds=1807.570787 in fcf5ad3dbcdf9700dd644eff run_manifest)."
+    }
+  ],
+  "manifest_version": "v1_6_b2_postmortem_v1",
+  "task": "B2"
+}

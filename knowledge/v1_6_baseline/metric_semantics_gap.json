@@ -1,0 +1,30 @@
+{
+  "duplicated_metrics": [
+    {
+      "detail": "The B2 evaluator computes candidate_recall@10 and hit_rate@10 with the same computation; they are semantically identical and must not be cited as two independent signals.",
+      "metrics": [
+        "candidate_recall@10",
+        "hit_rate@10"
+      ]
+    }
+  ],
+  "evidence_refs": [
+    "artifacts/b2_runs/fcf5ad3dbcdf9700dd644eff/run_manifest.json",
+    "artifacts/b2_runs/fcf5ad3dbcdf9700dd644eff/trajectory_B2.json"
+  ],
+  "manifest_version": "v1_6_metric_semantics_gap_v1",
+  "missing_metrics": [
+    {
+      "detail": "Pool recall at larger cutoffs (@20/@50/@100/@200) was never measured, so retrieval headroom is invisible.",
+      "metrics": [
+        "pool_recall@20",
+        "pool_recall@50",
+        "pool_recall@100",
+        "pool_recall@200"
+      ]
+    }
+  ],
+  "non_exclusive_failure_attribution": {
+    "detail": "Retrieval failure (target absent from candidate pool) and ranking failure (target pooled but ranked poorly) are not mutually exclusive in the B2 diagnosis; a pooled-but-misranked target can be counted in both buckets."
+  }
+}

@@ -1,0 +1,12 @@
+{
+  "contract": "candidate_set_contract",
+  "manifest_version": "a2_champion_candidate_set_contract_v1",
+  "rules": [
+    "The V23 Top10 candidate set membership is fixed and teammate-verified; it is never regenerated, re-selected, or extended.",
+    "Reranking is permitted only inside the original V23 Top7 set.",
+    "Positions 8-10 of the Top10 are never reordered by internal rerankers.",
+    "At most one external item may be admitted, only at position 10 (boundary_admission).",
+    "Novel-slot reranking touches Novel slots only (novel_only_rerank); history items are protected."
+  ],
+  "transfer_policy": "The contract principle (fixed membership, rerank inside a protected subset) is portable; the A2 candidate items themselves are not."
+}

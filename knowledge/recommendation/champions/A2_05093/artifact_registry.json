@@ -1,0 +1,41 @@
+{
+  "artifacts": [
+    {
+      "availability": "unknown",
+      "location": "external A2 project path",
+      "relative_path": "runs/C2_v42_merged/test_scores_cvmean.npz",
+      "role": "merged v42c test score tensor",
+      "transferability": "forbidden_direct_transfer"
+    },
+    {
+      "availability": "unknown",
+      "location": "external A2 project path",
+      "relative_path": "runs/C2_v48_merged/test_scores_cvmean.npz",
+      "role": "merged v48a test score tensor",
+      "transferability": "forbidden_direct_transfer"
+    },
+    {
+      "availability": "unknown",
+      "location": "external A2 project path",
+      "relative_path": "runs/C2_v42/fold*/v42c_finetune_best.pt",
+      "role": "v42c-DIN per-fold checkpoints",
+      "transferability": "forbidden_direct_transfer"
+    },
+    {
+      "availability": "unknown",
+      "location": "external A2 project path",
+      "relative_path": "runs/C2_v48/fold*/v48a_finetune_best.pt",
+      "role": "v48a per-fold checkpoints",
+      "transferability": "forbidden_direct_transfer"
+    },
+    {
+      "availability": "unknown",
+      "location": "external A2 project path",
+      "relative_path": "runs/stageA/train_folds.csv",
+      "role": "stage-A fold assignments",
+      "transferability": "forbidden_direct_transfer"
+    }
+  ],
+  "manifest_version": "a2_champion_artifact_registry_v1",
+  "note": "These assets live outside this repository in the external A2 project. They are recorded for lineage only; none may be copied, scored against, or transferred into B1/B2 work."
+}

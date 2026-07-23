@@ -1,10 +1,24 @@
-# AFAC Agent v1.3
+# AFAC Agent v2.0
 
 Current A1 champion: `v53Q-1`, online `0.7800`.
+A2 online champion: `0.5093`. B1 online best: `0.37974` (V2). B2 online V1: `0.06838`.
 
 This repository is the build-time codebase for a bounded AFAC2026 automated
-research agent.  It is not a model-training script and M0/M2 does not change
+research agent.  v2.0 adds the self-evolving research layer under
+`afac_agent/v2/` (metric semantics gate, no-op detector, dynamic budget
+scheduler, validation reality manager, problem hierarchy, model genome,
+capability registry, exploration controller, competition intelligence,
+memory-safe executor, classification and recommendation operator spaces),
+the Run Supervisor under `afac_agent/supervisor/` (heartbeat, dashboard,
+stall detection, resume), and knowledge packages under `knowledge/`
+(v1.6 postmortem, A2 champion architecture).  It does not change
 predictions, Fold definitions, Gates, OOF anchors, or the champion CSV.
+
+Run the four task smokes (minutes each, never a full loop):
+
+```bash
+python -m afac_agent.v2.smokes --task all
+```
 
 ## Quick start
 

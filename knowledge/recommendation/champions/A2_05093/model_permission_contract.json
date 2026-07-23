@@ -1,0 +1,30 @@
+{
+  "contract": "model_permission_contract",
+  "manifest_version": "a2_champion_model_permission_contract_v1",
+  "permissions": [
+    {
+      "allowed": "rerank exact Len3 users strictly inside the original V23 Top7 set",
+      "alpha": 0.5,
+      "forbidden": "modifying any non-Len3 user, touching positions outside Top7, altering Top10 membership",
+      "model": "v42c-DIN"
+    },
+    {
+      "allowed": "rerank Novel slots only",
+      "alpha": 0.5,
+      "forbidden": "modifying non-Novel slots, demoting or removing history items, modifying non-Len3 users",
+      "model": "C_all"
+    },
+    {
+      "allowed": "admit at most one external item at position 10",
+      "forbidden": "admitting more than one external item, admitting anywhere except position 10, modifying non-Len3 users",
+      "model": "position-10 admission"
+    }
+  ],
+  "protected": [
+    "non-Len3 users (modification forbidden in all cases)",
+    "history items",
+    "V23 Top10 membership",
+    "all positions and users not explicitly listed under permissions"
+  ],
+  "transfer_policy": "Model checkpoints and weights are A2-specific and must never be migrated into B2; only the bucket-specialist permission pattern transfers."
+}

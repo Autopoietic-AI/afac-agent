@@ -1,0 +1,31 @@
+{
+  "lineage": [
+    {
+      "change": "Earliest recorded online submission of the anchored V23-based strategy; exact delta not documented in available sources.",
+      "online_score": 0.5052,
+      "step": 1
+    },
+    {
+      "change": "Incremental strategy refinement; exact delta not documented in available sources.",
+      "online_score": 0.5066,
+      "step": 2
+    },
+    {
+      "change": "Incremental strategy refinement; exact delta not documented in available sources.",
+      "online_score": 0.5068,
+      "step": 3
+    },
+    {
+      "change": "Incremental strategy refinement; exact delta not documented in available sources.",
+      "online_score": 0.5092,
+      "step": 4
+    },
+    {
+      "change": "Frozen champion: fixed V23 Top10 candidate set (teammate-verified); only exact Len3 users modified; v42c-DIN rerank strictly inside original V23 Top7 (alpha=0.50); C_all Novel slot rerank (alpha=0.50); Top10 membership fixed; history items and non-Len3 users protected.",
+      "online_score": 0.5093,
+      "step": 5
+    }
+  ],
+  "manifest_version": "a2_champion_experiment_lineage_v1",
+  "note": "Historical scores from afac_agent/a2/anchors.py ONLINE_STRATEGY. Intermediate step deltas are not documented in this repository; only the final frozen strategy is fully specified."
+}

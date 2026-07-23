@@ -1,0 +1,90 @@
+{
+  "B1": [
+    {
+      "evidence_refs": [
+        "knowledge/v1_6_baseline/validation_gap.json",
+        "artifacts/b1_runs/c5e33663d37c6e49004e8213/B1_CLOSED_LOOP_V2_REPORT.md"
+      ],
+      "expected_headroom": "Closing even half of the ~0.11 absolute standard-online gap would outweigh any single-model gain seen so far.",
+      "priority": 1,
+      "problem": "standard-online gap",
+      "why": "Offline standard overestimates online by 0.11161 (V1) / 0.11667 (V2); validation cannot be trusted for candidate selection until calibrated."
+    },
+    {
+      "evidence_refs": [
+        "knowledge/v1_6_baseline/b1_postmortem.json"
+      ],
+      "expected_headroom": "Class 7 is the dominant residual error bucket with LP accuracy ~0; any recovery is near-pure gain.",
+      "priority": 2,
+      "problem": "class-7 failure",
+      "why": "LP Class 7 accuracy is approximately 0."
+    },
+    {
+      "evidence_refs": [
+        "knowledge/v1_6_baseline/b1_postmortem.json"
+      ],
+      "expected_headroom": "Neighbor-LR already shows Class-7 complementarity; fusing graph and feature views targets exactly the bucket LP misses.",
+      "priority": 3,
+      "problem": "feature-graph complementarity",
+      "why": "Complementary signal was observed but never fused."
+    },
+    {
+      "evidence_refs": [
+        "knowledge/v1_6_baseline/validation_gap.json"
+      ],
+      "expected_headroom": "Truly differentiated, calibrated panels are a prerequisite for trusting any offline gain above noise.",
+      "priority": 4,
+      "problem": "panel redesign",
+      "why": "Degree-matched/standard panels undifferentiated; test-like/propensity-matched panels duplicate."
+    }
+  ],
+  "B2": [
+    {
+      "evidence_refs": [
+        "knowledge/v1_6_baseline/b2_postmortem.json"
+      ],
+      "expected_headroom": "Novel targets are the majority of the test slice and current recall there is exactly 0; this is the largest single headroom.",
+      "priority": 1,
+      "problem": "novel-target coverage",
+      "why": "B2_HISTORY_RECALL only covers history targets; novel majority is unserved."
+    },
+    {
+      "evidence_refs": [
+        "knowledge/v1_6_baseline/capability_gap.json"
+      ],
+      "expected_headroom": "A real candidate-level L2R model replaces heuristic stand-ins; gated on lightgbm availability.",
+      "priority": 2,
+      "problem": "true candidate-level LambdaRank",
+      "why": "Candidate Ranker was never a true candidate-level LambdaRank."
+    },
+    {
+      "evidence_refs": [
+        "knowledge/v1_6_baseline/metric_semantics_gap.json"
+      ],
+      "expected_headroom": "Pool recall @20/50/100/200 makes retrieval headroom measurable and separates retrieval from ranking failure.",
+      "priority": 3,
+      "problem": "pool-recall metrics",
+      "why": "Retrieval vs ranking failure currently not separable."
+    },
+    {
+      "evidence_refs": [
+        "knowledge/v1_6_baseline/memory_failures.json"
+      ],
+      "expected_headroom": "Sparse candidate tables remove the 3.35GiB dense allocation failure and unblock larger candidate pools.",
+      "priority": 4,
+      "problem": "memory safety",
+      "why": "Dense float64 full-matrix default caused a 3.35GiB allocation failure."
+    },
+    {
+      "evidence_refs": [
+        "knowledge/v1_6_baseline/b2_postmortem.json",
+        "knowledge/v1_6_baseline/no_op_rounds.json"
+      ],
+      "expected_headroom": "Bucket-specialist reranking that actually differs per bucket, instead of degenerating to Popularity.",
+      "priority": 5,
+      "problem": "bucket specialists",
+      "why": "Bucket Rerank degenerated to Popularity."
+    }
+  ],
+  "manifest_version": "v2_initial_priority_queue_v1"
+}

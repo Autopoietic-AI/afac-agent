@@ -1,0 +1,47 @@
+{
+  "evidence_refs": [
+    "artifacts/b1_runs/e95368a24e0780e65e92aceb/run_manifest.json",
+    "artifacts/b1_runs/e95368a24e0780e65e92aceb/B1_CLOSED_LOOP_REPORT.md",
+    "artifacts/b1_runs/c5e33663d37c6e49004e8213/run_manifest.json",
+    "artifacts/b1_runs/c5e33663d37c6e49004e8213/B1_CLOSED_LOOP_V2_REPORT.md"
+  ],
+  "known_issues": [
+    {
+      "id": "B1-ISSUE-1",
+      "issue": "Standard panel overestimates online performance",
+      "detail": "Offline standard 0.49069 (V1) / 0.49641 (V2) vs online 0.37908 / 0.37974; absolute gaps 0.11161 / 0.11667."
+    },
+    {
+      "id": "B1-ISSUE-2",
+      "issue": "Degree-matched and Standard panels are not truly differentiated",
+      "detail": "The two panels measure nearly the same slice of the data, so panel-level signals collapse into one."
+    },
+    {
+      "id": "B1-ISSUE-3",
+      "issue": "Test-like and Propensity-matched panels duplicate each other",
+      "detail": "Panel membership overlaps; the audit needed to prove distinctness was never enforced."
+    },
+    {
+      "id": "B1-ISSUE-4",
+      "issue": "LP Class 7 accuracy is approximately 0",
+      "detail": "Label propagation fails completely on Class 7; it is the dominant residual error bucket."
+    },
+    {
+      "id": "B1-ISSUE-5",
+      "issue": "Neighbor-LR shows Class-7 complementarity",
+      "detail": "Neighbor-LR recovers part of the Class-7 mass that LP misses, indicating feature/graph complementarity that was never fused."
+    },
+    {
+      "id": "B1-ISSUE-6",
+      "issue": "Node-level gate was a no-op",
+      "detail": "Round-03 node gate changed zero predictions; the round produced no new information."
+    },
+    {
+      "id": "B1-ISSUE-7",
+      "issue": "Premature stop",
+      "detail": "Loop stopped at 75.6s of the 7200s budget because of a fixed 3-round cap (wall_clock_seconds=75.600925 in c5e33663d37c6e49004e8213 run_manifest)."
+    }
+  ],
+  "manifest_version": "v1_6_b1_postmortem_v1",
+  "task": "B1"
+}

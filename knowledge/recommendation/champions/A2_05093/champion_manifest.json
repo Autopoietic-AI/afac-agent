@@ -1,0 +1,45 @@
+{
+  "anchor_id": "A2_ONLINE_CHAMPION_05093",
+  "frozen": true,
+  "historical_online_scores": [
+    0.5052,
+    0.5066,
+    0.5068,
+    0.5092,
+    0.5093
+  ],
+  "manifest_version": "a2_champion_package_v1",
+  "online_score": 0.5093,
+  "portable_principles": [
+    "anchor_first",
+    "bucket_specialist",
+    "protected_residual",
+    "novel_only_rerank",
+    "boundary_admission",
+    "source_consensus_gate"
+  ],
+  "score_type": "competition_scalar_feedback",
+  "source_of_truth": "afac_agent/a2/anchors.py ONLINE_STRATEGY",
+  "strategy": [
+    "fixed V23 Top10 candidate set (teammate-verified)",
+    "only exact Len3 users are modified",
+    "rerank strictly inside the original V23 Top7 set",
+    "v42c-DIN alpha=0.50",
+    "C_all Novel slot alpha=0.50",
+    "Top10 candidate set membership fixed",
+    "history items and non-Len3 users protected"
+  ],
+  "task": "A2",
+  "transfer_policy": {
+    "forbidden_transfers_into_B2": [
+      "A2 user ids",
+      "A2 item ids",
+      "A2 scores",
+      "A2 checkpoints",
+      "A2 weights"
+    ],
+    "permitted_transfers": [
+      "portable principles only"
+    ]
+  }
+}

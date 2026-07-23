@@ -1,0 +1,50 @@
+{
+  "manifest_version": "v1_6_capability_gap_v1",
+  "missing_capabilities": [
+    {
+      "capability": "true_candidate_level_lambdarank",
+      "blocked_by": "lightgbm absent from the environment",
+      "impact": "B2 candidate ranking stayed heuristic; no learned candidate-level L2R was possible."
+    },
+    {
+      "capability": "gbdt_classification_parent",
+      "blocked_by": "no GBDT library available",
+      "impact": "B1 lacked a strong tabular parent branch alongside LP/Neighbor-LR."
+    },
+    {
+      "capability": "memory_safe_sparse_candidate_tables",
+      "blocked_by": "dense float64 full user x item matrix default",
+      "impact": "B2 hit a 3.35GiB allocation failure mid-round."
+    },
+    {
+      "capability": "run_supervisor_heartbeat_dashboard",
+      "blocked_by": "no supervisor/heartbeat infrastructure",
+      "impact": "Long loops could not be monitored or safely resumed."
+    },
+    {
+      "capability": "no_op_detection",
+      "blocked_by": "no automatic detection that a round changed nothing",
+      "impact": "B1 round-03 node gate no-op was only found by manual audit."
+    },
+    {
+      "capability": "metric_semantics_separation",
+      "blocked_by": "evaluator conflated candidate_recall@10 with hit_rate@10",
+      "impact": "Duplicated metrics were read as independent evidence in B2."
+    },
+    {
+      "capability": "panel_membership_audit",
+      "blocked_by": "no audit proving panels are distinct",
+      "impact": "B1 degree-matched/standard and test-like/propensity-matched panels were not truly differentiated."
+    },
+    {
+      "capability": "dynamic_budget_scheduling",
+      "blocked_by": "fixed 3-round cap instead of budget-aware scheduling",
+      "impact": "Both B1 (75.6s/7200s) and B2 (1807.57s/7200s) stopped prematurely."
+    },
+    {
+      "capability": "gpu_torch_models",
+      "blocked_by": "torch/GPU stack unavailable",
+      "impact": "No neural models (DIN-style or otherwise) could be trained for B1/B2."
+    }
+  ]
+}

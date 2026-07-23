@@ -1,0 +1,30 @@
+{
+  "b1_gaps": {
+    "B1_V1": {
+      "absolute_gap": 0.11161,
+      "offline_standard": 0.49069,
+      "online": 0.37908,
+      "relative_gap": 0.22746
+    },
+    "B1_V2": {
+      "absolute_gap": 0.11667,
+      "notes": "offline standard confirmed from run report: 0.49640522875816995; master_manifest rounds to 0.4964",
+      "offline_standard": 0.49641,
+      "online": 0.37974,
+      "relative_gap": 0.23503
+    }
+  },
+  "b2_gap": {
+    "absolute_gap": 0.08642,
+    "offline_ndcg_at_10": 0.1548,
+    "online": 0.06838,
+    "relative_gap": 0.55827
+  },
+  "manifest_version": "v1_6_validation_gap_v1",
+  "structural_issues": [
+    "B1 offline standard panel overestimates online for both V1 and V2 (gaps ~0.11-0.12 absolute, ~0.23 relative)",
+    "B1 degree-matched and standard panels are undifferentiated; test-like and propensity-matched panels duplicate",
+    "B2 offline ndcg@10 0.1548 vs online 0.06838 (absolute gap 0.08642, relative gap 0.55827)",
+    "Panel calibration against online feedback is absent entirely"
+  ]
+}

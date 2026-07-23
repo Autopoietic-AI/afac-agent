@@ -1,0 +1,13 @@
+{
+  "contract": "data_view_contract",
+  "fold_protocol": "AFAC_A2_FOLD_V1",
+  "manifest_version": "a2_champion_data_view_contract_v1",
+  "rules": [
+    "The offline view is OOF only, materialized under fold protocol AFAC_A2_FOLD_V1 with an explicit user order.",
+    "Test scores are never accepted as OOF and never enter the offline evaluation view.",
+    "The online champion record (score 0.5093) is an identity/deployment record only; it is never usable as an offline OOF artifact.",
+    "Assets are never selected by mtime, recency, or guessed file names; only explicit, hash-verified assets qualify.",
+    "If no explicit asset qualifies, the view status is waiting_for_explicit_asset and names the single missing asset."
+  ],
+  "transfer_policy": "No A2 user ids, item ids, scores, checkpoints, or weights may be migrated into B2; only portable principles transfer."
+}

@@ -1,5 +1,14 @@
 # PROJECT_STATE.md
 
+## AFAC v2.0 (Competition Full Edition)
+
+- Branch: `feat/afac-v2-full`, built on frozen v1.6 baseline `30efa2c`.
+- Status: architecture build complete; four task smokes passed; no full two-hour loop started.
+- New subsystems: Run Supervisor (`afac_agent/supervisor/`), Metric Semantics Gate, No-op Detector, Dynamic Budget Scheduler, Validation Reality Manager, Problem Hierarchy, Model Genome (L0-L9), Capability Registry, Global Exploration Controller, Competition Intelligence + MLE-STAR, Memory-safe Executor, classification + recommendation operator spaces (`afac_agent/v2/`).
+- Knowledge packages: `knowledge/v1_6_baseline/` (postmortem + verified online results), `knowledge/recommendation/champions/A2_05093/` (champion architecture, portable principles only).
+- Online feedback registered: B1 V1 `0.37908`, B1 V2 `0.37974`, B2 V1 `0.06838` (submission identity sha256-verified).
+- pytest: `313 passed`; Doctor: PASS; working tree clean at commit.
+
 ## Current Champion
 
 - A1 online: `0.7800`

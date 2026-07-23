@@ -1,0 +1,33 @@
+{
+  "closed_routes": [
+    {
+      "reason": "Top10 membership is fixed and teammate-verified; reopening it invalidates the anchor.",
+      "route": "regenerating or re-selecting the V23 Top10 candidate set"
+    },
+    {
+      "reason": "Explicitly protected; all observed online gains came from the exact Len3 bucket only.",
+      "route": "modifying non-Len3 users"
+    },
+    {
+      "reason": "Contract violation; rerank is permitted strictly inside the original V23 Top7.",
+      "route": "reranking outside the original Top7"
+    },
+    {
+      "reason": "Forbidden by the evaluation contract; OOF-only under AFAC_A2_FOLD_V1.",
+      "route": "using test scores as OOF or selecting assets by mtime/latest file"
+    },
+    {
+      "reason": "History protection rule; history items are never demoted or removed.",
+      "route": "reranking history slots"
+    },
+    {
+      "reason": "Boundary admission allows at most one external item at position 10.",
+      "route": "admitting more than one external item, or admitting outside position 10"
+    },
+    {
+      "reason": "Direct transfer of A2 user ids, item ids, scores, checkpoints, or weights into B2 is forbidden; only portable principles transfer.",
+      "route": "migrating A2 artifacts into B2"
+    }
+  ],
+  "manifest_version": "a2_champion_closed_routes_v1"
+}
