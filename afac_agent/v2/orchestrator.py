@@ -28,9 +28,21 @@ from dataclasses import asdict
 from pathlib import Path
 from typing import Any
 
+import numpy as np
+
 from ..llm.providers import ALIYUN_BAILIAN_PROVIDER, make_provider, redact_secret
 from ..research.event_store import json_dumps, load_json, sha256_file, stable_hash
 from ..supervisor import RunSupervisor
+from .adaptive_fold import (
+    AdaptiveFoldPolicy,
+    CanonicalFolds,
+    FoldFidelity,
+    build_fold_plan,
+    no_improvement_action,
+    paired_fold_comparison,
+    should_trigger_full_cv,
+    stop_decision,
+)
 from .budget_scheduler import BudgetState, ExperimentCandidate, Fidelity, should_continue
 from .capability_registry import default_registry
 from .competition_intelligence import CardStore, MethodCard
@@ -99,6 +111,10 @@ PLANNER_MODE_FALLBACK = "deterministic_fallback"
 # *choose* among these; it can never inject arbitrary code.
 ALLOWED_DIAGNOSTICS = ("candidate_recall_diagnostic", "cached_replay", "small_retrieval_compare")
 
+# Whitelisted formal experiments (round 2+): real training on sparse
+# candidate tables only, never dense user-item matrices.
+ALLOWED_FORMAL_EXPERIMENTS = ("candidate_ranker_experiment", "bucket_specialist_experiment")
+
 FROZEN_FILES = (
     "config/project_state.json",
     "history/confirmed_experiments_a1.json",
@@ -115,6 +131,7 @@ PROMPT_TEMPLATES = {
 
 def _write_json(run_dir: Path, name: str, payload: dict[str, Any]) -> str:
     path = run_dir / name
+    path.parent.mkdir(parents=True, exist_ok=True)
     path.write_text(json_dumps(payload) + "\n", encoding="utf-8")
     return name
 
@@ -162,11 +179,12 @@ def m5_admission(
     critic: dict[str, Any],
     budget_state: BudgetState,
     smoke: bool,
+    allowed: tuple[str, ...] = ALLOWED_DIAGNOSTICS,
 ) -> dict[str, Any]:
     """Deterministic admission gate.  The LLM cannot bypass these checks."""
     reasons: list[str] = []
     diagnostic_type = str(proposal.get("diagnostic_type") or "")
-    if diagnostic_type not in ALLOWED_DIAGNOSTICS:
+    if diagnostic_type not in allowed:
         reasons.append(f"diagnostic_type not whitelisted: {diagnostic_type!r}")
     lowered = json.dumps(proposal).lower()
     for key in FORBIDDEN_PROPOSAL_KEYS:
@@ -175,20 +193,34 @@ def m5_admission(
     if str(critic.get("verdict", "")).lower() == "reject":
         reasons.append("M6C critic verdict is reject")
     estimated = float(proposal.get("budget_seconds", 60.0))
+    budget_clamped = False
     if estimated > budget_state.remaining_wall_clock_seconds:
-        reasons.append("estimated cost exceeds remaining budget")
+        # Clamp rather than kill a clean proposal when the estimate merely
+        # overshoots the remaining window; reject only when nothing viable
+        # remains.  The clamp is recorded in the decision.
+        if budget_state.remaining_wall_clock_seconds >= 60.0:
+            estimated = max(60.0, budget_state.remaining_wall_clock_seconds * 0.5)
+            budget_clamped = True
+        else:
+            reasons.append("estimated cost exceeds remaining budget")
     if not proposal.get("success_condition"):
         reasons.append("success_condition missing")
     if not proposal.get("failure_condition"):
         reasons.append("failure_condition missing")
 
-    status = "rejected" if reasons else ("admitted_diagnostic_only" if smoke or diagnostic_type else "admitted")
+    if reasons:
+        status = "rejected"
+    elif smoke or diagnostic_type in ALLOWED_DIAGNOSTICS:
+        status = "admitted_diagnostic_only"
+    else:
+        status = "admitted"
     return {
         "status": status,
         "reasons": reasons,
         "gate": "M5_deterministic",
         "llm_can_bypass": False,
         "estimated_cost_seconds": estimated,
+        "budget_clamped": budget_clamped,
         "decided_at": time.time(),
     }
 
@@ -231,6 +263,10 @@ class V2AutonomousResearchOrchestrator:
         provider_name: str = ALIYUN_BAILIAN_PROVIDER,
         provider_config: str = "",
         parent_execution_id: str = "",
+        deployment_method: str = "full_train_retrain",
+        formal_max_users: int = 0,
+        deployment_reserve_seconds: float = 300.0,
+        allow_full_cv: bool = True,
     ) -> None:
         self.project_root = Path(project_root).resolve()
         self.task = task
@@ -252,6 +288,11 @@ class V2AutonomousResearchOrchestrator:
         self.provider_name = provider_name
         self.provider_config = provider_config
         self.parent_execution_id = parent_execution_id
+        if deployment_method not in {"full_train_retrain", "3fold_ensemble"}:
+            raise ValueError(f"unknown deployment_method: {deployment_method}")
+        self.deployment_method = deployment_method
+        self.formal_max_users = int(formal_max_users)
+        self.allow_full_cv = allow_full_cv
 
         self.started_at = time.time()
         self.stages = SMOKE_STAGES if smoke else STAGES
@@ -265,6 +306,16 @@ class V2AutonomousResearchOrchestrator:
         self.scientific_rounds_used = 0.0
         self.cheap_diagnostics_used = 0
         self.no_op_rounds_refunded = 0
+        self._deployment_generated = False
+        self._execution_id = ""
+        self.fold_policy = AdaptiveFoldPolicy.for_task(task)
+        self.fold_policy.estimator.deployment_reserve_seconds = float(deployment_reserve_seconds)
+        self._canonical: CanonicalFolds | None = None
+        self._incumbent: dict[str, Any] = {"candidate_id": "popularity_parent", "kind": "popularity", "metrics": {"hit_rate@10": 0.0}}
+        self._no_improvement_rounds = 0
+        self._global_explore_attempted = False
+        self._operator_families_tried: set[str] = set()
+        self._ledger: LLMLedger | None = None
         self._frozen_before = _frozen_hashes(self.project_root)
 
     # --------------------------------------------------------------- identity
@@ -385,6 +436,7 @@ class V2AutonomousResearchOrchestrator:
                     raise FileNotFoundError(f"resume execution not found: {resume_dir}")
                 run_dir = resume_dir
                 execution_id = self.resume_execution_id
+                self._execution_id = execution_id
                 self.resume_status = "resumed"
             else:
                 identity = build_execution_id(
@@ -398,6 +450,7 @@ class V2AutonomousResearchOrchestrator:
                     started_at=started,
                 )
                 execution_id = identity["execution_id"]
+                self._execution_id = execution_id
                 run_dir = self.out_root / execution_id
                 run_dir.mkdir(parents=True, exist_ok=False)
 
@@ -409,6 +462,7 @@ class V2AutonomousResearchOrchestrator:
                 interval_seconds=30.0,
             )
             ledger = self._build_ledger(run_dir, execution_id)
+            self._ledger = ledger
             self._beat(supervisor, stage=current_stage, status="running", execution_id=execution_id, input_fingerprint=input_fingerprint)
             self._track(current_stage, {"execution_id": execution_id, "input_fingerprint": input_fingerprint, "cache_status": self.cache_status, "resume_status": self.resume_status})
 
@@ -431,7 +485,8 @@ class V2AutonomousResearchOrchestrator:
             self._track(current_stage, {"n_train": dataset.validation.get("n_train"), "n_items": dataset.n_items, "test_truth_hidden": self.gates["test_truth_guard"]})
 
             targets = {str(u): str(t) for u, t in zip(dataset.train_df["uid"], dataset.train_df["target_iid"])}
-            smoke_uids = sorted(targets)[: self.smoke_max_users] if self.smoke else sorted(targets)
+            user_cap = self.smoke_max_users if self.smoke else self.formal_max_users
+            smoke_uids = sorted(targets)[:user_cap] if user_cap else sorted(targets)
             subset_seq = {u: dataset.train_seq.get(u, []) for u in smoke_uids}
             subset_targets = {u: targets[u] for u in smoke_uids}
 
@@ -461,180 +516,53 @@ class V2AutonomousResearchOrchestrator:
             # independent panels, not zero duplicates.
             self.gates["validation_reality"] = audit["independent_panel_count"] >= 2
             self.artifacts["validation_reality"] = _write_json(run_dir, "validation_reality.json", audit)
-            self._track(current_stage, {"independent_panels": audit["independent_panel_count"], "duplicates": audit["duplicate_pairs"]})
+            # Fixed canonical folds: every fidelity selects a fixed prefix
+            # subset of this hash-stable master assignment.  Never re-randomized.
+            seq_bins = np.array([min(5, len(subset_seq.get(u, []))) for u in smoke_uids], dtype=np.int64)
+            self._canonical = CanonicalFolds.build(smoke_uids, stratify_bins=seq_bins)
+            self.artifacts["canonical_folds"] = _write_json(run_dir, "canonical_folds.json", {
+                "canonical_fold_hash": self._canonical.fold_hash,
+                "master_fold_count": 5,
+                "n_users": len(smoke_uids),
+                "fold_sizes": {str(f): int((self._canonical.folds == f).sum()) for f in range(5)},
+                "policy": "fixed_prefix_subsets",
+            })
+            self._track(current_stage, {"independent_panels": audit["independent_panel_count"], "duplicates": audit["duplicate_pairs"], "canonical_fold_hash": self._canonical.fold_hash})
 
-            # ---- PROBLEM_SELECTION -----------------------------------------
-            current_stage = "PROBLEM_SELECTION"
-            self._beat(supervisor, stage=current_stage, status="running")
-            hierarchy = self._build_problem_hierarchy(di)
-            candidates = hierarchy.select_targets()
-            chosen = candidates[0] if candidates else None
-            problem_prompt = self._prompt_problem_synthesis(candidates)
-            llm_choice, problem_mode = self._llm_json_stage(
-                ledger,
-                stage="PROBLEM_SELECTION",
-                prompt_template_id=PROMPT_TEMPLATES["problem_synthesis"],
-                prompt=problem_prompt,
-                required=False,
-            )
-            if llm_choice and llm_choice.get("problem_id") in {c.node_id for c in candidates}:
-                chosen = next(c for c in candidates if c.node_id == llm_choice["problem_id"])
-            if chosen is None:
-                return self._finish(run_dir, supervisor, ledger, execution_id, input_fingerprint, status="failed", current_stage=current_stage, started=started, error="no problem node could be selected")
-            problem_payload = {
-                "problem_id": chosen.node_id,
-                "task": chosen.task,
-                "pipeline_stage": chosen.pipeline_stage,
-                "bucket": chosen.bucket,
-                "error_mechanism": chosen.error_mechanism,
-                "evidence": chosen.evidence,
-                "headroom": chosen.headroom,
-                "selection_mode": problem_mode,
-                "llm_rationale": (llm_choice or {}).get("rationale", ""),
-            }
-            self.artifacts["problem_node"] = _write_json(run_dir, "problem_node.json", problem_payload)
-            self._beat(supervisor, stage=current_stage, status="running", current_problem_id=chosen.node_id)
-            self._track(current_stage, {"problem_id": chosen.node_id, "mode": problem_mode})
-
-            # ---- COMPETITION_INTELLIGENCE ----------------------------------
-            current_stage = "COMPETITION_INTELLIGENCE"
-            self._beat(supervisor, stage=current_stage, status="running")
-            store = self._build_card_store()
-            cards = store.retrieve(task_regime="recommendation", error_mechanism=chosen.error_mechanism)
-            self.artifacts["competition_research_state"] = _write_json(run_dir, "competition_research_state.json", {"retrieved_cards": [c.card_id for c in cards], "card_count": len(cards)})
-            self._track(current_stage, {"cards": len(cards)})
-
-            # ---- M6B_PROPOSAL ----------------------------------------------
-            current_stage = "M6B_PROPOSAL"
-            self._beat(supervisor, stage=current_stage, status="running", current_problem_id=chosen.node_id)
-            proposal_prompt = self._prompt_m6b(chosen)
-            proposal, proposal_mode = self._llm_json_stage(
-                ledger,
-                stage="M6B_PROPOSAL",
-                prompt_template_id=PROMPT_TEMPLATES["m6b_proposal"],
-                prompt=proposal_prompt,
-                required=True,
-            )
-            if proposal is None:
-                proposal = self._deterministic_proposal(chosen)
-            proposal.setdefault("problem_id", chosen.node_id)
-            proposal["proposal_mode"] = proposal_mode
-            proposal["proposal_id"] = stable_hash({"proposal": proposal, "execution": ledger.execution_id})[:24]
-            self.artifacts["m6b_proposal"] = _write_json(run_dir, "m6b_proposal.json", proposal)
-            self._beat(supervisor, stage=current_stage, status="running", current_proposal_id=proposal["proposal_id"])
-            self._track(current_stage, {"proposal_id": proposal["proposal_id"], "mode": proposal_mode})
-
-            # ---- M6C_CRITIC ------------------------------------------------
-            current_stage = "M6C_CRITIC"
-            self._beat(supervisor, stage=current_stage, status="running")
-            critic_prompt = self._prompt_m6c(proposal)
-            critic, critic_mode = self._llm_json_stage(
-                ledger,
-                stage="M6C_CRITIC",
-                prompt_template_id=PROMPT_TEMPLATES["m6c_critic"],
-                prompt=critic_prompt,
-                required=True,
-            )
-            if critic is None:
-                critic = {"verdict": "approve", "issues": [], "rationale": "proposal restricted to whitelisted cheap diagnostics"}
-            critic["critic_mode"] = critic_mode
-            self.artifacts["m6c_critic"] = _write_json(run_dir, "m6c_critic.json", critic)
-            self._beat(supervisor, stage=current_stage, status="running", current_critic_status=str(critic.get("verdict", "")))
-            self._track(current_stage, {"verdict": critic.get("verdict"), "mode": critic_mode})
-
-            # ---- M5_ADMISSION ----------------------------------------------
-            current_stage = "M5_ADMISSION"
-            self._beat(supervisor, stage=current_stage, status="running")
-            budget_state = BudgetState(
-                max_wall_clock_seconds=self.smoke_max_seconds if self.smoke else self.max_wall_clock_seconds,
-                elapsed=time.time() - started,
-                rounds_used=self.scientific_rounds_used,
-            )
-            m5 = m5_admission(proposal=proposal, critic=critic, budget_state=budget_state, smoke=self.smoke)
-            self.artifacts["m5_decision"] = _write_json(run_dir, "m5_decision.json", m5)
-            self._track(current_stage, {"status": m5["status"], "reasons": m5["reasons"]})
-            if m5["status"] == "rejected":
-                return self._finish(run_dir, supervisor, ledger, execution_id, input_fingerprint, status="incomplete", current_stage=current_stage, started=started, error=f"M5 rejected: {m5['reasons']}")
-
-            # ---- EXPERIMENT_GENOME ------------------------------------------
-            current_stage = "EXPERIMENT_GENOME"
-            self._beat(supervisor, stage=current_stage, status="running")
-            genome = self._build_genome(proposal, chosen)
-            self.artifacts["experiment_genome"] = _write_json(run_dir, "experiment_genome.json", asdict(genome))
-            self._track(current_stage, {"genome_id": genome.genome_id})
-
-            # ---- BUDGET_DECISION --------------------------------------------
-            current_stage = "BUDGET_DECISION"
-            self._beat(supervisor, stage=current_stage, status="running")
-            candidate = ExperimentCandidate(
-                candidate_id=proposal["proposal_id"],
-                fidelity=Fidelity.CHEAP_DIAGNOSTIC,
-                expected_gain=float(proposal.get("expected_gain", 0.01)),
-                expected_information_gain=0.6,
-                compute_cost_seconds=float(proposal.get("budget_seconds", 60.0)),
-                novelty=0.5,
-            )
-            decision = {
-                "decision": "run" if should_continue(budget_state, [candidate]) else "stop",
-                "fidelity": candidate.fidelity.value,
-                "consumes_scientific_round": candidate.fidelity in {Fidelity.SINGLE_FOLD, Fidelity.FULL_OOF},
-                "remaining_seconds": budget_state.remaining_wall_clock_seconds,
-            }
-            self.artifacts["budget_decision"] = _write_json(run_dir, "budget_decision.json", decision)
-            self._track(current_stage, decision)
-            if decision["decision"] != "run":
-                return self._finish(run_dir, supervisor, ledger, execution_id, input_fingerprint, status="incomplete", current_stage=current_stage, started=started, error="budget decision: stop")
-
-            # ---- EXPERIMENT_EXECUTION (cheap diagnostic) --------------------
-            current_stage = "EXPERIMENT_EXECUTION"
-            self._beat(supervisor, stage=current_stage, status="running", current_experiment=proposal["proposal_id"], current_model=str(proposal.get("diagnostic_type")))
-            result = self._run_cheap_diagnostic(proposal, dataset, smoke_uids, subset_seq, subset_targets)
-            self.cheap_diagnostics_used += 1
-            self.artifacts["experiment_result"] = _write_json(run_dir, "experiment_result.json", {k: v for k, v in result.items() if k not in {"parent_top10", "candidate_top10"}})
-            self._track(current_stage, {"diagnostic": proposal.get("diagnostic_type"), "metrics": result.get("pool_recall")})
-
-            # ---- EVALUATION --------------------------------------------------
-            current_stage = "EVALUATION"
-            self._beat(supervisor, stage=current_stage, status="evaluating", latest_metric=result.get("pool_recall"))
-            decomp = result.get("error_decomposition", {})
-            validity = validate_error_decomposition(decomp)
-            self.artifacts["evaluation"] = _write_json(run_dir, "evaluation.json", {"error_decomposition": decomp, "validity": validity, "pool_recall": result.get("pool_recall"), "top10_metrics": result.get("top10_metrics")})
-            self._track(current_stage, {"validity": validity["status"]})
-
-            # ---- NO_OP_AUDIT --------------------------------------------------
-            current_stage = "NO_OP_AUDIT"
-            self._beat(supervisor, stage=current_stage, status="running")
-            noop_report = compare_predictions(result["parent_top10"], result["candidate_top10"])
-            noop_record = apply_noop_policy({"experiment_id": proposal["proposal_id"]}, noop_report)
-            if noop_report.status == "no_op":
-                self.no_op_rounds_refunded += 1
-            self.artifacts["no_op_audit"] = _write_json(run_dir, "no_op_audit.json", {"report": asdict(noop_report), "policy": {k: v for k, v in noop_record.items() if k != "report"}})
-            self._track(current_stage, {"status": noop_report.status, "changed_fraction": noop_report.changed_fraction})
-
-            # ---- PORTFOLIO_UPDATE ---------------------------------------------
-            current_stage = "PORTFOLIO_UPDATE"
-            self._beat(supervisor, stage=current_stage, status="running")
-            portfolio = Portfolio()
-            registered = portfolio.register_candidate({"candidate_id": proposal["proposal_id"], "metrics": {"hit_rate@10": result.get("top10_metrics", {}).get("hit_rate@10", 0.0), "pool_recall@100": result.get("pool_recall", {}).get("candidate_pool_recall@100", 0.0)}, "no_op": noop_report.status == "no_op"})
-            self.artifacts["portfolio_update"] = _write_json(run_dir, "portfolio_update.json", {"registered": asdict(registered)})
-            self._track(current_stage, {"registered": proposal["proposal_id"]})
-
-            # ---- POSTMORTEM -----------------------------------------------------
-            current_stage = "POSTMORTEM"
-            self._beat(supervisor, stage=current_stage, status="running")
-            postmortem_prompt = self._prompt_postmortem(proposal, result, noop_report)
-            postmortem, postmortem_mode = self._llm_json_stage(
-                ledger,
-                stage="POSTMORTEM",
-                prompt_template_id=PROMPT_TEMPLATES["postmortem"],
-                prompt=postmortem_prompt,
-                required=False,
-            )
-            if postmortem is None:
-                postmortem = {"summary": "deterministic postmortem (optional LLM stage degraded)", "result_metrics": result.get("pool_recall")}
-            postmortem["mode"] = postmortem_mode
-            self.artifacts["postmortem"] = _write_json(run_dir, "postmortem.json", postmortem)
-            self._track(current_stage, {"mode": postmortem_mode})
+            if self.smoke:
+                # ---- smoke: exactly one cheap-diagnostic round --------------
+                record = self._round_pipeline(
+                    run_dir, supervisor, ledger,
+                    dataset=dataset, di=di, smoke_uids=smoke_uids,
+                    subset_seq=subset_seq, subset_targets=subset_targets,
+                    round_index=1, started=started,
+                )
+                if record is None:
+                    return self._finish(run_dir, supervisor, ledger, execution_id, input_fingerprint, status="incomplete", current_stage="ROUND_1", started=started, error="smoke round rejected or budget-stopped")
+            else:
+                # ---- formal: dynamic multi-round loop ------------------------
+                round_records: list[dict[str, Any]] = []
+                for round_index in range(1, 13):  # safety cap; budget decides the real stop
+                    record = self._round_pipeline(
+                        run_dir, supervisor, ledger,
+                        dataset=dataset, di=di, smoke_uids=smoke_uids,
+                        subset_seq=subset_seq, subset_targets=subset_targets,
+                        round_index=round_index, started=started,
+                    )
+                    if record is None:
+                        break
+                    round_records.append(record)
+                    decision = self._next_decision(run_dir, supervisor, ledger, round_records, started)
+                    if not decision["continue"]:
+                        break
+                # ---- DEPLOYMENT ----------------------------------------------
+                current_stage = "DEPLOYMENT"
+                self._beat(supervisor, stage=current_stage, status="running")
+                deployment = self._run_deployment(run_dir, supervisor, dataset, subset_targets, round_records)
+                if deployment is not None:
+                    self.artifacts["deployment_audit"] = _write_json(run_dir, "deployment_audit.json", deployment)
+                    self._deployment_generated = True
+                    self._track(current_stage, {"best_candidate": deployment.get("best_candidate_id"), "rows": deployment.get("n_rows")})
 
             # ---- FINAL_AUDIT -----------------------------------------------------
             current_stage = "FINAL_AUDIT"
@@ -651,11 +579,473 @@ class V2AutonomousResearchOrchestrator:
         except Exception as exc:  # noqa: BLE001 - run must always produce a manifest
             return self._finish(run_dir, supervisor, ledger, execution_id, input_fingerprint, status="failed", current_stage=current_stage, started=started, error=redact_secret(f"{type(exc).__name__}: {exc}"))
 
+    # --------------------------------------------------------------- round pipeline
+
+    def _round_pipeline(
+        self,
+        run_dir: Path,
+        supervisor: RunSupervisor,
+        ledger: LLMLedger,
+        *,
+        dataset: Any,
+        di: Any,
+        smoke_uids: list[str],
+        subset_seq: dict[str, list[str]],
+        subset_targets: dict[str, str],
+        round_index: int,
+        started: float,
+    ) -> dict[str, Any] | None:
+        """One full decision chain: PROBLEM_SELECTION → … → PORTFOLIO_UPDATE.
+
+        Returns a round record for the portfolio/deployment selection, or
+        ``None`` when the loop must stop (M5 rejection or budget stop).
+        """
+        prefix = "" if self.smoke else f"round_{round_index:02d}/"
+
+        # ---- PROBLEM_SELECTION -----------------------------------------
+        stage = "PROBLEM_SELECTION"
+        self._beat(supervisor, stage=stage, status="running", rounds_used=int(self.scientific_rounds_used))
+        hierarchy = self._build_problem_hierarchy(di)
+        candidates = hierarchy.select_targets()
+        chosen = candidates[0] if candidates else None
+        problem_prompt = self._prompt_problem_synthesis(candidates)
+        llm_choice, problem_mode = self._llm_json_stage(
+            ledger,
+            stage="PROBLEM_SELECTION",
+            prompt_template_id=PROMPT_TEMPLATES["problem_synthesis"],
+            prompt=problem_prompt,
+            required=False,
+        )
+        if llm_choice and llm_choice.get("problem_id") in {c.node_id for c in candidates}:
+            chosen = next(c for c in candidates if c.node_id == llm_choice["problem_id"])
+        if chosen is None:
+            return None
+        problem_payload = {
+            "problem_id": chosen.node_id,
+            "task": chosen.task,
+            "pipeline_stage": chosen.pipeline_stage,
+            "bucket": chosen.bucket,
+            "error_mechanism": chosen.error_mechanism,
+            "evidence": chosen.evidence,
+            "headroom": chosen.headroom,
+            "selection_mode": problem_mode,
+            "llm_rationale": (llm_choice or {}).get("rationale", ""),
+        }
+        self.artifacts["problem_node"] = _write_json(run_dir, f"{prefix}problem_node.json", problem_payload)
+        self._beat(supervisor, stage=stage, status="running", current_problem_id=chosen.node_id)
+        self._track(stage, {"round": round_index, "problem_id": chosen.node_id, "mode": problem_mode})
+
+        # ---- COMPETITION_INTELLIGENCE ----------------------------------
+        stage = "COMPETITION_INTELLIGENCE"
+        self._beat(supervisor, stage=stage, status="running")
+        store = self._build_card_store()
+        cards = store.retrieve(task_regime="recommendation", error_mechanism=chosen.error_mechanism)
+        self.artifacts["competition_research_state"] = _write_json(run_dir, f"{prefix}competition_research_state.json", {"retrieved_cards": [c.card_id for c in cards], "card_count": len(cards)})
+        self._track(stage, {"round": round_index, "cards": len(cards)})
+
+        # ---- M6B_PROPOSAL ----------------------------------------------
+        stage = "M6B_PROPOSAL"
+        self._beat(supervisor, stage=stage, status="running", current_problem_id=chosen.node_id)
+        proposal_prompt = self._prompt_m6b(
+            chosen,
+            formal=not self.smoke and round_index > 1,
+            tried_families=sorted(self._operator_families_tried),
+        )
+        proposal, proposal_mode = self._llm_json_stage(
+            ledger,
+            stage="M6B_PROPOSAL",
+            prompt_template_id=PROMPT_TEMPLATES["m6b_proposal"],
+            prompt=proposal_prompt,
+            required=True,
+        )
+        if proposal is None:
+            proposal = self._deterministic_proposal(chosen)
+        proposal.setdefault("problem_id", chosen.node_id)
+        proposal["proposal_mode"] = proposal_mode
+        proposal["proposal_id"] = stable_hash({"proposal": proposal, "execution": ledger.execution_id, "round": round_index})[:24]
+        self.artifacts["m6b_proposal"] = _write_json(run_dir, f"{prefix}m6b_proposal.json", proposal)
+        self._beat(supervisor, stage=stage, status="running", current_proposal_id=proposal["proposal_id"])
+        self._track(stage, {"round": round_index, "proposal_id": proposal["proposal_id"], "mode": proposal_mode})
+
+        # ---- M6C_CRITIC ------------------------------------------------
+        stage = "M6C_CRITIC"
+        self._beat(supervisor, stage=stage, status="running")
+        critic_prompt = self._prompt_m6c(proposal)
+        critic, critic_mode = self._llm_json_stage(
+            ledger,
+            stage="M6C_CRITIC",
+            prompt_template_id=PROMPT_TEMPLATES["m6c_critic"],
+            prompt=critic_prompt,
+            required=True,
+        )
+        if critic is None:
+            critic = {"verdict": "approve", "issues": [], "rationale": "proposal restricted to whitelisted cheap diagnostics"}
+        critic["critic_mode"] = critic_mode
+        self.artifacts["m6c_critic"] = _write_json(run_dir, f"{prefix}m6c_critic.json", critic)
+        self._beat(supervisor, stage=stage, status="running", current_critic_status=str(critic.get("verdict", "")))
+        self._track(stage, {"round": round_index, "verdict": critic.get("verdict"), "mode": critic_mode})
+
+        # ---- M5_ADMISSION ----------------------------------------------
+        stage = "M5_ADMISSION"
+        self._beat(supervisor, stage=stage, status="running")
+        budget_state = BudgetState(
+            max_wall_clock_seconds=self.smoke_max_seconds if self.smoke else self.max_wall_clock_seconds,
+            elapsed=time.time() - started,
+            rounds_used=self.scientific_rounds_used,
+        )
+        allowed = ALLOWED_DIAGNOSTICS if self.smoke or round_index == 1 else ALLOWED_DIAGNOSTICS + ALLOWED_FORMAL_EXPERIMENTS
+        m5 = m5_admission(proposal=proposal, critic=critic, budget_state=budget_state, smoke=self.smoke, allowed=allowed)
+        self.artifacts["m5_decision"] = _write_json(run_dir, f"{prefix}m5_decision.json", m5)
+        self._track(stage, {"round": round_index, "status": m5["status"], "reasons": m5["reasons"]})
+        if m5["status"] == "rejected":
+            return None
+
+        # ---- EXPERIMENT_GENOME ------------------------------------------
+        stage = "EXPERIMENT_GENOME"
+        self._beat(supervisor, stage=stage, status="running")
+        genome = self._build_genome(proposal, chosen)
+        self.artifacts["experiment_genome"] = _write_json(run_dir, f"{prefix}experiment_genome.json", asdict(genome))
+        self._track(stage, {"round": round_index, "genome_id": genome.genome_id})
+
+        # ---- BUDGET_DECISION --------------------------------------------
+        stage = "BUDGET_DECISION"
+        self._beat(supervisor, stage=stage, status="running")
+        diagnostic_type = str(proposal.get("diagnostic_type") or "")
+        fidelity = Fidelity.CHEAP_DIAGNOSTIC if diagnostic_type in ALLOWED_DIAGNOSTICS else Fidelity.SINGLE_FOLD
+        candidate = ExperimentCandidate(
+            candidate_id=proposal["proposal_id"],
+            fidelity=fidelity,
+            expected_gain=float(proposal.get("expected_gain", 0.01)),
+            expected_information_gain=0.6,
+            compute_cost_seconds=float(m5.get("estimated_cost_seconds", proposal.get("budget_seconds", 60.0))),
+            novelty=0.5,
+        )
+        decision = {
+            "decision": "run" if should_continue(budget_state, [candidate]) else "stop",
+            "fidelity": candidate.fidelity.value,
+            "consumes_scientific_round": candidate.fidelity in {Fidelity.SINGLE_FOLD, Fidelity.FULL_OOF},
+            "remaining_seconds": budget_state.remaining_wall_clock_seconds,
+        }
+        self.artifacts["budget_decision"] = _write_json(run_dir, f"{prefix}budget_decision.json", decision)
+        self._track(stage, {"round": round_index, **decision})
+        if decision["decision"] != "run":
+            return None
+
+        # ---- EXPERIMENT_EXECUTION ----------------------------------------
+        stage = "EXPERIMENT_EXECUTION"
+        self._beat(supervisor, stage=stage, status="running", current_experiment=proposal["proposal_id"], current_model=diagnostic_type)
+        parent_at_start = dict(self._incumbent)
+        fold_outcome: dict[str, Any]
+        if self.smoke and diagnostic_type in ALLOWED_DIAGNOSTICS:
+            # Smoke path: flat cheap diagnostic (F0), contract-stable.
+            result = self._run_cheap_diagnostic(proposal, dataset, smoke_uids, subset_seq, subset_targets)
+            self.cheap_diagnostics_used += 1
+            fold_outcome = {
+                "fold_plan": build_fold_plan(self._canonical, FoldFidelity.F0_DETERMINISTIC, task=self.task).to_dict() if self._canonical else {},
+                "paired_comparison": {},
+                "promotion": {"decision": "not_applicable_diagnostic", "reasons": []},
+                "estimated_runtime": 0.0,
+                "actual_runtime": 0.0,
+            }
+        else:
+            # Formal path: every experiment (diagnostics included) runs on the
+            # canonical fold ladder with paired parent comparison.
+            fold_outcome = self._run_folded_with_promotion(run_dir, proposal, dataset, subset_targets, started, prefix)
+            result = fold_outcome["result"]
+            if diagnostic_type in ALLOWED_DIAGNOSTICS:
+                self.cheap_diagnostics_used += 1
+            else:
+                self.scientific_rounds_used += 1.0
+        self.artifacts["experiment_result"] = _write_json(run_dir, f"{prefix}experiment_result.json", {k: v for k, v in result.items() if k not in {"parent_top10", "candidate_top10"}})
+        self._operator_families_tried.add(diagnostic_type)
+        self._track(stage, {"round": round_index, "diagnostic": diagnostic_type, "metrics": result.get("pool_recall")})
+
+        # ---- EVALUATION --------------------------------------------------
+        stage = "EVALUATION"
+        self._beat(supervisor, stage=stage, status="evaluating", latest_metric=result.get("pool_recall"))
+        decomp = result.get("error_decomposition", {})
+        validity = validate_error_decomposition(decomp)
+        self.artifacts["evaluation"] = _write_json(run_dir, f"{prefix}evaluation.json", {"error_decomposition": decomp, "validity": validity, "pool_recall": result.get("pool_recall"), "top10_metrics": result.get("top10_metrics")})
+        self._track(stage, {"round": round_index, "validity": validity["status"]})
+
+        # ---- NO_OP_AUDIT --------------------------------------------------
+        stage = "NO_OP_AUDIT"
+        self._beat(supervisor, stage=stage, status="running")
+        noop_report = compare_predictions(result["parent_top10"], result["candidate_top10"])
+        noop_record = apply_noop_policy({"experiment_id": proposal["proposal_id"]}, noop_report)
+        if noop_report.status == "no_op":
+            self.no_op_rounds_refunded += 1
+        self.artifacts["no_op_audit"] = _write_json(run_dir, f"{prefix}no_op_audit.json", {"report": asdict(noop_report), "policy": {k: v for k, v in noop_record.items() if k != "report"}})
+        self._track(stage, {"round": round_index, "status": noop_report.status, "changed_fraction": noop_report.changed_fraction})
+
+        # ---- PORTFOLIO_UPDATE ---------------------------------------------
+        stage = "PORTFOLIO_UPDATE"
+        self._beat(supervisor, stage=stage, status="running")
+        portfolio = Portfolio()
+        metrics = {
+            "hit_rate@10": result.get("top10_metrics", {}).get("hit_rate@10", 0.0),
+            "ndcg@10": result.get("top10_metrics", {}).get("ndcg@10", 0.0),
+            "pool_recall@100": result.get("pool_recall", {}).get("candidate_pool_recall@100", 0.0),
+        }
+        registered = portfolio.register_candidate({"candidate_id": proposal["proposal_id"], "metrics": metrics, "no_op": noop_report.status == "no_op"})
+        self.artifacts["portfolio_update"] = _write_json(run_dir, f"{prefix}portfolio_update.json", {"registered": asdict(registered)})
+        self._track(stage, {"round": round_index, "registered": proposal["proposal_id"]})
+
+        # Incumbent promotion requires confirm-level (3-fold) or higher
+        # comparable evidence — screen results alone never promote.
+        fidelity_level = int(fold_outcome.get("fold_plan", {}).get("fidelity", 0))
+        if (
+            fidelity_level >= int(FoldFidelity.F2_CONFIRM)
+            and fold_outcome.get("paired_comparison", {}).get("comparable")
+            and metrics["hit_rate@10"] > self._incumbent["metrics"].get("hit_rate@10", 0.0)
+        ):
+            self._incumbent = {"candidate_id": proposal["proposal_id"], "kind": diagnostic_type, "metrics": metrics}
+
+        # ---- POSTMORTEM -----------------------------------------------------
+        stage = "POSTMORTEM"
+        self._beat(supervisor, stage=stage, status="running")
+        postmortem_prompt = self._prompt_postmortem(proposal, result, noop_report)
+        postmortem, postmortem_mode = self._llm_json_stage(
+            ledger,
+            stage="POSTMORTEM",
+            prompt_template_id=PROMPT_TEMPLATES["postmortem"],
+            prompt=postmortem_prompt,
+            required=False,
+        )
+        if postmortem is None:
+            postmortem = {"summary": "deterministic postmortem (optional LLM stage degraded)", "result_metrics": result.get("pool_recall")}
+        postmortem["mode"] = postmortem_mode
+        self.artifacts["postmortem"] = _write_json(run_dir, f"{prefix}postmortem.json", postmortem)
+        self._track(stage, {"round": round_index, "mode": postmortem_mode})
+
+        return {
+            "iteration_index": round_index,
+            "round_index": round_index,
+            "problem_id": chosen.node_id,
+            "proposal_id": proposal["proposal_id"],
+            "candidate_id": proposal["proposal_id"],
+            "parent_candidate_id": parent_at_start["candidate_id"],
+            "diagnostic_type": diagnostic_type,
+            "fidelity": fold_outcome.get("fold_plan", {}).get("fidelity", 0),
+            "fold_count": fold_outcome.get("fold_plan", {}).get("fold_count", 0),
+            "selected_fold_ids": fold_outcome.get("fold_plan", {}).get("selected_fold_ids", []),
+            "canonical_fold_hash": fold_outcome.get("fold_plan", {}).get("canonical_fold_hash", ""),
+            "paired_fold_delta": fold_outcome.get("paired_comparison", {}).get("mean_delta", 0.0),
+            "target_metric": metrics["hit_rate@10"],
+            "target_bucket_metric": metrics["pool_recall@100"],
+            "promotion_decision": fold_outcome.get("promotion", {}).get("decision", ""),
+            "promotion_reason": fold_outcome.get("promotion", {}).get("reasons", []),
+            "estimated_runtime": fold_outcome.get("estimated_runtime", 0.0),
+            "actual_runtime": fold_outcome.get("actual_runtime", 0.0),
+            "metrics": metrics,
+            "noop": noop_report.status == "no_op",
+        }
+
+    # --------------------------------------------------------------- next decision
+
+    def _next_decision(
+        self,
+        run_dir: Path,
+        supervisor: RunSupervisor,
+        ledger: LLMLedger,
+        round_records: list[dict[str, Any]],
+        started: float,
+    ) -> dict[str, Any]:
+        """NEXT_DECISION: continue while budget and positive-ROI candidates
+        remain; stop on stagnation (no improvement over two rounds)."""
+        stage = "NEXT_DECISION"
+        self._beat(supervisor, stage=stage, status="running")
+        budget_state = BudgetState(
+            max_wall_clock_seconds=self.max_wall_clock_seconds,
+            elapsed=time.time() - started,
+            rounds_used=self.scientific_rounds_used,
+        )
+        remaining = budget_state.remaining_wall_clock_seconds
+        hits = [r["metrics"].get("hit_rate@10", 0.0) for r in round_records]
+        improved = len(hits) < 2 or hits[-1] > max(hits[:-1]) + 1e-12
+        self._no_improvement_rounds = 0 if improved else self._no_improvement_rounds + 1
+        action = no_improvement_action(self._no_improvement_rounds)
+        if action == "switch_problem_or_global_explore":
+            self._global_explore_attempted = True
+        deployment_reserve_entered = remaining < self.fold_policy.estimator.deployment_reserve_seconds
+        sd = stop_decision(
+            no_improvement_rounds=self._no_improvement_rounds,
+            operator_families_tried=sorted({r["diagnostic_type"] for r in round_records}),
+            problem_nodes_tried=sorted({r["problem_id"] for r in round_records}),
+            global_explore_attempted=self._global_explore_attempted,
+            high_roi_routes_remaining=False,
+            m5_admissible_routes_remaining=False,
+            remaining_seconds=remaining,
+            deployment_reserve_entered=deployment_reserve_entered,
+        )
+        decision = {
+            "continue": not sd["allow_stop"] and remaining > 180.0,
+            "action": action,
+            "stop_decision": sd,
+            "remaining_seconds": remaining,
+            "rounds_used": self.scientific_rounds_used,
+            "reason": sd["required_action"] if sd["allow_stop"] else action,
+        }
+        self.artifacts.setdefault("next_decision", _write_json(run_dir, f"round_{len(round_records):02d}/next_decision.json", decision))
+        self._track(stage, decision)
+        return decision
+
+    # --------------------------------------------------------------- deployment
+
+    def _run_deployment(
+        self,
+        run_dir: Path,
+        supervisor: RunSupervisor,
+        dataset: Any,
+        targets: dict[str, str],
+        round_records: list[dict[str, Any]],
+    ) -> dict[str, Any] | None:
+        """Retrain the best candidate on all public train users, infer the
+        official test users, write candidate_B2.csv with a strict audit."""
+        if self.no_deployment:
+            return None
+        from .operators.recommendation import (
+            CandidateTableRanker,
+            CandidateUnion,
+            HistoryRetriever,
+            PairTransitionRetriever,
+            PopularityRetriever,
+        )
+
+        if not round_records:
+            return None
+        best = max(round_records, key=lambda r: r["metrics"].get("hit_rate@10", 0.0))
+        kind = best["diagnostic_type"]
+        all_train_uids = sorted(targets)
+        all_seq = {u: dataset.train_seq.get(u, []) for u in all_train_uids}
+
+        popularity = PopularityRetriever().fit(all_seq, targets, dataset.user_df, dataset.item_df)
+        test_uids = [str(u) for u in dataset.test_df["uid"]]
+        parent_table = popularity.retrieve(test_uids, max_per_user=200)
+        history = HistoryRetriever().fit(all_seq, targets, dataset.user_df, dataset.item_df)
+        pair = PairTransitionRetriever().fit(all_seq, targets, dataset.user_df, dataset.item_df)
+        for retr in (history, pair):
+            retr.train_seq.update({u: dataset.test_seq.get(u, []) for u in test_uids})
+        union_table = CandidateUnion(rrf_k=60, max_per_user=200).merge(
+            [parent_table, history.retrieve(test_uids, max_per_user=200), pair.retrieve(test_uids, max_per_user=200)]
+        )
+
+        if kind == "candidate_ranker_experiment":
+            fit_tables = [retr.retrieve(all_train_uids, max_per_user=200) for retr in (popularity, history, pair)]
+            fit_union = CandidateUnion(rrf_k=60, max_per_user=200).merge(fit_tables)
+            ranker = CandidateTableRanker()
+            ranker.set_context(train_seq=all_seq, train_targets=targets, user_df=dataset.user_df, item_df=dataset.item_df)
+            rows, labels = ranker.build_training_rows(fit_union, user_ids=all_train_uids)
+            ranker.fit(rows, labels)
+            ranker.build_scoring_rows(union_table)
+            top10_lists = ranker.rerank(test_uids, k=dataset.top_k)
+        else:
+            top10_lists = union_table.to_topk_lists(dataset.top_k)
+
+        if self.deployment_method == "3fold_ensemble":
+            top10_lists = self._deployment_3fold_ensemble(dataset, targets, test_uids, kind)
+
+        _write_json(run_dir, "deployment_decision.json", {
+            "method": self.deployment_method,
+            "supported_methods": ["full_train_retrain", "3fold_ensemble"],
+            "best_candidate_id": best["proposal_id"],
+            "kind": kind,
+            "selection_evidence": f"fidelity_{best.get('fidelity', 0)}_folds_{best.get('fold_count', 0)}",
+            "reason": "default full-data retrain of the selected candidate; 3-fold ensemble available via deployment_method=3fold_ensemble",
+            "uses_test_truth": False,
+        })
+
+        # Official order from the sample submission.
+        order = [r["uid"] for r in dataset.sample_submission]
+        top10_by_uid = {uid: lst for uid, lst in zip(test_uids, top10_lists)}
+        all_items = dataset.all_item_ids()
+        errors: list[str] = []
+        rows_out: list[tuple[str, str]] = []
+        for uid in order:
+            items = top10_by_uid.get(uid, [])
+            if len(items) < dataset.top_k:
+                errors.append(f"{uid}: only {len(items)} items")
+            if len(set(items)) != len(items):
+                errors.append(f"{uid}: duplicate items")
+            bad = [i for i in items if i not in all_items]
+            if bad:
+                errors.append(f"{uid}: illegal items {bad[:3]}")
+            rows_out.append((uid, ",".join(items[: dataset.top_k])))
+        if len(rows_out) != len(order):
+            errors.append("row count mismatch")
+
+        to_upload = run_dir / "TO_UPLOAD"
+        to_upload.mkdir(parents=True, exist_ok=True)
+        candidate_path = to_upload / "candidate_B2.csv"
+        with candidate_path.open("w", encoding="utf-8", newline="") as handle:
+            handle.write("uid,prediction\n")
+            for uid, pred in rows_out:
+                handle.write(f"{uid},{pred}\n")
+
+        audit = {
+            "n_rows": len(rows_out),
+            "expected_rows": len(order),
+            "order_matches_sample_submission": True,
+            "top_k": dataset.top_k,
+            "errors": errors,
+            "audit_passed": not errors,
+            "candidate_sha256": sha256_file(candidate_path),
+            "contains_test_truth": False,
+        }
+        _write_json(to_upload, "submission_audit.json", audit)
+        _write_json(to_upload, "deployment_manifest.json", {
+            "best_candidate_id": best["proposal_id"],
+            "kind": kind,
+            "metrics": best["metrics"],
+            "execution_id": self._execution_id,
+            "retrained_on_all_train_users": True,
+        })
+        _write_json(to_upload, "best_candidate_summary.json", best)
+        return {
+            "best_candidate_id": best["proposal_id"],
+            "kind": kind,
+            "n_rows": len(rows_out),
+            "audit_passed": not errors,
+            "errors": errors,
+            "candidate_sha256": audit["candidate_sha256"],
+            "to_upload": "TO_UPLOAD/",
+        }
+
+    def _deployment_3fold_ensemble(self, dataset: Any, targets: dict[str, str], test_uids: list[str], kind: str) -> list[list[str]]:
+        """3-fold ensemble test inference: fit the retrieval union on each of
+        three canonical fold complements and merge via RRF."""
+        from .operators.recommendation import (
+            CandidateUnion,
+            HistoryRetriever,
+            PairTransitionRetriever,
+            PopularityRetriever,
+        )
+
+        all_train_uids = sorted(targets)
+        canonical = CanonicalFolds.build(all_train_uids)
+        tables = []
+        for f in [0, 1, 2]:
+            fit_mask, _ = canonical.masks(f)
+            fit_uids = [u for u, m in zip(canonical.uids, fit_mask) if m]
+            fit_seq = {u: dataset.train_seq.get(u, []) for u in fit_uids}
+            fit_targets = {u: targets[u] for u in fit_uids}
+            popularity = PopularityRetriever().fit(fit_seq, fit_targets, dataset.user_df, dataset.item_df)
+            history = HistoryRetriever().fit(fit_seq, fit_targets, dataset.user_df, dataset.item_df)
+            pair = PairTransitionRetriever().fit(fit_seq, fit_targets, dataset.user_df, dataset.item_df)
+            for retr in (history, pair):
+                retr.train_seq.update({u: dataset.test_seq.get(u, []) for u in test_uids})
+            tables.extend(retr.retrieve(test_uids, max_per_user=200) for retr in (popularity, history, pair))
+        union_table = CandidateUnion(rrf_k=60, max_per_user=200).merge(tables)
+        return union_table.to_topk_lists(dataset.top_k)
+
     # --------------------------------------------------------------- stage helpers
 
     def _beat(self, supervisor: RunSupervisor, **fields: Any) -> None:
         fields.setdefault("orchestrator_version", ORCHESTRATOR_VERSION)
         fields.setdefault("planner_mode", self.planner_mode)
+        ledger = getattr(self, "_ledger", None)
+        if ledger is not None:
+            fields.setdefault("llm_calls_count", ledger.calls_count)
         supervisor.heartbeat(**fields)
         supervisor.event("stage_transition", {"stage": fields.get("stage", ""), "status": fields.get("status", "")})
         supervisor.write_all()
@@ -801,13 +1191,24 @@ class V2AutonomousResearchOrchestrator:
             f"Candidates: {json.dumps(options, ensure_ascii=False)}"
         )
 
-    def _prompt_m6b(self, problem: ProblemNode) -> str:
+    def _prompt_m6b(self, problem: ProblemNode, formal: bool = False, tried_families: list[str] | None = None) -> str:
+        if formal:
+            allowed = ALLOWED_DIAGNOSTICS + ALLOWED_FORMAL_EXPERIMENTS
+        else:
+            allowed = ALLOWED_DIAGNOSTICS
+        tried = [t for t in (tried_families or []) if t]
+        avoid = (
+            f"These experiment families were ALREADY tried in this run and produced no improvement — you MUST choose a different family: {json.dumps(tried)}. "
+            if tried
+            else ""
+        )
         return (
             "You are the M6B proposal stage of the AFAC v2 orchestrator. "
             f"Target problem: {problem.error_mechanism} (evidence: {json.dumps(problem.evidence, ensure_ascii=False)}). "
-            "Propose ONE cheap diagnostic experiment. Reply with a single JSON object with keys: "
-            '"diagnostic_type" (one of "candidate_recall_diagnostic", "cached_replay", "small_retrieval_compare"), '
-            '"hypothesis", "information_sources", "parent", "budget_seconds" (number, <=120), '
+            + avoid
+            + "Propose ONE experiment. Reply with a single JSON object with keys: "
+            f'"diagnostic_type" (one of {json.dumps(list(allowed))}), '
+            '"hypothesis", "information_sources", "parent", "budget_seconds" (number, <=600), '
             '"expected_gain" (number), "success_condition", "failure_condition", "stop_condition". '
             "Rules: never use test truth, never use online feedback, never modify frozen assets."
         )
@@ -930,6 +1331,291 @@ class V2AutonomousResearchOrchestrator:
             "candidate_top10": cand_top10,
         }
 
+    def _run_formal_experiment(
+        self,
+        proposal: dict[str, Any],
+        dataset: Any,
+        smoke_uids: list[str],
+        subset_seq: dict[str, list[str]],
+        subset_targets: dict[str, str],
+    ) -> dict[str, Any]:
+        """Whitelisted formal experiments (round 2+): real training on sparse
+        candidate tables, evaluated on a held-out user split."""
+        from .operators.recommendation import (
+            CandidateTableRanker,
+            CandidateUnion,
+            HistoryRetriever,
+            PairTransitionRetriever,
+            PopularityRetriever,
+        )
+
+        n_fit = max(1, int(0.8 * len(smoke_uids)))
+        fit_uids = smoke_uids[:n_fit]
+        held_uids = smoke_uids[n_fit:] or smoke_uids[-max(1, len(smoke_uids) // 5):]
+        fit_seq = {u: subset_seq.get(u, []) for u in fit_uids}
+        fit_targets = {u: subset_targets[u] for u in fit_uids if u in subset_targets}
+
+        popularity = PopularityRetriever().fit(fit_seq, fit_targets, dataset.user_df, dataset.item_df)
+        history = HistoryRetriever().fit(fit_seq, fit_targets, dataset.user_df, dataset.item_df)
+        pair = PairTransitionRetriever().fit(fit_seq, fit_targets, dataset.user_df, dataset.item_df)
+        for retr in (history, pair):
+            retr.train_seq.update({u: subset_seq.get(u, []) for u in held_uids})
+
+        fit_tables = [retr.retrieve(fit_uids, max_per_user=200) for retr in (popularity, history, pair)]
+        fit_union = CandidateUnion(rrf_k=60, max_per_user=200).merge(fit_tables)
+        held_tables = [retr.retrieve(held_uids, max_per_user=200) for retr in (popularity, history, pair)]
+        held_union = CandidateUnion(rrf_k=60, max_per_user=200).merge(held_tables)
+
+        kind = str(proposal.get("diagnostic_type"))
+        held_targets_list = [subset_targets[u] for u in held_uids]
+        parent_top10 = held_union.to_topk_lists(10)
+
+        if kind == "candidate_ranker_experiment":
+            ranker = CandidateTableRanker()
+            ranker.set_context(
+                train_seq={u: subset_seq.get(u, []) for u in smoke_uids},
+                train_targets=fit_targets,
+                user_df=dataset.user_df,
+                item_df=dataset.item_df,
+            )
+            rows, labels = ranker.build_training_rows(fit_union, user_ids=fit_uids)
+            ranker.fit(rows, labels)
+            ranker.build_scoring_rows(held_union)
+            cand_top10 = ranker.rerank(held_uids, k=10)
+        else:  # bucket_specialist_experiment: length-bucket weighted blend
+            cand_top10 = []
+            for i, uid in enumerate(held_uids):
+                seq_len = len(subset_seq.get(uid, []))
+                entries = held_union.entries_for(uid)
+                if seq_len == 0:
+                    weight = lambda e: 0.7 * e.sources.get("popularity", {}).get("score", 0.0) + 0.3 * e.rrf  # noqa: E731
+                else:
+                    weight = lambda e: 0.3 * e.sources.get("popularity", {}).get("score", 0.0) + 0.7 * e.rrf  # noqa: E731
+                ranked = sorted(entries, key=lambda e: (-weight(e), e.item_id))
+                cand_top10.append([e.item_id for e in ranked[:10]])
+
+        cand_pool = held_union.to_topk_lists(200)
+        return {
+            "diagnostic_type": kind,
+            "n_fit_users": len(fit_uids),
+            "n_held_users": len(held_uids),
+            "pool_recall": candidate_pool_recall(cand_pool, held_targets_list, ks=(20, 50, 100, 200)),
+            "top10_metrics": ranking_metrics(cand_top10, held_targets_list, k=10),
+            "error_decomposition": error_decomposition(cand_top10, cand_pool, held_targets_list, k=10),
+            "parent_top10": parent_top10,
+            "candidate_top10": cand_top10,
+        }
+
+    def _bucket_rerank(self, union_table: Any, user_ids: list[str], seqs: dict[str, list[str]]) -> list[list[str]]:
+        """Length-bucket weighted rerank over a sparse candidate union."""
+        out: list[list[str]] = []
+        for uid in user_ids:
+            seq_len = len(seqs.get(uid, []))
+            entries = union_table.entries_for(uid)
+            if seq_len == 0:
+                ranked = sorted(entries, key=lambda e: (-(0.7 * e.sources.get("popularity", {}).get("score", 0.0) + 0.3 * e.rrf), e.item_id))
+            else:
+                ranked = sorted(entries, key=lambda e: (-(0.3 * e.sources.get("popularity", {}).get("score", 0.0) + 0.7 * e.rrf), e.item_id))
+            out.append([e.item_id for e in ranked[:10]])
+        return out
+
+    def _run_folded_experiment(
+        self,
+        kind: str,
+        dataset: Any,
+        subset_targets: dict[str, str],
+        fold_ids: list[int],
+        *,
+        parent_kind: str,
+    ) -> dict[str, Any]:
+        """Run one whitelisted experiment fold-by-fold over the canonical
+        master assignment: fit on the fold complement, evaluate on the fold,
+        and compute paired parent metrics on the SAME folds."""
+        from .operators.recommendation import (
+            CandidateTableRanker,
+            CandidateUnion,
+            HistoryRetriever,
+            PairTransitionRetriever,
+            PopularityRetriever,
+        )
+
+        canonical = self._canonical
+        assert canonical is not None, "canonical folds must be built first"
+        cand_fold_metrics: dict[int, float] = {}
+        parent_fold_metrics: dict[int, float] = {}
+        agg_eval_uids: list[str] = []
+        agg_parent_top10: list[list[str]] = []
+        agg_cand_top10: list[list[str]] = []
+        agg_pool: list[list[str]] = []
+        changed_any = False
+
+        for f in fold_ids:
+            t0 = time.time()
+            fit_mask, eval_mask = canonical.masks(f)
+            fit_uids = [u for u, m in zip(canonical.uids, fit_mask) if m]
+            eval_uids = [u for u, m in zip(canonical.uids, eval_mask) if m]
+            seqs = {u: dataset.train_seq.get(u, []) for u in canonical.uids}
+            fit_seq = {u: seqs[u] for u in fit_uids}
+            fit_targets = {u: subset_targets[u] for u in fit_uids if u in subset_targets}
+            eval_targets = [subset_targets[u] for u in eval_uids]
+
+            popularity = PopularityRetriever().fit(fit_seq, fit_targets, dataset.user_df, dataset.item_df)
+            history = HistoryRetriever().fit(fit_seq, fit_targets, dataset.user_df, dataset.item_df)
+            pair = PairTransitionRetriever().fit(fit_seq, fit_targets, dataset.user_df, dataset.item_df)
+            for retr in (history, pair):
+                retr.train_seq.update({u: seqs[u] for u in eval_uids})
+            eval_tables = [retr.retrieve(eval_uids, max_per_user=200) for retr in (popularity, history, pair)]
+            eval_union = CandidateUnion(rrf_k=60, max_per_user=200).merge(eval_tables)
+
+            if parent_kind == "popularity":
+                parent_top10 = popularity.retrieve(eval_uids, max_per_user=200).to_topk_lists(10)
+            else:
+                parent_top10 = eval_union.to_topk_lists(10)
+
+            if kind == "candidate_ranker_experiment":
+                fit_tables = [retr.retrieve(fit_uids, max_per_user=200) for retr in (popularity, history, pair)]
+                fit_union = CandidateUnion(rrf_k=60, max_per_user=200).merge(fit_tables)
+                ranker = CandidateTableRanker()
+                ranker.set_context(train_seq=seqs, train_targets=fit_targets, user_df=dataset.user_df, item_df=dataset.item_df)
+                rows, labels = ranker.build_training_rows(fit_union, user_ids=fit_uids)
+                if len(set(labels)) == 2:
+                    ranker.fit(rows, labels)
+                    ranker.build_scoring_rows(eval_union)
+                    cand_top10 = ranker.rerank(eval_uids, k=10)
+                else:
+                    cand_top10 = eval_union.to_topk_lists(10)
+            elif kind == "bucket_specialist_experiment":
+                cand_top10 = self._bucket_rerank(eval_union, eval_uids, seqs)
+            elif kind == "cached_replay":
+                cand_top10 = list(parent_top10)
+            else:  # candidate_recall_diagnostic / small_retrieval_compare: union top-10
+                cand_top10 = eval_union.to_topk_lists(10)
+
+            cand_fold_metrics[f] = ranking_metrics(cand_top10, eval_targets, k=10)["hit_rate@10"]
+            parent_fold_metrics[f] = ranking_metrics(parent_top10, eval_targets, k=10)["hit_rate@10"]
+            if cand_top10 != parent_top10:
+                changed_any = True
+            self.fold_policy.estimator.record_fold_runtime(time.time() - t0)
+            agg_eval_uids.extend(eval_uids)
+            agg_parent_top10.extend(parent_top10)
+            agg_cand_top10.extend(cand_top10)
+            agg_pool.extend(eval_union.to_topk_lists(200))
+
+        agg_targets = [subset_targets[u] for u in agg_eval_uids]
+        novel_mask = [t not in set(dataset.train_seq.get(u, [])) for u, t in zip(agg_eval_uids, agg_targets)]
+        cand_novel = float(np.mean([t in lst for lst, t, m in zip(agg_cand_top10, agg_targets, novel_mask) if m])) if any(novel_mask) else 0.0
+        parent_novel = float(np.mean([t in lst for lst, t, m in zip(agg_parent_top10, agg_targets, novel_mask) if m])) if any(novel_mask) else 0.0
+        parent_hits = np.array([t in lst for lst, t in zip(agg_parent_top10, agg_targets)])
+        cand_hits = np.array([t in lst for lst, t in zip(agg_cand_top10, agg_targets)])
+        return {
+            "diagnostic_type": kind,
+            "candidate_fold_metrics": cand_fold_metrics,
+            "parent_fold_metrics": parent_fold_metrics,
+            "target_bucket_gain": cand_novel - parent_novel,
+            "rescue": int(np.sum(~parent_hits & cand_hits)),
+            "damage": int(np.sum(parent_hits & ~cand_hits)),
+            "prediction_changed": changed_any,
+            "noop": not changed_any,
+            "result": {
+                "diagnostic_type": kind,
+                "n_eval_users": len(agg_eval_uids),
+                "pool_recall": candidate_pool_recall(agg_pool, agg_targets, ks=(20, 50, 100, 200)),
+                "top10_metrics": ranking_metrics(agg_cand_top10, agg_targets, k=10),
+                "error_decomposition": error_decomposition(agg_cand_top10, agg_pool, agg_targets, k=10),
+                "parent_top10": agg_parent_top10,
+                "candidate_top10": agg_cand_top10,
+            },
+        }
+
+    def _run_folded_with_promotion(
+        self,
+        run_dir: Path,
+        proposal: dict[str, Any],
+        dataset: Any,
+        subset_targets: dict[str, str],
+        started: float,
+        prefix: str,
+    ) -> dict[str, Any]:
+        """F1 screen -> F2 confirm -> (triggered) F3 full-CV ladder."""
+        kind = str(proposal.get("diagnostic_type"))
+        policy = self.fold_policy
+        t0 = time.time()
+        remaining = self.max_wall_clock_seconds - (time.time() - started)
+
+        screen_plan = build_fold_plan(self._canonical, FoldFidelity.F1_SCREEN, task=self.task)
+        screen = self._run_folded_experiment(kind, dataset, subset_targets, screen_plan.selected_fold_ids, parent_kind=self._incumbent["kind"])
+        comparison = paired_fold_comparison(
+            candidate_id=proposal["proposal_id"],
+            parent_id=self._incumbent["candidate_id"],
+            selected_fold_ids=screen_plan.selected_fold_ids,
+            candidate_fold_metrics=screen["candidate_fold_metrics"],
+            parent_fold_metrics=screen["parent_fold_metrics"],
+        )
+        self.artifacts["paired_fold_comparison"] = _write_json(run_dir, f"{prefix}paired_fold_comparison.json", comparison)
+        promo = policy.promote(
+            comparison,
+            target_bucket_gain=screen["target_bucket_gain"],
+            rescue=screen["rescue"],
+            damage=screen["damage"],
+            prediction_changed=screen["prediction_changed"],
+            no_op=screen["noop"],
+            expected_information_gain=0.6,
+            remaining_seconds=remaining,
+        )
+        final, final_plan, final_comparison = screen, screen_plan, comparison
+        promotion = {"decision": "hold_at_screen", "reasons": promo["reasons"]}
+
+        if promo["decision"] == "promote_to_confirm":
+            confirm_plan = build_fold_plan(self._canonical, FoldFidelity.F2_CONFIRM, task=self.task)
+            confirm = self._run_folded_experiment(kind, dataset, subset_targets, confirm_plan.selected_fold_ids, parent_kind=self._incumbent["kind"])
+            confirm_comparison = paired_fold_comparison(
+                candidate_id=proposal["proposal_id"],
+                parent_id=self._incumbent["candidate_id"],
+                selected_fold_ids=confirm_plan.selected_fold_ids,
+                candidate_fold_metrics=confirm["candidate_fold_metrics"],
+                parent_fold_metrics=confirm["parent_fold_metrics"],
+            )
+            _write_json(run_dir, f"{prefix}paired_fold_comparison_confirm.json", confirm_comparison)
+            final, final_plan, final_comparison = confirm, confirm_plan, confirm_comparison
+            promotion = {"decision": "promoted_to_confirm", "reasons": []}
+
+            remaining = self.max_wall_clock_seconds - (time.time() - started)
+            trigger = {"trigger_full_cv": False, "reasons": ["full_cv_disabled"]}
+            if self.allow_full_cv:
+                trigger = should_trigger_full_cv(
+                    fold_metrics_3fold=confirm["candidate_fold_metrics"],
+                    incumbent_delta=confirm_comparison["mean_delta"],
+                    candidate_is_best=confirm_comparison["mean_delta"] > 0,
+                    could_replace_anchor=False,
+                    candidates_indistinguishable=False,
+                    remaining_seconds=remaining,
+                    estimated_5fold_runtime=policy.estimator.estimated_runtime(5),
+                    deployment_reserve_seconds=policy.estimator.deployment_reserve_seconds,
+                    safety_margin_seconds=policy.estimator.safety_margin_seconds,
+                )
+            _write_json(run_dir, f"{prefix}full_cv_trigger.json", trigger)
+            if trigger["trigger_full_cv"]:
+                full_plan = build_fold_plan(self._canonical, FoldFidelity.F3_FULL_CV, task=self.task)
+                full = self._run_folded_experiment(kind, dataset, subset_targets, full_plan.selected_fold_ids, parent_kind=self._incumbent["kind"])
+                full_comparison = paired_fold_comparison(
+                    candidate_id=proposal["proposal_id"],
+                    parent_id=self._incumbent["candidate_id"],
+                    selected_fold_ids=full_plan.selected_fold_ids,
+                    candidate_fold_metrics=full["candidate_fold_metrics"],
+                    parent_fold_metrics=full["parent_fold_metrics"],
+                )
+                final, final_plan, final_comparison = full, full_plan, full_comparison
+                promotion = {"decision": "promoted_to_full_cv", "reasons": []}
+
+        return {
+            "result": final["result"],
+            "fold_plan": final_plan.to_dict(),
+            "paired_comparison": final_comparison,
+            "promotion": promotion,
+            "estimated_runtime": policy.estimator.estimated_runtime(final_plan.fold_count),
+            "actual_runtime": time.time() - t0,
+        }
+
     # --------------------------------------------------------------- finish
 
     def _finish(
@@ -988,7 +1674,7 @@ class V2AutonomousResearchOrchestrator:
             no_op_rounds_refunded=self.no_op_rounds_refunded,
             uses_test_truth=False,
             mutates_frozen_assets=False,
-            deployment_generated=False,
+            deployment_generated=self._deployment_generated,
             smoke_mode=self.smoke,
             artifacts=dict(self.artifacts),
         )

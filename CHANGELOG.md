@@ -1,5 +1,42 @@
 # CHANGELOG
 
+## 2026-07-23 - Adaptive Fold Validation and Budget-aware Promotion
+
+- Added `afac_agent/v2/adaptive_fold.py`: fidelity ladder F0_DETERMINISTIC
+  (0 folds) → F1_SCREEN (B2: 2 folds, B1: 1-2 folds, screening only) →
+  F2_CONFIRM (3 folds, incumbent promotions allowed) → F3_FULL_CV (5 folds,
+  trigger-only, never default) → F4_DEPLOYMENT (full train + test inference).
+- Fixed canonical folds: one hash-stable 5-fold master assignment per run;
+  every fidelity selects a fixed prefix subset ([0,1]/[0,1,2]/[0..4]); no
+  re-randomization, so candidates and parents stay comparable across rounds.
+- Paired parent comparison on identical folds only
+  (`paired_fold_comparison.json`); mismatched fold means are rejected as not
+  comparable.
+- Configurable promotion rules (mean delta, positive folds, worst-fold delta,
+  target-bucket gain, rescue/damage/net, no-op veto, remaining budget);
+  screen results never promote an incumbent — confirm-level evidence only.
+- 5-fold trigger requires BOTH budget headroom (est. 5-fold + deployment
+  reserve + safety margin) AND an uncertainty reason (3-fold variance,
+  near-boundary delta, anchor replacement, indistinguishable candidates).
+- FoldRuntimeEstimator: per-fold runtime history, dynamic 2/3/5-fold
+  estimates, deployment reserve + safety margin enforcement.
+- Stagnation semantics fixed: 1 no-improvement round → revise/switch
+  operator family; 2 → switch problem/global explore; stopping requires
+  global explore attempted + no viable routes, or deployment reserve entered
+  (stop_decision records all fields).
+- Formal multi-round loop wired to the ladder: each round runs F1 screen,
+  promotes to F2 confirm when rules pass, triggers F3 only when justified;
+  round records carry iteration/fidelity/fold ids/canonical hash/paired
+  delta/promotion/runtime/next-decision fields.
+- Deployment: full-train retrain (default) or 3-fold ensemble, recorded in
+  `deployment_decision.json`; TO_UPLOAD with strict submission audit.
+- Added `--limit-users` CLI flag for bounded control-flow smokes on the
+  formal path.
+- Added `docs/FORMAL_EXPERIMENT_CAPABILITY_AUDIT.md` and
+  `tests/test_v2_adaptive_fold.py` (22 tests): fold ladder, canonical
+  integrity, paired comparison, promotion, full-CV trigger, budget/reserve,
+  stagnation semantics, formal loop + deployment end-to-end.
+
 ## 2026-07-23 - v2 Runtime Wiring, LLM Orchestration and False-Completion Repair
 
 Root cause repaired: the only CLI entry ever wired was the legacy v1

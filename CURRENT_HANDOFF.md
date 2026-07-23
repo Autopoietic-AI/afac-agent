@@ -2,7 +2,23 @@
 
 ## Current module
 
-- Module: v2 Runtime Wiring, LLM Orchestration and False-Completion Repair (P0)
+- Module: Adaptive Fold Validation and Budget-aware Promotion
+- Branch: `feat/afac-v2-full`
+- Previous baseline: `ba226bd31aa61c3e75ca11740655595fa10d1aba` (v2 runtime wiring + false-completion repair)
+- Scope: AdaptiveFoldPolicy (F0→F1→F2→F3→F4 ladder), fixed canonical folds with prefix subsets, paired same-fold parent comparison, configurable promotion rules, full-CV trigger, runtime estimation with deployment reserve, stagnation semantics fix, formal multi-round loop integration, deployment decision (full retrain / 3-fold ensemble), capability audit doc, bounded 600s control-flow smoke. No two-hour formal run started.
+
+## Adaptive fold key facts
+
+- Ladder: F0_DETERMINISTIC (0 folds) → F1_SCREEN (B2: 2 folds, B1: 1 fold) → F2_CONFIRM (3 folds, incumbent promotion allowed) → F3_FULL_CV (5 folds, trigger-only) → F4_DEPLOYMENT (full train + test inference).
+- Canonical folds: single hash-stable 5-fold master per run; fixed prefix subsets; never re-randomized.
+- Parent comparison: identical folds only; mismatched means are rejected as not comparable; screen evidence alone never promotes an incumbent.
+- 5-fold trigger: budget headroom AND uncertainty (variance / near-boundary / anchor replacement / indistinguishable); disabled via `--no-full-cv`.
+- M5 budget handling: clean proposals with over-estimated budgets are clamped (recorded `budget_clamped`), not killed; BUDGET_DECISION consumes the clamped estimate.
+- Stagnation: round 1 no-improvement → revise/switch family; round 2 → switch problem/global explore; stop only after global explore with no viable routes or deployment reserve entered.
+- Capability audit: `docs/FORMAL_EXPERIMENT_CAPABILITY_AUDIT.md`.
+- Tests: `tests/test_v2_adaptive_fold.py` (22), full suite 363 passed, Doctor PASS.
+
+## Previous module (P0 runtime repair, committed ba226bd)
 - Branch: `feat/afac-v2-full`
 - Previous frozen baseline: `d41fee95abce61aa314f1c08f69db8a31d472252` (v2.0 architecture build)
 - Scope: invalid-replay marking, CLI wiring audit, v2 orchestrator (real state machine), execution identity, LLM call ledger, legacy replay detector, strict completion contract, CLI separation, runtime tests.

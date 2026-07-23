@@ -708,6 +708,9 @@ def _v2_run(argv: list[str]) -> None:
     parser.add_argument("--smoke-max-seconds", type=float, default=300.0)
     parser.add_argument("--no-deployment", action="store_true")
     parser.add_argument("--dry-run-orchestration", action="store_true")
+    parser.add_argument("--limit-users", type=int, default=0, help="cap train users in formal mode (0 = all; for bounded control-flow smokes)")
+    parser.add_argument("--deployment-reserve-seconds", type=float, default=300.0)
+    parser.add_argument("--no-full-cv", dest="allow_full_cv", action="store_false", default=True)
     parser.add_argument("--provider", default=ALIYUN_BAILIAN_PROVIDER)
     parser.add_argument("--provider-config", default="")
     args = parser.parse_args(argv)
@@ -731,6 +734,9 @@ def _v2_run(argv: list[str]) -> None:
         dry_run_orchestration=args.dry_run_orchestration,
         provider_name=args.provider,
         provider_config=args.provider_config,
+        formal_max_users=args.limit_users,
+        deployment_reserve_seconds=args.deployment_reserve_seconds,
+        allow_full_cv=args.allow_full_cv,
     )
     result = orchestrator.run()
     print(json.dumps(result, ensure_ascii=False, indent=2, default=str))

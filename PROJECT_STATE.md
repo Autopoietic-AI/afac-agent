@@ -1,8 +1,10 @@
 # PROJECT_STATE.md
 
-## AFAC v2.0 Runtime (P0 repair)
+## AFAC v2.0 Runtime (P0 repair + adaptive folds)
 
 - v2 orchestrator wired: `python -m afac_agent.main v2-run --task B2 ...` → `V2AutonomousResearchOrchestrator` (real state machine, LLM ledger, M5 gates, strict completion contract).
+- Adaptive fold ladder live: F0 (0 folds) → F1 screen (B2: 2) → F2 confirm (3) → F3 full-CV (5, trigger-only) → F4 deployment; fixed canonical folds with prefix subsets; paired same-fold parent comparison; budget-aware promotion with deployment reserve.
+- Stagnation semantics: no-improvement rounds escalate (revise → switch problem/global explore), never a direct global stop.
 - Legacy/v2 CLI fully separated: `legacy-b2-closed-loop` (reproduction), `b2-closed-loop` (loud legacy alias), `v2-run` (real v2).
 - `artifacts/v2_formal_runs/b2/fcf5ad3dbcdf9700dd644eff` marked `invalid_v2_replay` (v1 byte-identical replay, false completion).
 - Execution identity: `input_fingerprint` (cache) vs `execution_id` (unique per execution, commit + nonce).
