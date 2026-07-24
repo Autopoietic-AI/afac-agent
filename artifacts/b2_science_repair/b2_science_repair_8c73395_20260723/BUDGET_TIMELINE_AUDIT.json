@@ -1,0 +1,16 @@
+{
+  "started_at": 1784831111.2551327,
+  "ended_at": 1784839451.6350582,
+  "max_wall_clock_seconds": 7200.0,
+  "actual_wall_clock_seconds": 8340.379925489426,
+  "budget_exceeded_seconds": 1140.3799254894257,
+  "hard_deadline_enforced": false,
+  "research_deadline": null,
+  "deployment_reserve_seconds": 300.0,
+  "safety_margin_seconds": 120.0,
+  "why_exceeded": [
+    "Round 3 cached_replay was budgeted at 450s but re-ran full 2-fold retrieval (~2300s)",
+    "Budget decision only checked remaining_seconds >= estimated_cost_seconds; no deployment_reserve + safety_margin check",
+    "No hard_deadline based on time.monotonic() was maintained"
+  ]
+}

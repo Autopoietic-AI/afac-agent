@@ -1,0 +1,18 @@
+{
+  "expected": [
+    "PRECHECK -> INPUT_DISCOVERY -> DATA_INTELLIGENCE -> METRIC_SEMANTICS_GATE -> VALIDATION_REALITY",
+    "PROBLEM_SELECTION -> COMPETITION_INTELLIGENCE -> M6B_PROPOSAL -> M6C_CRITIC -> M5_ADMISSION",
+    "PROPOSAL_OPERATOR_COMPILER -> EXPERIMENT_GENOME -> BUDGET_DECISION -> EXPERIMENT_EXECUTION",
+    "F1_SCREEN (2-fold, consumes 1 scientific round) -> EVALUATION -> NO_OP_AUDIT -> PORTFOLIO_UPDATE",
+    "PROMOTION_GATE (same-fold, same-panel, target metric contract) -> F2_CONFIRM (3-fold)",
+    "INCUMBENT (Confirm-level) -> DEPLOYMENT_PERMISSION_CONTRACT -> DEPLOYMENT"
+  ],
+  "actual": [
+    "M5 admitted any diagnostic_type in ALLOWED_DIAGNOSTICS forever",
+    "Formal experiments (candidate_ranker_experiment, bucket_specialist_experiment) never admitted",
+    "All 3 rounds ran _run_folded_with_promotion but diagnostic_type stayed in ALLOWED_DIAGNOSTICS",
+    "Fidelity was forced to Fidelity.CHEAP_DIAGNOSTIC (round_cost=0), so scientific_rounds_used stayed 0",
+    "Promotion gate never received a candidate with fold_plan.fidelity >= F2_CONFIRM",
+    "Deployment selected the best round record by hit_rate@10 without checking can_deploy"
+  ]
+}

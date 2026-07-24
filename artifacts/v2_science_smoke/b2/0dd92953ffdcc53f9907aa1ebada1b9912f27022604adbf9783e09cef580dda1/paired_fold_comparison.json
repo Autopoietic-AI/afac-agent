@@ -1,0 +1,26 @@
+{
+  "candidate_fold_metrics": {
+    "0": 0.13333333333333333,
+    "1": 0.10576923076923077
+  },
+  "candidate_id": "7c84d3bd1f9b2405fd975429",
+  "comparable": true,
+  "fold_deltas": {
+    "0": 0.11428571428571428,
+    "1": 0.05769230769230769
+  },
+  "mean_delta": 0.08598901098901099,
+  "missing_parent_folds": [],
+  "parent_fold_metrics": {
+    "0": 0.01904761904761905,
+    "1": 0.04807692307692308
+  },
+  "parent_id": "popularity_parent",
+  "positive_fold_count": 2,
+  "recomputed_parent_folds": [],
+  "selected_fold_ids": [
+    0,
+    1
+  ],
+  "worst_fold_delta": 0.05769230769230769
+}

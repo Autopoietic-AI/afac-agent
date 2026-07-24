@@ -1,0 +1,17 @@
+{
+  "budget_seconds": 450,
+  "diagnostic_type": "cached_replay",
+  "expected_gain": 0.15,
+  "failure_condition": "history_recall_coverage does not increase or novel_target_ratio drops below 0.50",
+  "hypothesis": "The low history recall coverage (0.285) indicates that the current retrieval strategy is failing to surface relevant historical context, while the high novel target ratio (0.715) suggests the system is over-indexing on new or unseen targets. Replaying cached historical interactions with adjusted retrieval weights will improve coverage of known relevant targets without modifying frozen assets.",
+  "information_sources": [
+    "di_novel_ratio",
+    "di_history_coverage"
+  ],
+  "parent": "novel_target_low_coverage",
+  "problem_id": "a55916274f696affcda2bf07c044c2abca37bea911a02fd50aabae03c1960f8c",
+  "proposal_id": "7c84d3bd1f9b2405fd975429",
+  "proposal_mode": "llm",
+  "stop_condition": "budget_seconds exhausted or history_recall_coverage reaches 0.45",
+  "success_condition": "history_recall_coverage increases by at least 0.10 while novel_target_ratio remains above 0.60"
+}

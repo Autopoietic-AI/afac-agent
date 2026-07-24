@@ -1,0 +1,11 @@
+{
+  "action": "continue",
+  "continue": true,
+  "effective_scientific_rounds": 0.0,
+  "hard_deadline": 705485.8541478,
+  "reason": "continue",
+  "remaining_seconds": 700.0153189999983,
+  "research_deadline": 705305.8541478,
+  "research_remaining_seconds": 520.0153189999983,
+  "scientific_attempts_used": 0
+}

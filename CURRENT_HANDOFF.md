@@ -249,3 +249,53 @@ python -m afac_agent.main b1-closed-loop --project_root . --data-root "C:\Users\
 python -m pytest -p no:cacheprovider -q --basetemp "C:/tmp/afac_b1_post"
 python -m afac_agent.doctor --project_root .
 ```
+
+## B2 v2.1 Scientific Execution, Data Contract, Budget and Deployment Permission Repair
+
+- Module: B2 scientific execution repair; branch: `fix/b2-v2-scientific-execution` (worktree `afac_agent_v1_b2_science_repair`).
+- Fault run: execution_id `74ba8db66a4b8f50d9196865a611e9d78058e14d35fd8ac99c6e2426279dcd41` — all diagnostic, budget exceeded, falsely deployed, completion contract failed. Marked `INVALID_SCIENTIFIC_DEPLOYMENT`.
+- Scope: Data Contract (canonical n_items=14065 with provenance), Experiment Permission (Diagnostic/Screen/Confirm/Deployment), Proposal-to-Operator Compiler, Target Metric Contract, Anchor Registry, Budget Safety (monotonic hard deadline), Deployment Permission Contract, Capability Registry v2.1, Heartbeat transparency fields.
+
+### Key new files
+
+- `afac_agent/v2/data_contract.py`: `B2CanonicalDataContract`, `ScaleValue`, `build_b2_data_contract()`, `reconcile_data_contract()`.
+- `afac_agent/v2/experiment_kind.py`: `ExperimentKind` enum, `ExperimentPermission`, `permission_for_kind()`, `kind_from_operator_and_folds()`.
+- `afac_agent/v2/proposal_compiler.py`: `CompiledOperator`, `compile_proposal()`, `semantic_revision_delta()`.
+- `afac_agent/v2/anchor_registry.py`: `B2AnchorRegistry`, `AnchorRecord`, 5-fold popularity/history anchor materialization.
+- `afac_agent/v2/target_metric_contract.py`: `TargetMetricContract`, `evaluate_target_metric_contract()`.
+- `tests/test_b2_science_repair.py`: 21 tests (data contract, permission, compiler, no-op, budget, orchestrator integration, capability registry, fault manifest regression).
+
+### Key modified files
+
+- `afac_agent/v2/orchestrator.py`: data contract build & reconcile, compiled operator pipeline, experiment permission checks, monotonic hard deadline, multi-round smoke loop, heartbeat transparency, anchor fallback deployment, completion contract v2.1.
+- `afac_agent/v2/capability_registry.py`: per-operator capability flags (diagnostic/screen/confirm/full_cv/checkpoint/deployment_ready), B2 v2.1 operators.
+- `afac_agent/v2/completion_contract.py`: data/budget/deployment permission contract checks, scientific execution reality check.
+- `afac_agent/v2/data_intelligence.py`: n_train_total/n_test_total vs n_train_profiled/n_test_profiled, profile_scope, raw/dedup/unique/repeat buckets.
+- `afac_agent/supervisor/heartbeat.py`: v2.1 transparency fields (operator_id, experiment_kind, semantic_genome_hash, fidelity, target_panel, permissions, deadlines, data contract fields).
+
+### Real 900s B2 Science Smoke
+
+- Execution ID: `0dd92953ffdcc53f9907aa1ebada1b9912f27022604adbf9783e09cef580dda1`
+- Status: `completed_smoke`; wall clock: `599.5s` (budget: 900s).
+- 12 real LLM calls; 3 rounds: 1 diagnostic + 2 scientific (retrieval_union_experiment as SCREEN_EXPERIMENT).
+- `scientific_attempts_used=2`, `all_rounds_diagnostic=false`.
+- Data contract: n_items=14065 consistent across all stages.
+- Completion contract: passed. No deployment generated.
+
+### Synthetic Smoke A-D
+
+All 4 smokes covered by 21 pytest tests in `tests/test_b2_science_repair.py` — all PASS.
+
+### Formal B2 two-hour run
+
+**NOT started.** Do not start without explicit approval. The fix branch must be committed and merged first.
+
+### Frozen assets
+
+A1 `v53Q-1` (0.7800), A2 0.5093 champion, B1 V1/V2, B2 V1 results — all verified unchanged. Frozen hashes match.
+
+### Key run commands (v2.1 smoke)
+
+```powershell
+python -u -m afac_agent.main v2-run --task B2 --data-root "C:/Users/李天皓/agent比赛/B推荐/B推荐" --out-root artifacts/v2_science_smoke/b2 --max-wall-clock-seconds 900 --deployment-reserve-seconds 180 --require-llm --force-new-execution --smoke --no-deployment --no-full-cv --smoke-max-seconds 900
+```

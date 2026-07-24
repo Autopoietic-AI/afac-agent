@@ -1,0 +1,460 @@
+{
+  "ended_at": 1784874898.141743,
+  "events": [
+    {
+      "payload": {
+        "cache_status": "bypassed_by_force_new_execution",
+        "execution_id": "0dd92953ffdcc53f9907aa1ebada1b9912f27022604adbf9783e09cef580dda1",
+        "input_fingerprint": "dafcd8f6a43793c90df6d40574856b6f520ed49ab4625ae9ad90484be325d137",
+        "resume_status": "fresh"
+      },
+      "stage": "PRECHECK",
+      "timestamp": 1784874298.9271002
+    },
+    {
+      "payload": {
+        "n_items": 14065,
+        "n_train": 40000,
+        "test_truth_hidden": true
+      },
+      "stage": "INPUT_DISCOVERY",
+      "timestamp": 1784874301.0644813
+    },
+    {
+      "payload": {
+        "n_items": 14065,
+        "profile_scope": "sampled_head",
+        "status": "verified"
+      },
+      "stage": "DATA_INTELLIGENCE",
+      "timestamp": 1784874301.323095
+    },
+    {
+      "payload": {
+        "gate": true
+      },
+      "stage": "METRIC_SEMANTICS_GATE",
+      "timestamp": 1784874301.3315609
+    },
+    {
+      "payload": {
+        "canonical_fold_hash": "67711f5dffc87ceaa758797764449dee1691678713eb41ce90d90336a77a4d61",
+        "duplicates": [],
+        "independent_panels": 5
+      },
+      "stage": "VALIDATION_REALITY",
+      "timestamp": 1784874301.3469028
+    },
+    {
+      "payload": {
+        "mode": "llm",
+        "problem_id": "a55916274f696affcda2bf07c044c2abca37bea911a02fd50aabae03c1960f8c",
+        "round": 1
+      },
+      "stage": "PROBLEM_SELECTION",
+      "timestamp": 1784874332.539844
+    },
+    {
+      "payload": {
+        "cards": 2,
+        "round": 1
+      },
+      "stage": "COMPETITION_INTELLIGENCE",
+      "timestamp": 1784874332.548087
+    },
+    {
+      "payload": {
+        "mode": "llm",
+        "proposal_id": "6eac25602cdaa9f2087b27c2",
+        "round": 1
+      },
+      "stage": "M6B_PROPOSAL",
+      "timestamp": 1784874383.4694786
+    },
+    {
+      "payload": {
+        "mode": "llm",
+        "round": 1,
+        "verdict": "revise"
+      },
+      "stage": "M6C_CRITIC",
+      "timestamp": 1784874450.7320442
+    },
+    {
+      "payload": {
+        "reasons": [],
+        "round": 1,
+        "status": "admitted_diagnostic_only"
+      },
+      "stage": "M5_ADMISSION",
+      "timestamp": 1784874450.7427387
+    },
+    {
+      "payload": {
+        "genome_id": "c1ea1785d3f68f241b62fea3fb0b6a0a50b9d5032c6061bcdcadaa6ea9791e8e",
+        "round": 1,
+        "semantic_hash": "57279eb65b2056f9d724b6bb986f33404552ec195022f6f95dd78c5428c09a25"
+      },
+      "stage": "EXPERIMENT_GENOME",
+      "timestamp": 1784874450.7542248
+    },
+    {
+      "payload": {
+        "consumes_scientific_round": false,
+        "decision": "run",
+        "estimated_runtime": 120.0,
+        "experiment_kind": "DETERMINISTIC_DIAGNOSTIC",
+        "fidelity": "F0_DETERMINISTIC",
+        "operator_id": "candidate_recall_diagnostic",
+        "remaining_research_seconds": 567.8900261999806,
+        "remaining_wall_seconds": 747.8900261999806,
+        "required_seconds": 240.0,
+        "round": 1
+      },
+      "stage": "BUDGET_DECISION",
+      "timestamp": 1784874450.7644427
+    },
+    {
+      "payload": {
+        "metrics": {
+          "candidate_pool_recall@100": 0.46601941747572817,
+          "candidate_pool_recall@20": 0.18446601941747573,
+          "candidate_pool_recall@200": 0.6213592233009708,
+          "candidate_pool_recall@50": 0.33980582524271846
+        },
+        "operator_id": "candidate_recall_diagnostic",
+        "round": 1
+      },
+      "stage": "EXPERIMENT_EXECUTION",
+      "timestamp": 1784874451.8870823
+    },
+    {
+      "payload": {
+        "round": 1,
+        "validity": "ok"
+      },
+      "stage": "EVALUATION",
+      "timestamp": 1784874451.8994884
+    },
+    {
+      "payload": {
+        "changed_fraction": 1.0,
+        "round": 1,
+        "status": "ok"
+      },
+      "stage": "NO_OP_AUDIT",
+      "timestamp": 1784874451.9109051
+    },
+    {
+      "payload": {
+        "candidate_id": "6eac25602cdaa9f2087b27c2",
+        "portfolio_status": "diagnostic_registry",
+        "round": 1
+      },
+      "stage": "PORTFOLIO_UPDATE",
+      "timestamp": 1784874451.9226153
+    },
+    {
+      "payload": {
+        "mode": "llm",
+        "round": 1
+      },
+      "stage": "POSTMORTEM",
+      "timestamp": 1784874498.6221337
+    },
+    {
+      "payload": {
+        "action": "continue",
+        "continue": true,
+        "effective_scientific_rounds": 0.0,
+        "hard_deadline": 705485.8541478,
+        "reason": "continue",
+        "remaining_seconds": 700.0153189999983,
+        "research_deadline": 705305.8541478,
+        "research_remaining_seconds": 520.0153189999983,
+        "scientific_attempts_used": 0
+      },
+      "stage": "NEXT_DECISION",
+      "timestamp": 1784874498.639636
+    },
+    {
+      "payload": {
+        "mode": "llm",
+        "problem_id": "a55916274f696affcda2bf07c044c2abca37bea911a02fd50aabae03c1960f8c",
+        "round": 2
+      },
+      "stage": "PROBLEM_SELECTION",
+      "timestamp": 1784874516.6958704
+    },
+    {
+      "payload": {
+        "cards": 2,
+        "round": 2
+      },
+      "stage": "COMPETITION_INTELLIGENCE",
+      "timestamp": 1784874516.705471
+    },
+    {
+      "payload": {
+        "mode": "llm",
+        "proposal_id": "be82abd42d5879f10c7ffa2a",
+        "round": 2
+      },
+      "stage": "M6B_PROPOSAL",
+      "timestamp": 1784874563.3341172
+    },
+    {
+      "payload": {
+        "mode": "llm",
+        "round": 2,
+        "verdict": "revise"
+      },
+      "stage": "M6C_CRITIC",
+      "timestamp": 1784874638.0905645
+    },
+    {
+      "payload": {
+        "reasons": [],
+        "round": 2,
+        "status": "admitted"
+      },
+      "stage": "M5_ADMISSION",
+      "timestamp": 1784874638.1003304
+    },
+    {
+      "payload": {
+        "genome_id": "4820cdf8bdbe498b7c89f24e980fe0d24715d61cc39d6a264fc9131ac526012e",
+        "round": 2,
+        "semantic_hash": "18c3d6389e4ca4a9a685b977ca098e7426e930a04886d6923f9d29f9fd97ae5e"
+      },
+      "stage": "EXPERIMENT_GENOME",
+      "timestamp": 1784874638.110301
+    },
+    {
+      "payload": {
+        "consumes_scientific_round": true,
+        "decision": "run",
+        "estimated_runtime": 60.0,
+        "experiment_kind": "SCREEN_EXPERIMENT",
+        "fidelity": "F1_SCREEN",
+        "operator_id": "retrieval_union_experiment",
+        "remaining_research_seconds": 380.5351879000664,
+        "remaining_wall_seconds": 560.5351879000664,
+        "required_seconds": 180.0,
+        "round": 2
+      },
+      "stage": "BUDGET_DECISION",
+      "timestamp": 1784874638.1192548
+    },
+    {
+      "payload": {
+        "metrics": {
+          "candidate_pool_recall@100": 0.430622009569378,
+          "candidate_pool_recall@20": 0.15789473684210525,
+          "candidate_pool_recall@200": 0.583732057416268,
+          "candidate_pool_recall@50": 0.32057416267942584
+        },
+        "operator_id": "retrieval_union_experiment",
+        "round": 2
+      },
+      "stage": "EXPERIMENT_EXECUTION",
+      "timestamp": 1784874641.251795
+    },
+    {
+      "payload": {
+        "round": 2,
+        "validity": "ok"
+      },
+      "stage": "EVALUATION",
+      "timestamp": 1784874641.2626855
+    },
+    {
+      "payload": {
+        "changed_fraction": 1.0,
+        "round": 2,
+        "status": "ok"
+      },
+      "stage": "NO_OP_AUDIT",
+      "timestamp": 1784874641.2750645
+    },
+    {
+      "payload": {
+        "candidate_id": "be82abd42d5879f10c7ffa2a",
+        "portfolio_status": "scientific_candidate_portfolio_screen_only",
+        "round": 2
+      },
+      "stage": "PORTFOLIO_UPDATE",
+      "timestamp": 1784874641.2859542
+    },
+    {
+      "payload": {
+        "mode": "llm",
+        "round": 2
+      },
+      "stage": "POSTMORTEM",
+      "timestamp": 1784874694.833722
+    },
+    {
+      "payload": {
+        "action": "revise_proposal_or_switch_operator_family",
+        "continue": true,
+        "effective_scientific_rounds": 1.0,
+        "hard_deadline": 705485.8541478,
+        "reason": "revise_proposal_or_switch_operator_family",
+        "remaining_seconds": 503.8067176999757,
+        "research_deadline": 705305.8541478,
+        "research_remaining_seconds": 323.8067176999757,
+        "scientific_attempts_used": 1
+      },
+      "stage": "NEXT_DECISION",
+      "timestamp": 1784874694.8485837
+    },
+    {
+      "payload": {
+        "mode": "llm",
+        "problem_id": "a55916274f696affcda2bf07c044c2abca37bea911a02fd50aabae03c1960f8c",
+        "round": 3
+      },
+      "stage": "PROBLEM_SELECTION",
+      "timestamp": 1784874730.4468894
+    },
+    {
+      "payload": {
+        "cards": 2,
+        "round": 3
+      },
+      "stage": "COMPETITION_INTELLIGENCE",
+      "timestamp": 1784874730.4572058
+    },
+    {
+      "payload": {
+        "mode": "llm",
+        "proposal_id": "7c84d3bd1f9b2405fd975429",
+        "round": 3
+      },
+      "stage": "M6B_PROPOSAL",
+      "timestamp": 1784874781.8183103
+    },
+    {
+      "payload": {
+        "mode": "llm",
+        "round": 3,
+        "verdict": "revise"
+      },
+      "stage": "M6C_CRITIC",
+      "timestamp": 1784874844.8286777
+    },
+    {
+      "payload": {
+        "reasons": [],
+        "round": 3,
+        "status": "admitted"
+      },
+      "stage": "M5_ADMISSION",
+      "timestamp": 1784874844.8397188
+    },
+    {
+      "payload": {
+        "round": 3,
+        "semantic_hash": "18c3d6389e4ca4a9a685b977ca098e7426e930a04886d6923f9d29f9fd97ae5e",
+        "status": "duplicate_revision"
+      },
+      "stage": "EXPERIMENT_GENOME",
+      "timestamp": 1784874844.8470871
+    },
+    {
+      "payload": {
+        "genome_id": "4820cdf8bdbe498b7c89f24e980fe0d24715d61cc39d6a264fc9131ac526012e",
+        "round": 3,
+        "semantic_hash": "18c3d6389e4ca4a9a685b977ca098e7426e930a04886d6923f9d29f9fd97ae5e"
+      },
+      "stage": "EXPERIMENT_GENOME",
+      "timestamp": 1784874844.8482616
+    },
+    {
+      "payload": {
+        "consumes_scientific_round": true,
+        "decision": "run",
+        "estimated_runtime": 3.097123384475708,
+        "experiment_kind": "SCREEN_EXPERIMENT",
+        "fidelity": "F1_SCREEN",
+        "operator_id": "retrieval_union_experiment",
+        "remaining_research_seconds": 173.79639939998742,
+        "remaining_wall_seconds": 353.7963993999874,
+        "required_seconds": 123.09712338447571,
+        "round": 3
+      },
+      "stage": "BUDGET_DECISION",
+      "timestamp": 1784874844.858309
+    },
+    {
+      "payload": {
+        "metrics": {
+          "candidate_pool_recall@100": 0.430622009569378,
+          "candidate_pool_recall@20": 0.15789473684210525,
+          "candidate_pool_recall@200": 0.583732057416268,
+          "candidate_pool_recall@50": 0.32057416267942584
+        },
+        "operator_id": "retrieval_union_experiment",
+        "round": 3
+      },
+      "stage": "EXPERIMENT_EXECUTION",
+      "timestamp": 1784874847.774832
+    },
+    {
+      "payload": {
+        "round": 3,
+        "validity": "ok"
+      },
+      "stage": "EVALUATION",
+      "timestamp": 1784874847.789684
+    },
+    {
+      "payload": {
+        "changed_fraction": 1.0,
+        "round": 3,
+        "status": "ok"
+      },
+      "stage": "NO_OP_AUDIT",
+      "timestamp": 1784874847.803179
+    },
+    {
+      "payload": {
+        "candidate_id": "7c84d3bd1f9b2405fd975429",
+        "portfolio_status": "scientific_candidate_portfolio_screen_only",
+        "round": 3
+      },
+      "stage": "PORTFOLIO_UPDATE",
+      "timestamp": 1784874847.8130176
+    },
+    {
+      "payload": {
+        "mode": "llm",
+        "round": 3
+      },
+      "stage": "POSTMORTEM",
+      "timestamp": 1784874898.113745
+    },
+    {
+      "payload": {
+        "action": "stop",
+        "continue": false,
+        "effective_scientific_rounds": 2.0,
+        "hard_deadline": 705485.8541478,
+        "reason": "insufficient_budget_for_next_experiment",
+        "remaining_seconds": 300.5240299999714,
+        "research_deadline": 705305.8541478,
+        "research_remaining_seconds": 120.52402999997139,
+        "scientific_attempts_used": 2
+      },
+      "stage": "NEXT_DECISION",
+      "timestamp": 1784874898.1307433
+    }
+  ],
+  "execution_id": "0dd92953ffdcc53f9907aa1ebada1b9912f27022604adbf9783e09cef580dda1",
+  "orchestrator_version": "2.0.0",
+  "planner_mode": "llm_plus_deterministic_gates",
+  "status": "completed_smoke",
+  "task": "B2",
+  "trajectory_version": "afac_v2_trajectory_v1"
+}

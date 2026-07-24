@@ -1,0 +1,11 @@
+{
+  "consumes_scientific_round": true,
+  "decision": "run",
+  "estimated_runtime": 3.097123384475708,
+  "experiment_kind": "SCREEN_EXPERIMENT",
+  "fidelity": "F1_SCREEN",
+  "operator_id": "retrieval_union_experiment",
+  "remaining_research_seconds": 173.79639939998742,
+  "remaining_wall_seconds": 353.7963993999874,
+  "required_seconds": 123.09712338447571
+}

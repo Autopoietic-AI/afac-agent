@@ -1,0 +1,56 @@
+{
+  "duplicate_pairs": [],
+  "independent_panel_count": 5,
+  "panels": [
+    {
+      "class_distribution": null,
+      "degree_distribution": null,
+      "distance_to_test": null,
+      "membership_hash": "21ede56758faa55b1bcc2c4372e9e9dce8815c604a7ece8500e9b9bc9a549b55",
+      "panel_id": "B2_STANDARD_PANEL",
+      "propensity_distribution": null,
+      "size": 512,
+      "status": "independent_panel"
+    },
+    {
+      "class_distribution": null,
+      "degree_distribution": null,
+      "distance_to_test": null,
+      "membership_hash": "44dfd409367710107d14c6fb22ea142d85bef776e45ea0da30b309575fa6d4c9",
+      "panel_id": "B2_SHORT_HISTORY_PANEL",
+      "propensity_distribution": null,
+      "size": 32,
+      "status": "independent_panel"
+    },
+    {
+      "class_distribution": null,
+      "degree_distribution": null,
+      "distance_to_test": null,
+      "membership_hash": "fe64b856adb4c2e1132c3a4855544f3408a1e647143da14f745f924a10673089",
+      "panel_id": "B2_LONG_HISTORY_PANEL",
+      "propensity_distribution": null,
+      "size": 480,
+      "status": "independent_panel"
+    },
+    {
+      "class_distribution": null,
+      "degree_distribution": null,
+      "distance_to_test": null,
+      "membership_hash": "d1b1e5c4d1bb464b45aa705f97ef7418af91dd0afe288dbe668742bbb862ab8d",
+      "panel_id": "B2_HISTORY_TARGET_PANEL",
+      "propensity_distribution": null,
+      "size": 146,
+      "status": "independent_panel"
+    },
+    {
+      "class_distribution": null,
+      "degree_distribution": null,
+      "distance_to_test": null,
+      "membership_hash": "c35f43b56ed7190aa0f5e57d40abb4911d30f0e951da59f5efe7904a93e9b251",
+      "panel_id": "B2_NOVEL_TARGET_PANEL",
+      "propensity_distribution": null,
+      "size": 366,
+      "status": "independent_panel"
+    }
+  ]
+}

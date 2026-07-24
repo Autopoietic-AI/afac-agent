@@ -59,6 +59,30 @@ class HeartbeatState:
     current_critic_status: str = ""
     cache_status: str = ""
     legacy_mode: bool = False
+    # v2.1 scientific execution transparency fields
+    current_operator_id: str = ""
+    current_experiment_kind: str = ""
+    current_semantic_genome_hash: str = ""
+    current_fidelity: str = ""
+    current_target_panel: str = ""
+    current_candidate_permission: str = ""
+    parent_target_metric: float | None = None
+    candidate_target_metric: float | None = None
+    target_metric_delta: float | None = None
+    scientific_attempts_used: int = 0
+    effective_scientific_rounds: float = 0.0
+    diagnostics_used: int = 0
+    no_op_rounds_refunded: int = 0
+    experiment_timeout: float | None = None
+    research_deadline: float | None = None
+    hard_deadline: float | None = None
+    budget_contract_status: str = "unknown"
+    deployment_permission_status: str = "unknown"
+    data_contract_status: str = "unknown"
+    n_items_total: int = 0
+    n_test_total: int = 0
+    n_test_profiled: int = 0
+    profiler_scope: str = ""
 
 
 class HeartbeatWriter:

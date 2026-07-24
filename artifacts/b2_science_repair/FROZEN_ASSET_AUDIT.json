@@ -1,0 +1,42 @@
+{
+  "audit_timestamp": "2026-07-24T06:40:00Z",
+  "worktree": "afac_agent_v1_b2_science_repair",
+  "original_repo": "C:\\Users\\李天皓\\agent比赛\\agent\\AFAC_AGENT_V1_1_CODEX_READY\\afac_agent_v1",
+  "frozen_assets": {
+    "A1_v53Q1_champion_csv": {
+      "path": "artifacts/A1_v53q1_transition_stable_edge_h2_SAFE.csv",
+      "sha256": "3cd9ae37cf4dab7edbb72f91ec16ed943edbd6921f6509d90771ac631278eefce",
+      "status": "unchanged"
+    },
+    "A2_champion_05093_package": {
+      "path": "knowledge/recommendation/champions/A2_05093",
+      "status": "unchanged"
+    },
+    "project_state": {
+      "path": "config/project_state.json",
+      "sha256": "1436a7ebf12ee8aa6ff2ac59e13ff64c03643ad73cde762ca831817bd67e5393",
+      "status": "unchanged"
+    },
+    "confirmed_experiments_a1": {
+      "path": "history/confirmed_experiments_a1.json",
+      "sha256": "dcb43de7156419e47ba6a36dc587fccd6151ef161792f0886bcd1459ac1e59ab",
+      "status": "unchanged"
+    }
+  },
+  "historical_runs": {
+    "A1": "all preserved in original repo",
+    "A2_0_5093": "preserved in original repo",
+    "B1_V1_e95368a2": "preserved in original repo artifacts/b1_runs/",
+    "B1_V2_c5e33663": "preserved in original repo artifacts/b1_runs/",
+    "B2_V1_fcf5ad3d": "preserved in original repo artifacts/b2_runs/",
+    "fault_run_74ba8db6": "preserved in original repo artifacts/v2_runs/b2/"
+  },
+  "fault_run_not_overwritten": true,
+  "test_truth_guard_passing": true,
+  "frozen_hash_match": true,
+  "worktree_smoke_artifacts": {
+    "initial_smoke_19fdb318": "artifacts/v2_science_smoke/b2/ (preserved)",
+    "real_science_smoke_0dd92953": "artifacts/v2_science_smoke/b2/ (preserved)"
+  },
+  "verdict": "ALL_FROZEN_ASSETS_INTACT"
+}

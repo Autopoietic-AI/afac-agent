@@ -23,6 +23,13 @@ RUN_STATUSES = (
     "saving",
     "completed",
     "completed_smoke",
+    "completed_with_anchor_fallback",
+    "incomplete_no_scientific_experiment",
+    "incomplete_no_deployable_candidate",
+    "blocked_data_contract_mismatch",
+    "failed_budget_contract",
+    "failed_deployment_permission",
+    "failed_operator_compilation",
     "blocked_missing_llm",
     "blocked_llm_error",
     "degraded_deterministic_fallback",
@@ -94,6 +101,17 @@ def build_manifest(
     deployment_generated: bool,
     smoke_mode: bool,
     artifacts: dict[str, str] | None = None,
+    scientific_attempts_used: int = 0,
+    effective_scientific_rounds: float = 0.0,
+    diagnostics_used: int = 0,
+    implementation_failures_used: int = 0,
+    data_contract_status: str = "unknown",
+    budget_contract_status: str = "unknown",
+    deployment_permission_status: str = "unknown",
+    incumbent_can_deploy: bool = False,
+    no_op_in_portfolio: bool = False,
+    all_rounds_diagnostic: bool = True,
+    anchor_fallback: bool = False,
 ) -> dict[str, Any]:
     """Assemble a v2 run manifest (section 12 field set)."""
     if status not in RUN_STATUSES:
@@ -103,7 +121,7 @@ def build_manifest(
         "orchestrator_version": ORCHESTRATOR_VERSION,
         "trajectory_version": TRAJECTORY_VERSION,
         "execution_id": execution_id,
-        "run_id": execution_id,  # v2: run_id is the execution_id; v1 run ids are never reused
+        "run_id": execution_id,
         "input_fingerprint": input_fingerprint,
         "parent_execution_id": parent_execution_id,
         "task": task,
@@ -128,21 +146,33 @@ def build_manifest(
         "status": status,
         "current_stage": current_stage,
         "scientific_rounds_used": scientific_rounds_used,
+        "scientific_attempts_used": scientific_attempts_used,
+        "effective_scientific_rounds": effective_scientific_rounds,
+        "diagnostics_used": diagnostics_used,
         "cheap_diagnostics_used": cheap_diagnostics_used,
         "no_op_rounds_refunded": no_op_rounds_refunded,
+        "implementation_failures_used": implementation_failures_used,
         "uses_test_truth": uses_test_truth,
         "mutates_frozen_assets": mutates_frozen_assets,
         "deployment_generated": deployment_generated,
         "smoke_mode": smoke_mode,
+        "data_contract_status": data_contract_status,
+        "budget_contract_status": budget_contract_status,
+        "deployment_permission_status": deployment_permission_status,
+        "incumbent_can_deploy": incumbent_can_deploy,
+        "no_op_in_portfolio": no_op_in_portfolio,
+        "all_rounds_diagnostic": all_rounds_diagnostic,
+        "anchor_fallback": anchor_fallback,
         "artifacts": artifacts or {},
     }
 
 
 def check_completion_contract(manifest: dict[str, Any], *, smoke: bool = False) -> dict[str, Any]:
-    """Strict v2 completion contract (section 13).
+    """Strict v2.1 completion contract (section 13 + 19).
 
-    Returns ``{"status": "passed"|"failed", "missing": [...]}``.  A failed
-    contract forbids ``completed`` / ``completed_smoke``.
+    A formal run may only claim ``completed`` when it has executed at least one
+    real scientific experiment, produced a deployable candidate, respected the
+    hard wall-clock budget, and passed data/metric/deployment contracts.
     """
     missing: list[str] = []
 
@@ -176,9 +206,35 @@ def check_completion_contract(manifest: dict[str, Any], *, smoke: bool = False) 
         missing.append("v1 final trajectory/stop decision reused")
     if manifest.get("uses_test_truth"):
         missing.append("test truth used")
-    if not smoke and not manifest.get("deployment_generated", False):
-        missing.append("deployment audit missing for formal run")
     if smoke and manifest.get("deployment_generated"):
         missing.append("smoke must not generate deployment")
+
+    # Data / budget / deployment permission contracts
+    if manifest.get("data_contract_status") != "passed":
+        missing.append("data_contract_status not passed")
+    if manifest.get("budget_contract_status") != "passed":
+        missing.append("budget_contract_status not passed")
+    if not smoke and manifest.get("deployment_permission_status") != "passed":
+        missing.append("deployment_permission_status not passed")
+
+    # Scientific execution reality
+    if not smoke:
+        anchor_fallback = bool(manifest.get("anchor_fallback"))
+        if manifest.get("scientific_attempts_used", 0) < 1 and not anchor_fallback:
+            missing.append("no scientific attempt executed and no anchor fallback")
+        if manifest.get("effective_scientific_rounds", 0) < 1 and not anchor_fallback:
+            missing.append("effective_scientific_rounds zero and no anchor fallback")
+        if manifest.get("all_rounds_diagnostic", True) and not anchor_fallback:
+            missing.append("all rounds were diagnostic-only")
+        if manifest.get("no_op_in_portfolio"):
+            missing.append("no-op candidate entered portfolio")
+        if not manifest.get("incumbent_can_deploy", False) and not anchor_fallback:
+            missing.append("incumbent lacks deployment permission")
+        if not manifest.get("deployment_generated", False) and not anchor_fallback:
+            missing.append("deployment artifact not generated")
+        wall = manifest.get("wall_clock_seconds", 0.0)
+        max_wall = manifest.get("max_wall_clock_seconds", 0.0)
+        if wall > max_wall + 5.0:
+            missing.append(f"wall_clock_seconds {wall:.1f} exceeds max {max_wall:.1f} + 5s")
 
     return {"status": "passed" if not missing else "failed", "missing": missing}

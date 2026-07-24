@@ -1,0 +1,34 @@
+{
+  "anchors": {
+    "anchor_history_b2": {
+      "candidate_id": "anchor_history_b2",
+      "data_hash": "29c0ba2aa5752c785e93a1d45254c55059449aa41c8a9302c755cb38e238374d",
+      "deployment_ready": true,
+      "evaluator_version": "afac_b2_ranking_v1",
+      "fold_hash": "67711f5dffc87ceaa758797764449dee1691678713eb41ce90d90336a77a4d61",
+      "kind": "ValidatedAnchor",
+      "oof_hash": "f8fcb13aa1bc9d4081118211f7d6ff0227ca509f862beb6edca6596a8452c57d",
+      "source_execution_id": "0dd92953ffdcc53f9907aa1ebada1b9912f27022604adbf9783e09cef580dda1",
+      "validation_metrics": {
+        "hit_rate@10": 0.0,
+        "mrr@10": 0.0
+      }
+    },
+    "anchor_popularity_b2": {
+      "candidate_id": "anchor_popularity_b2",
+      "data_hash": "29c0ba2aa5752c785e93a1d45254c55059449aa41c8a9302c755cb38e238374d",
+      "deployment_ready": true,
+      "evaluator_version": "afac_b2_ranking_v1",
+      "fold_hash": "67711f5dffc87ceaa758797764449dee1691678713eb41ce90d90336a77a4d61",
+      "kind": "ValidatedAnchor",
+      "oof_hash": "31f34b9a9a22cb8c46a48b706fec67421951991612c7fb2ab8237881242430e8",
+      "source_execution_id": "0dd92953ffdcc53f9907aa1ebada1b9912f27022604adbf9783e09cef580dda1",
+      "validation_metrics": {
+        "hit_rate@10": 0.05859375,
+        "mrr@10": 0.02021639384920635
+      }
+    }
+  },
+  "best_anchor_id": "anchor_popularity_b2",
+  "evaluator_version": "afac_b2_ranking_v1"
+}

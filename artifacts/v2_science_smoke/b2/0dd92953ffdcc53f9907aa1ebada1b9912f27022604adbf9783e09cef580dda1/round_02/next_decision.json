@@ -1,0 +1,11 @@
+{
+  "action": "revise_proposal_or_switch_operator_family",
+  "continue": true,
+  "effective_scientific_rounds": 1.0,
+  "hard_deadline": 705485.8541478,
+  "reason": "revise_proposal_or_switch_operator_family",
+  "remaining_seconds": 503.8067176999757,
+  "research_deadline": 705305.8541478,
+  "research_remaining_seconds": 323.8067176999757,
+  "scientific_attempts_used": 1
+}

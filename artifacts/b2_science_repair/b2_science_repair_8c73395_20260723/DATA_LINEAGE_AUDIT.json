@@ -1,0 +1,12 @@
+{
+  "n_items_14065_source": "item.csv unique iid (canonical item universe)",
+  "n_items_14065_value": 14065,
+  "n_items_14065_source_file": "BÍÆ¼ö/BÍÆ¼ö/item.csv",
+  "n_items_40011_source": "Data Intelligence item_popularity keys when caller passed dicts instead of lists",
+  "n_items_40011_composition": "40000 train uids + ~11 uid-string characters treated as item ids",
+  "n_items_40011_source_file": "artifacts/v2_runs/b2/74ba.../data_intelligence.json coverage_map.item_popularity.n_items",
+  "n_test_512_source": "Profiler sampled only list(dataset.test_seq)[:smoke_max_users] where smoke_max_users=512",
+  "n_test_total_actual": 10000,
+  "data_contract_status": "blocked_data_contract_mismatch",
+  "fix": "B2CanonicalDataContract reconciles adapter item universe, DI item universe, experiment executor item universe, and deployment legality universe; analyze_recommendation must accept dicts and caller must pass explicit full/sampled scopes"
+}

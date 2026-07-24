@@ -1,0 +1,21 @@
+{
+  "diagnostic_type": "retrieval_union_experiment",
+  "error_decomposition": {
+    "in_pool_outside_top10": 0.46411483253588515,
+    "missing_from_candidate_pool": 0.41626794258373206,
+    "top10_success": 0.11961722488038277
+  },
+  "n_eval_users": 209,
+  "operator_id": "retrieval_union_experiment",
+  "pool_recall": {
+    "candidate_pool_recall@100": 0.430622009569378,
+    "candidate_pool_recall@20": 0.15789473684210525,
+    "candidate_pool_recall@200": 0.583732057416268,
+    "candidate_pool_recall@50": 0.32057416267942584
+  },
+  "top10_metrics": {
+    "hit_rate@10": 0.11961722488038277,
+    "mrr@10": 0.04930128351180982,
+    "ndcg@10": 0.06588095972892438
+  }
+}
