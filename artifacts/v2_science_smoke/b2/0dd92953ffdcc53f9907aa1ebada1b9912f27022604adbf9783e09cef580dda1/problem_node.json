@@ -1,0 +1,22 @@
+{
+  "bucket": "novel_target",
+  "error_mechanism": "novel_target_low_coverage",
+  "evidence": [
+    {
+      "evidence_id": "di_novel_ratio",
+      "metric": "novel_target_ratio",
+      "value": 0.71484375
+    },
+    {
+      "evidence_id": "di_history_coverage",
+      "metric": "history_recall_coverage",
+      "value": 0.28515625
+    }
+  ],
+  "headroom": 0.71484375,
+  "llm_rationale": "This node is selected because it provides corroborating evidence for both a high novel target ratio and low history recall coverage, offering a more complete diagnostic picture than the alternative.",
+  "pipeline_stage": "retrieval",
+  "problem_id": "a55916274f696affcda2bf07c044c2abca37bea911a02fd50aabae03c1960f8c",
+  "selection_mode": "llm",
+  "task": "B2"
+}

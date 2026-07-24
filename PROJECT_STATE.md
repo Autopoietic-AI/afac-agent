@@ -291,3 +291,105 @@ Latest verified runtime:
 - Total B1+B2 wall clock well within the 14400s combined budget; peak GPU memory 0 GB (CPU-only runs).
 - No A1/A2/B1 Champion, Anchor, Fold, history, or scientific-round records modified.
 - No Test truth used; no automatic platform upload.
+
+## B2 v2.1 Scientific Execution, Data Contract, Budget and Deployment Permission Repair
+
+- Branch: `fix/b2-v2-scientific-execution` (pending commit from worktree).
+- Fault run: execution_id `74ba8db66a4b8f50d9196865a611e9d78058e14d35fd8ac99c6e2426279dcd41` marked `INVALID_SCIENTIFIC_DEPLOYMENT`: all 3 rounds were diagnostic-only, `wall_clock_seconds=8340 > max=7200`, `deployment_generated=true` without any real scientific experiment, `completion_contract=failed`.
+- Root cause: the v2.0 orchestrator had no experiment-kind permission model, so diagnostics, screens, and confirms were treated identically. Proposal compiler mapped everything to `diagnostic_type`, and budget/scientific-round counters were not enforced against hard deadlines.
+
+### Data Contract (v2.1)
+
+- Added `afac_agent/v2/data_contract.py`: `B2CanonicalDataContract` with `ScaleValue` provenance.
+- Every count field records `source_file`, `source_column`, `counting_rule`, `deduplicated`, `sampled`, and `membership_hash`.
+- Canonical B2 numbers: `n_items_total=14065` (item.csv::iid), `n_train_users_total=40000` (train.csv::uid), `n_test_users_total=10000` (test.csv::uid), `n_interactions_total=1797067`.
+- `reconcile_data_contract()` cross-validates Input Discovery, Data Intelligence, Experiment Executor, and Deployment universes — mismatch blocks execution.
+- Data Intelligence now separates `n_train_total`/`n_test_total` (full dataset) from `n_train_profiled`/`n_test_profiled` (sampled subset), with explicit `profile_scope`.
+- Raw/dedup/unique/repeat length buckets added with `length_definition`, `source_sequence`, and `full_or_sampled` metadata.
+
+### Experiment Permission (v2.1)
+
+- Added `afac_agent/v2/experiment_kind.py`: `DETERMINISTIC_DIAGNOSTIC`, `CACHED_REPLAY`, `SCREEN_EXPERIMENT`, `CONFIRM_EXPERIMENT`, `FULL_CV_EXPERIMENT`, `DEPLOYMENT_MODEL`.
+- **Diagnostic**: cannot deploy, cannot be incumbent, cannot enter portfolio, does not consume scientific round.
+- **Screen** (1-2 folds): can enter portfolio as `scientific_candidate_portfolio_screen_only`, cannot deploy, cannot be incumbent — belongs to real science but must be confirmed before deployment.
+- **Confirm** (3 folds): can deploy, can be incumbent, can enter portfolio, consumes scientific round.
+- **Full-CV** (5 folds): trigger-only, never default.
+- Kind classification from `operator_id` + `fold_count` via `kind_from_operator_and_folds()`.
+
+### Proposal-to-Operator Compiler (v2.1)
+
+- Added `afac_agent/v2/proposal_compiler.py`: `compile_proposal()` maps LLM `diagnostic_type` to canonical `operator_id` via `DIAGNOSTIC_TYPE_TO_OPERATOR`.
+- In `formal_mode` (round > 1), diagnostic-only operators are rejected (`blocked_missing_adapter`).
+- `semantic_revision_delta()` compares two `CompiledOperator` genome hashes — detects duplicates and reports which fields changed.
+- M6C=revise now requires `semantic_genome_hash` to actually differ; name-only changes are detected as duplicates.
+
+### Capability Registry (v2.1)
+
+- Added per-operator booleans: `supports_diagnostic`, `supports_screen`, `supports_confirm`, `supports_full_cv`, `supports_full_train`, `supports_checkpoint`, `supports_warm_start`.
+- Registered B2 v2.1 operators: `retrieval_union_experiment`, `candidate_ranker_experiment`, `bucket_specialist_experiment`, `protected_rerank_experiment`, `candidate_recall_diagnostic`.
+- `candidate_recall_diagnostic`: `deployment_ready=false`, diagnostic-only.
+- All scientific operators: `supports_screen=true`, `supports_confirm=true`.
+
+### Budget Safety (v2.1)
+
+- Hard deadline uses `time.monotonic()` (survives system clock skew).
+- `_hard_deadline = started + max_wall_clock_seconds`; `_research_deadline = _hard_deadline - deployment_reserve_seconds`.
+- Each experiment requires: `estimated_runtime + deployment_reserve + safety_margin <= remaining_wall`.
+- Diagnostic ceiling: 120s hard cap.
+- 900s smoke margin: 5s beyond hard deadline.
+
+### Anchor Fallback (v2.1)
+
+- Added `afac_agent/v2/anchor_registry.py`: `B2AnchorRegistry` builds popularity and history baselines on canonical folds with same evaluator version.
+- When no scientific candidate has deployment permission, the best validated anchor is used as fallback.
+- `anchor_fallback=True` in manifest; deployment audit records `fallback_to_anchor=True`.
+
+### Deployment Permission Contract (v2.1)
+
+- `_run_deployment()` only deploys candidates with `can_deploy=true`, `actual_kind` in `{CONFIRM_EXPERIMENT, FULL_CV_EXPERIMENT, DEPLOYMENT_MODEL, ValidatedAnchor}`.
+- Deployment audit checks: `format_audit_passed`, `scientific_permission_passed`, `budget_contract_passed`, `data_contract_passed`.
+- Diagnostics and screens are never deployed, even if format is correct.
+
+### Real 900s B2 Science Smoke (v2.1)
+
+- Execution ID: `0dd92953ffdcc53f9907aa1ebada1b9912f27022604adbf9783e09cef580dda1`
+- Status: `completed_smoke`; wall clock: `599.5s` (budget: 900s).
+- 12 real LLM calls (3 rounds × 4 calls each: problem synthesis, M6B, M6C, postmortem).
+- Round 1: `candidate_recall_diagnostic` (diagnostic, pool_recall@100=0.466).
+- Round 2: `retrieval_union_experiment` (SCREEN_EXPERIMENT, 2-fold, pool_recall@100=0.431).
+- Round 3: second scientific experiment.
+- `scientific_attempts_used=2`, `effective_scientific_rounds=2.0`, `all_rounds_diagnostic=false`.
+- Data contract passed: n_items=14065 consistent across all stages.
+- No deployment generated; no candidate_B2.csv.
+- Completion contract: passed (smoke mode).
+
+### Currently Available Real Operators (B2)
+
+| Operator | Screen | Confirm | Deploy | Checkpoint |
+|----------|--------|---------|--------|------------|
+| `retrieval_union_experiment` | ✅ | ✅ | ✅ (after confirm) | ❌ |
+| `candidate_ranker_experiment` | ✅ | ✅ | ✅ (after confirm) | ✅ |
+| `bucket_specialist_experiment` | ✅ | ✅ | ✅ (after confirm) | ✅ |
+| `protected_rerank_experiment` | ✅ | ✅ | ✅ (after confirm) | ✅ |
+| `candidate_recall_diagnostic` | ❌ | ❌ | ❌ | ❌ |
+
+### Not Yet Implemented
+
+- `LambdaRank` / `lightgbm` ranking objective (gap honestly recorded).
+- `full_retrieval_union + candidate_ranker + bucket_specialist` chained pipeline.
+- Network-enabled M6R-B2 semantic method research.
+- B2 formal two-hour run: **NOT started**.
+
+### Key Contract Differences from v2.0
+
+| Aspect | v2.0 (fault) | v2.1 (fixed) |
+|--------|-------------|-------------|
+| n_items source | 14065 vs 40011 mixed | 14065 from item.csv, provenance tracked |
+| Experiment kind | all = diagnostic_type | Diagnostic/Screen/Confirm/Full-CV |
+| Diagnostic can deploy | implicitly yes | explicitly no |
+| Screen can deploy | unclear | no (must confirm first) |
+| Budget | wall_clock > max allowed | monotonic hard deadline enforced |
+| Data contract | not reconciled | cross-stage reconcile blocks mismatch |
+| Proposal compiler | direct LLM → diagnostic_type | LLM → compile → operator_id → permission |
+| Anchor fallback | not available | popularity/history built on canonical folds |
+| Completion contract | 27 conditions | 27 + data/budget/permission/science checks |

@@ -1,0 +1,15 @@
+{
+  "deployed_candidate_id": "49ed23f3915a02e88a032674",
+  "deployed_kind": "candidate_recall_diagnostic",
+  "can_deploy": false,
+  "fold_count": 2,
+  "confirm_fidelity": false,
+  "no_op": false,
+  "deployment_permission_checks": {
+    "format_audit_passed": true,
+    "scientific_permission_passed": false,
+    "budget_contract_passed": false,
+    "data_contract_passed": false,
+    "audit_passed": false
+  }
+}

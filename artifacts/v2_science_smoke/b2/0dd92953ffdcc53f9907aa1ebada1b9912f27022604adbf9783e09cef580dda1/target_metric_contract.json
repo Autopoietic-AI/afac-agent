@@ -1,0 +1,17 @@
+{
+  "candidate_target_metric": null,
+  "evaluator_version": "afac_b2_ranking_v1",
+  "fold_hash": "67711f5dffc87ceaa758797764449dee1691678713eb41ce90d90336a77a4d61",
+  "parent_target_metric": null,
+  "reasons": [
+    "parent_target_metric missing",
+    "candidate_target_metric missing",
+    "fold hash mismatch: 67711f5dffc87ceaa758797764449dee1691678713eb41ce90d90336a77a4d61 != "
+  ],
+  "status": "blocked_missing_parent_target_metric",
+  "target_direction": "maximize",
+  "target_k": 10,
+  "target_metric_delta": null,
+  "target_metric_name": "candidate_hit_rate@10",
+  "target_panel_id": "B2_NOVEL_TARGET_PANEL"
+}

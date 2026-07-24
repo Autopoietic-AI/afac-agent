@@ -1,0 +1,73 @@
+{
+  "candidate_item_column": "iid",
+  "errors": [],
+  "interaction_item_column": "item_seq_raw",
+  "item_universe_source": "item.csv::iid",
+  "n_candidate_items_total": {
+    "counting_rule": "unique_items_legal_for_candidates",
+    "deduplicated": true,
+    "membership_hash": "4e6f7e40db4a73d8e8d63804e621ac2d9b104f2f73fb5a87276320ab32522e59",
+    "sampled": false,
+    "source_column": "iid",
+    "source_file": "C:\\Users\\李天皓\\agent比赛\\B推荐\\B推荐\\item.csv",
+    "value": 14065
+  },
+  "n_interactions_total": {
+    "counting_rule": "raw_sequence_items_plus_targets",
+    "deduplicated": false,
+    "membership_hash": "115170c60da08c410435d5a758c7cf083848b0eb97a3935079a70aa4f975c14e",
+    "sampled": false,
+    "source_column": "item_seq_raw,target_iid",
+    "source_file": "C:\\Users\\李天皓\\agent比赛\\B推荐\\B推荐\\train.csv",
+    "value": 1797067
+  },
+  "n_items_total": {
+    "counting_rule": "unique_items",
+    "deduplicated": true,
+    "membership_hash": "4e6f7e40db4a73d8e8d63804e621ac2d9b104f2f73fb5a87276320ab32522e59",
+    "sampled": false,
+    "source_column": "iid",
+    "source_file": "C:\\Users\\李天皓\\agent比赛\\B推荐\\B推荐\\item.csv",
+    "value": 14065
+  },
+  "n_test_users_total": {
+    "counting_rule": "unique_users",
+    "deduplicated": true,
+    "membership_hash": "17d9dd29b7f3728b5d2df31e0416c3f5f37c2b3ee70370c58340a370a3bbfb21",
+    "sampled": false,
+    "source_column": "uid",
+    "source_file": "C:\\Users\\李天皓\\agent比赛\\B推荐\\B推荐\\test.csv",
+    "value": 10000
+  },
+  "n_train_users_total": {
+    "counting_rule": "unique_users",
+    "deduplicated": true,
+    "membership_hash": "69e8f819b9087b0d8fd15a45e6c858799efe6ea8a092491263171bae372f73ec",
+    "sampled": false,
+    "source_column": "uid",
+    "source_file": "C:\\Users\\李天皓\\agent比赛\\B推荐\\B推荐\\train.csv",
+    "value": 40000
+  },
+  "profile_scope": "sampled_head",
+  "profiler_sample_test_users": {
+    "counting_rule": "unique_users_sampled_for_profiler",
+    "deduplicated": true,
+    "membership_hash": "d5931fc680a19761b6cecfc4cecc51a627b8a224aaa691db0691dee3c41aab2f",
+    "sampled": true,
+    "source_column": "uid",
+    "source_file": "C:\\Users\\李天皓\\agent比赛\\B推荐\\B推荐\\test.csv",
+    "value": 512
+  },
+  "profiler_sample_train_users": {
+    "counting_rule": "unique_users_sampled_for_profiler",
+    "deduplicated": true,
+    "membership_hash": "309ff2e975af62cb3ffd7e525f752c89263895b92986c264de9344ee2a1dd9e2",
+    "sampled": true,
+    "source_column": "uid",
+    "source_file": "C:\\Users\\李天皓\\agent比赛\\B推荐\\B推荐\\train.csv",
+    "value": 512
+  },
+  "status": "passed",
+  "target_item_column": "target_iid",
+  "user_universe_source": "train.csv::uid + test.csv::uid"
+}

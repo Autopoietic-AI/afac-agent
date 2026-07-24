@@ -1,0 +1,28 @@
+# Capability Registry
+
+- `gbdt_lightgbm` family=gbdt implemented=False available=False diag=False screen=False confirm=False full_cv=False deployment_ready=False
+- `ranker_lightgbm_lambdarank` family=ranker_lightgbm_lambdarank implemented=False available=False diag=False screen=False confirm=False full_cv=False deployment_ready=False
+- `candidate_ranker_experiment` family=candidate_ranker implemented=True available=True diag=False screen=True confirm=True full_cv=True deployment_ready=True
+- `heterophily_gnn_torch` family=heterophily_gnn implemented=False available=False diag=False screen=False confirm=False full_cv=False deployment_ready=False
+- `graphsage_torch` family=graphsage implemented=False available=False diag=False screen=False confirm=False full_cv=False deployment_ready=False
+- `residual_mlp_torch` family=residual_mlp implemented=False available=False diag=False screen=False confirm=False full_cv=False deployment_ready=False
+- `appnp_torch` family=appnp implemented=False available=False diag=False screen=False confirm=False full_cv=False deployment_ready=False
+- `gbdt_hist_sklearn` family=gbdt implemented=True available=True diag=False screen=False confirm=False full_cv=False deployment_ready=True
+- `gcn_torch` family=gcn implemented=False available=False diag=False screen=False confirm=False full_cv=False deployment_ready=False
+- `retrieval_item2vec_torch` family=retrieval_item2vec implemented=False available=False diag=False screen=False confirm=False full_cv=False deployment_ready=False
+- `ranker_gbdt_binary_sklearn` family=ranker_gbdt_binary implemented=True available=True diag=False screen=False confirm=False full_cv=False deployment_ready=True
+- `bucket_specialist_experiment` family=bucket_specialist implemented=True available=True diag=False screen=True confirm=True full_cv=True deployment_ready=True
+- `label_propagation_sklearn` family=label_propagation implemented=True available=True diag=False screen=False confirm=False full_cv=False deployment_ready=True
+- `retrieval_itemcf_cosine` family=retrieval_itemcf implemented=True available=True diag=False screen=False confirm=False full_cv=False deployment_ready=True
+- `sgc_numpy` family=sgc implemented=True available=True diag=False screen=False confirm=False full_cv=False deployment_ready=True
+- `protected_rerank_experiment` family=protected_rerank implemented=True available=True diag=False screen=True confirm=True full_cv=True deployment_ready=True
+- `retrieval_random_walk_ppr` family=retrieval_random_walk implemented=True available=True diag=False screen=False confirm=False full_cv=False deployment_ready=True
+- `pca_lowrank_sklearn` family=pca_lowrank implemented=True available=True diag=False screen=False confirm=False full_cv=False deployment_ready=True
+- `prototype_nearest_centroid` family=prototype implemented=True available=True diag=False screen=False confirm=False full_cv=False deployment_ready=True
+- `rerank_protected_rules` family=rerank_protected implemented=True available=True diag=False screen=False confirm=False full_cv=False deployment_ready=True
+- `retrieval_union_experiment` family=retrieval_union implemented=True available=True diag=True screen=True confirm=True full_cv=True deployment_ready=True
+- `ranker_logistic_sklearn` family=ranker_logistic implemented=True available=True diag=False screen=False confirm=False full_cv=False deployment_ready=True
+- `linear_logistic` family=linear implemented=True available=True diag=False screen=False confirm=False full_cv=False deployment_ready=True
+- `retrieval_history_repeat` family=retrieval_history implemented=True available=True diag=False screen=False confirm=False full_cv=False deployment_ready=True
+- `retrieval_popularity_topn` family=retrieval_popularity implemented=True available=True diag=False screen=False confirm=False full_cv=False deployment_ready=True
+- `candidate_recall_diagnostic` family=retrieval_diagnostic implemented=True available=True diag=True screen=False confirm=False full_cv=False deployment_ready=False

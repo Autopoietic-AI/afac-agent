@@ -255,3 +255,66 @@ stage, not a permanent ban on networked research. M6R-B2 will add
 `disabled`; real research defaults to `live_cached`; provider/network failures
 fall back to `cache_only`. M6R-B2 will handle semantic extraction from ordinary
 papers or repositories under separate approval.
+
+## B2 v2.1 Scientific Execution Repair
+
+The v2.0 orchestrator deployed diagnostics as if they were confirmed scientific
+candidates, exceeded the hard budget, and mixed `n_items=14065` with
+`n_items=40011` without provenance. v2.1 repairs every contract:
+
+### Data Contract
+
+```python
+from afac_agent.v2.data_contract import build_b2_data_contract, reconcile_data_contract
+```
+
+Every count field carries `source_file`, `source_column`, `counting_rule`,
+`deduplicated`, `sampled`, and `membership_hash`. Canonical B2: n_items=14065
+(from item.csv), n_train=40000, n_test=10000, n_interactions=1797067.
+
+`reconcile_data_contract()` cross-validates 4 stages and blocks on mismatch.
+
+### Experiment Permission
+
+| Kind | Folds | Portfolio | Incumbent | Deploy | Consumes Round |
+|------|-------|-----------|-----------|--------|---------------|
+| DETERMINISTIC_DIAGNOSTIC | 0 | ❌ | ❌ | ❌ | ❌ |
+| SCREEN_EXPERIMENT | 1-2 | ✅ | ❌ | ❌ | ✅ |
+| CONFIRM_EXPERIMENT | 3 | ✅ | ✅ | ✅ | ✅ |
+| FULL_CV_EXPERIMENT | 5 | ✅ | ✅ | ✅ | ✅ |
+
+### Available B2 Operators (v2.1)
+
+- `retrieval_union_experiment` — multi-source retrieval union (pool recall)
+- `candidate_ranker_experiment` — GBDT binary ranker over candidate table
+- `bucket_specialist_experiment` — ExpertRouter + bucket reweight
+- `protected_rerank_experiment` — top-k protection over union base
+- `candidate_recall_diagnostic` — diagnostic only, never deploys
+
+### Real Smoke
+
+```bash
+python -u -m afac_agent.main v2-run --task B2 \
+  --data-root "C:/Users/李天皓/agent比赛/B推荐/B推荐" \
+  --out-root "artifacts/v2_science_smoke/b2" \
+  --max-wall-clock-seconds 900 --deployment-reserve-seconds 180 \
+  --require-llm --force-new-execution --smoke --no-deployment --no-full-cv
+```
+
+Latest smoke: `completed_smoke`, 599.5s, 12 LLM calls, 2 scientific attempts,
+data contract passed, no deployment generated.
+
+### Tests
+
+```bash
+python -m pytest -p no:cacheprovider -q tests/test_b2_science_repair.py
+# 21 passed (data contract, permission, compiler, no-op, budget, orchestrator, registry, fault manifest)
+```
+
+### Fault Run
+
+`74ba8db66a4b8f50d9196865a611e9d78058e14d35fd8ac99c6e2426279dcd41` —
+all diagnostic, wall_clock 8340s > max 7200s, falsely deployed.
+Marked `INVALID_SCIENTIFIC_DEPLOYMENT`; preserved as evidence.
+
+### Formal two-hour B2 run: NOT started.

@@ -457,29 +457,83 @@ def _length_buckets(lengths: np.ndarray) -> dict[str, Any]:
     return {"counts": counts, "fractions": {k: _f(v / n) for k, v in counts.items()}}
 
 
+def _bucket_record(
+    bucket_name: str,
+    lengths: np.ndarray,
+    *,
+    length_definition: str,
+    source_sequence: str,
+    full_or_sampled: str,
+) -> dict[str, Any]:
+    return {
+        "bucket_name": bucket_name,
+        "length_definition": length_definition,
+        "source_sequence": source_sequence,
+        "full_or_sampled": full_or_sampled,
+        "membership_hash": stable_hash({"lengths": lengths.tolist()}),
+        "size": int(len(lengths)),
+        **_length_buckets(lengths),
+    }
+
+
+def _normalize_seq(seqs: Any) -> list[list[Any]]:
+    """Accept dict[str, list] or list[list]."""
+    if isinstance(seqs, dict):
+        return list(seqs.values())
+    return list(seqs)
+
+
+def _normalize_targets(targets: Any) -> list[Any]:
+    if isinstance(targets, dict):
+        return list(targets.values())
+    return list(targets)
+
+
 def analyze_recommendation(
-    train_seq: list[list[Any]],
-    train_targets: list[Any],
-    test_seq: list[list[Any]],
+    train_seq: Any,
+    train_targets: Any,
+    test_seq: Any,
     item_popularity: dict[Any, float] | None = None,
+    *,
+    n_train_total: int | None = None,
+    n_test_total: int | None = None,
+    profile_scope: str = "full",
+    sampling_seed: int | None = None,
 ) -> DataIntelligenceReport:
-    """Profile a sequential-recommendation dataset (histories + targets)."""
+    """Profile a sequential-recommendation dataset (histories + targets).
+
+    ``train_seq`` and ``test_seq`` may be dicts mapping uid -> sequence or
+    plain lists of sequences.  ``train_targets`` may be a dict uid -> target or
+    a list of targets aligned to ``train_seq``.
+
+    The report now separates full-dataset scale from profiler-sample scale and
+    reports raw, dedup, unique-item, and repeat-intensity buckets.
+    """
     report = DataIntelligenceReport(task="recommendation")
     try:
-        train_lens = np.array([len(s) for s in train_seq], dtype=np.int64)
-        test_lens = np.array([len(s) for s in test_seq], dtype=np.int64)
-        train_dedup = np.array([len(set(s)) for s in train_seq], dtype=np.int64)
-        test_dedup = np.array([len(set(s)) for s in test_seq], dtype=np.int64)
+        train_seq_list = _normalize_seq(train_seq)
+        test_seq_list = _normalize_seq(test_seq)
+        train_targets_list = _normalize_targets(train_targets)
+
+        train_lens = np.array([len(s) for s in train_seq_list], dtype=np.int64)
+        test_lens = np.array([len(s) for s in test_seq_list], dtype=np.int64)
+        train_dedup = np.array([len(set(s)) for s in train_seq_list], dtype=np.int64)
+        test_dedup = np.array([len(set(s)) for s in test_seq_list], dtype=np.int64)
+        train_unique = np.array([len({*s}) for s in train_seq_list], dtype=np.int64)
+        test_unique = np.array([len({*s}) for s in test_seq_list], dtype=np.int64)
+        train_repeat = train_lens - train_dedup
+        test_repeat = test_lens - test_dedup
 
         if item_popularity is None:
             pop: dict[Any, float] = {}
-            for seq, tgt in zip(train_seq, train_targets):
+            for seq, tgt in zip(train_seq_list, train_targets_list):
                 for item in seq:
                     pop[item] = pop.get(item, 0.0) + 1.0
-                pop[tgt] = pop.get(tgt, 0.0) + 1.0
+                if tgt is not None:
+                    pop[tgt] = pop.get(tgt, 0.0) + 1.0
             item_popularity = pop
 
-        in_history = [t in set(s) for s, t in zip(train_seq, train_targets)]
+        in_history = [t in set(s) for s, t in zip(train_seq_list, train_targets_list)]
         history_ratio = _f(np.mean(in_history)) if in_history else 0.0
 
         pop_values = np.array(sorted(item_popularity.values(), reverse=True), dtype=np.float64)
@@ -495,24 +549,47 @@ def analyze_recommendation(
             "max_count": _f(pop_values.max()) if n_items else 0.0,
         }
 
+        n_train_profiled = n_train_total if n_train_total is not None else len(train_seq_list)
+        n_test_profiled = n_test_total if n_test_total is not None else len(test_seq_list)
+
         report.dataset_fingerprint = {
-            "n_train": int(len(train_seq)),
-            "n_test": int(len(test_seq)),
+            "n_train_total": int(n_train_total if n_train_total is not None else len(train_seq_list)),
+            "n_train_profiled": int(n_train_profiled),
+            "n_test_total": int(n_test_total if n_test_total is not None else len(test_seq_list)),
+            "n_test_profiled": int(n_test_profiled),
             "n_items": n_items,
+            "profile_scope": profile_scope,
+            "sampling_seed": sampling_seed,
             "popularity_hash": stable_hash({str(k): _f(v) for k, v in item_popularity.items()}),
         }
         report.coverage_map = {
             "history_recall_coverage": history_ratio,
-            "train_length_buckets": _length_buckets(train_lens),
-            "test_length_buckets": _length_buckets(test_lens),
+            "novel_target_ratio": _f(1.0 - history_ratio),
+            "item_popularity": popularity_stats,
             "raw_vs_dedup": {
                 "train_mean_raw_len": _f(train_lens.mean()) if len(train_lens) else 0.0,
                 "train_mean_dedup_len": _f(train_dedup.mean()) if len(train_dedup) else 0.0,
                 "test_mean_raw_len": _f(test_lens.mean()) if len(test_lens) else 0.0,
                 "test_mean_dedup_len": _f(test_dedup.mean()) if len(test_dedup) else 0.0,
             },
-            "novel_target_ratio": _f(1.0 - history_ratio),
-            "item_popularity": popularity_stats,
+            "raw_length_buckets": {
+                "train": _bucket_record("train_raw", train_lens, length_definition="raw_sequence_length", source_sequence="item_seq_raw", full_or_sampled=profile_scope),
+                "test": _bucket_record("test_raw", test_lens, length_definition="raw_sequence_length", source_sequence="item_seq_raw", full_or_sampled=profile_scope),
+            },
+            "dedup_length_buckets": {
+                "train": _bucket_record("train_dedup", train_dedup, length_definition="deduplicated_sequence_length", source_sequence="item_seq_dedup", full_or_sampled=profile_scope),
+                "test": _bucket_record("test_dedup", test_dedup, length_definition="deduplicated_sequence_length", source_sequence="item_seq_dedup", full_or_sampled=profile_scope),
+            },
+            "unique_item_count_buckets": {
+                "train": _bucket_record("train_unique", train_unique, length_definition="unique_item_count", source_sequence="item_seq_dedup", full_or_sampled=profile_scope),
+                "test": _bucket_record("test_unique", test_unique, length_definition="unique_item_count", source_sequence="item_seq_dedup", full_or_sampled=profile_scope),
+            },
+            "repeat_intensity_buckets": {
+                "train": _bucket_record("train_repeat", train_repeat, length_definition="raw_minus_dedup_count", source_sequence="item_seq_raw - item_seq_dedup", full_or_sampled=profile_scope),
+                "test": _bucket_record("test_repeat", test_repeat, length_definition="raw_minus_dedup_count", source_sequence="item_seq_raw - item_seq_dedup", full_or_sampled=profile_scope),
+            },
+            "test_length_buckets": _length_buckets(test_lens),
+            "train_length_buckets": _length_buckets(train_lens),
         }
 
         # Train/test propensity on [seq_len, mean_history_popularity].
@@ -523,8 +600,8 @@ def analyze_recommendation(
                 rows.append([float(len(s)), mean_pop])
             return np.asarray(rows, dtype=np.float64)
 
-        prop_feats = np.vstack([_pop_feats(train_seq), _pop_feats(test_seq)])
-        is_test = np.concatenate([np.zeros(len(train_seq)), np.ones(len(test_seq))]).astype(int)
+        prop_feats = np.vstack([_pop_feats(train_seq_list), _pop_feats(test_seq_list)])
+        is_test = np.concatenate([np.zeros(len(train_seq_list)), np.ones(len(test_seq_list))]).astype(int)
         prop = _propensity_auc(prop_feats, is_test)
         report.shift_map = {
             "propensity_features": ["seq_len", "mean_history_popularity"],
@@ -568,7 +645,7 @@ def analyze_recommendation(
             "history_recall": _conclusion(
                 "history-recall signal covers most targets" if history_ratio >= 0.5 else "most targets are novel w.r.t. history",
                 {"history_recall_coverage": history_ratio},
-                "high" if len(train_targets) > 100 else "medium",
+                "high" if len(train_targets_list) > 100 else "medium",
                 "history membership ignores item order and recency",
             ),
             "popularity": _conclusion(

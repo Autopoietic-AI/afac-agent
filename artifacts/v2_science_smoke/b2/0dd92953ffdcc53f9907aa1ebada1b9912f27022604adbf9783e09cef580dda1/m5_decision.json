@@ -1,0 +1,10 @@
+{
+  "budget_clamped": false,
+  "compiled_operator_id": "retrieval_union_experiment",
+  "compiled_status": "compiled",
+  "estimated_cost_seconds": 450.0,
+  "gate": "M5_deterministic",
+  "llm_can_bypass": false,
+  "reasons": [],
+  "status": "admitted"
+}

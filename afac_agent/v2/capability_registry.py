@@ -22,10 +22,18 @@ class OperatorRecord:
     implemented: bool = True
     available: bool = True
     required_inputs: list[str] = field(default_factory=list)
+    adapter_path: str = ""
     expected_runtime_seconds: float = 60.0
     expected_memory_mb: float = 256.0
+    supports_diagnostic: bool = False
+    supports_screen: bool = False
+    supports_confirm: bool = False
+    supports_full_cv: bool = False
+    supports_full_train: bool = False
     supports_oof: bool = True
     supports_test: bool = True
+    supports_checkpoint: bool = False
+    supports_warm_start: bool = False
     deployment_ready: bool = True
     scientific_priority: float = 0.0  # higher = more valuable scientifically
     missing_dependency: list[str] = field(default_factory=list)
@@ -129,18 +137,37 @@ def _op(
     missing: list[str] | None = None,
     runtime: float = 60.0,
     tasks: list[str] | None = None,
+    adapter_path: str = "afac_agent.v2.operators.recommendation",
+    supports_diagnostic: bool = False,
+    supports_screen: bool = False,
+    supports_confirm: bool = False,
+    supports_full_cv: bool = False,
+    supports_full_train: bool = False,
+    supports_checkpoint: bool = False,
+    supports_warm_start: bool = False,
+    deployment_ready: bool | None = None,
 ) -> OperatorRecord:
     implemented = not missing
+    if deployment_ready is None:
+        deployment_ready = implemented and not missing
     return OperatorRecord(
         family=family,
         operator_id=operator_id,
         implemented=implemented,
         available=available and implemented,
+        adapter_path=adapter_path,
         expected_runtime_seconds=runtime,
         scientific_priority=priority,
         missing_dependency=list(missing or []),
-        deployment_ready=implemented and not missing,
+        deployment_ready=deployment_ready,
         tasks=list(tasks or []),
+        supports_diagnostic=supports_diagnostic,
+        supports_screen=supports_screen,
+        supports_confirm=supports_confirm,
+        supports_full_cv=supports_full_cv,
+        supports_full_train=supports_full_train,
+        supports_checkpoint=supports_checkpoint,
+        supports_warm_start=supports_warm_start,
     )
 
 
@@ -176,6 +203,74 @@ def default_registry() -> CapabilityRegistry:
         _op("ranker_gbdt_binary", "ranker_gbdt_binary_sklearn", priority=0.65, runtime=240.0),
         _op("ranker_logistic", "ranker_logistic_sklearn", priority=0.45, runtime=60.0),
         _op("rerank_protected", "rerank_protected_rules", priority=0.5, runtime=15.0),
+        # --- B2 v2.1 scientific operators ---
+        _op(
+            "retrieval_union",
+            "retrieval_union_experiment",
+            priority=0.5,
+            runtime=120.0,
+            tasks=["B2"],
+            supports_diagnostic=True,
+            supports_screen=True,
+            supports_confirm=True,
+            supports_full_cv=True,
+            supports_full_train=True,
+            supports_checkpoint=False,
+        ),
+        _op(
+            "candidate_ranker",
+            "candidate_ranker_experiment",
+            priority=0.85,
+            runtime=300.0,
+            tasks=["B2"],
+            supports_diagnostic=False,
+            supports_screen=True,
+            supports_confirm=True,
+            supports_full_cv=True,
+            supports_full_train=True,
+            supports_checkpoint=True,
+            supports_warm_start=True,
+        ),
+        _op(
+            "bucket_specialist",
+            "bucket_specialist_experiment",
+            priority=0.6,
+            runtime=180.0,
+            tasks=["B2"],
+            supports_diagnostic=False,
+            supports_screen=True,
+            supports_confirm=True,
+            supports_full_cv=True,
+            supports_full_train=True,
+            supports_checkpoint=True,
+        ),
+        _op(
+            "protected_rerank",
+            "protected_rerank_experiment",
+            priority=0.55,
+            runtime=120.0,
+            tasks=["B2"],
+            supports_diagnostic=False,
+            supports_screen=True,
+            supports_confirm=True,
+            supports_full_cv=True,
+            supports_full_train=True,
+            supports_checkpoint=True,
+        ),
+        _op(
+            "retrieval_diagnostic",
+            "candidate_recall_diagnostic",
+            priority=0.1,
+            runtime=90.0,
+            tasks=["B2"],
+            supports_diagnostic=True,
+            supports_screen=False,
+            supports_confirm=False,
+            supports_full_cv=False,
+            supports_full_train=False,
+            supports_checkpoint=False,
+            deployment_ready=False,
+        ),
     ]
     for record in records:
         registry.register(record)

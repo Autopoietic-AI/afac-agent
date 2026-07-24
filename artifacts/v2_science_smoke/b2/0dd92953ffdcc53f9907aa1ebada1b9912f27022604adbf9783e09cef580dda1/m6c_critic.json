@@ -1,0 +1,19 @@
+{
+  "critic_mode": "llm",
+  "issues": [
+    "Label leakage risk: Adjusting retrieval weights based on cached replay may inadvertently optimize for historical labels that are no longer valid or representative of current target distributions, causing the system to overfit to stale patterns.",
+    "No-op risk: The proposal relies on 'adjusted retrieval weights' without specifying the mechanism or magnitude of adjustment. If the retrieval architecture does not support dynamic weight tuning or if the cache is already saturated with low-signal interactions, the intervention may yield zero measurable change.",
+    "Metric-semantics confusion: The success condition requires history_recall_coverage to increase while novel_target_ratio remains above 0.60. These metrics may be inversely coupled; increasing historical recall could naturally suppress the novel ratio, making the joint success condition mathematically contradictory or unstable depending on the denominator definitions.",
+    "Availability bias: The hypothesis assumes that cached historical interactions contain high-value context. However, the low initial coverage (0.285) suggests the cache itself may be biased toward irrelevant or low-quality history, meaning replaying it will only amplify noise rather than recover signal.",
+    "Budget realism: 450 seconds is likely insufficient to perform a statistically significant replay, re-index or re-weight retrieval vectors, and observe a stable shift in coverage metrics, especially if the underlying index requires warm-up or batch processing."
+  ],
+  "rationale": "The proposal identifies a plausible retrieval imbalance but lacks technical specificity regarding the weight adjustment mechanism and ignores the potential inverse correlation between the target metrics. The reliance on cached history assumes signal quality that the low coverage metric itself contradicts. Revisions are required to ensure the intervention is mechanically feasible, metrically consistent, and robust against stale data bias before execution.",
+  "required_adjustments": [
+    "Define the exact mechanism for 'adjusted retrieval weights' and verify that the retrieval infrastructure supports dynamic modification without a full re-index.",
+    "Decouple the success metrics or provide a mathematical proof that history_recall_coverage can increase by 0.10 without forcing novel_target_ratio below 0.60 given the current target distribution.",
+    "Add a pre-check to validate the quality and relevance of the cached history before replay to mitigate availability bias.",
+    "Increase budget_seconds to account for index latency and metric stabilization, or define a smaller, high-confidence subset of history for rapid replay.",
+    "Include a rollback condition if label drift is detected between cached history and current ground truth."
+  ],
+  "verdict": "revise"
+}

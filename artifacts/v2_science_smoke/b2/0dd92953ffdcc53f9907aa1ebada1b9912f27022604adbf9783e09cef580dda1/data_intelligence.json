@@ -1,0 +1,366 @@
+{
+  "avoid_list": [],
+  "coverage_map": {
+    "dedup_length_buckets": {
+      "test": {
+        "bucket_name": "test_dedup",
+        "counts": {
+          "exact_len3": 17,
+          "len0": 46,
+          "len1": 10,
+          "len2": 17,
+          "len4_plus": 422
+        },
+        "fractions": {
+          "exact_len3": 0.033203125,
+          "len0": 0.08984375,
+          "len1": 0.01953125,
+          "len2": 0.033203125,
+          "len4_plus": 0.82421875
+        },
+        "full_or_sampled": "sampled_head",
+        "length_definition": "deduplicated_sequence_length",
+        "membership_hash": "08ee3597c3ca1b3bd9cde796703c1f2cd6c1b159ca4ee425808f5106aa6424ff",
+        "size": 512,
+        "source_sequence": "item_seq_dedup"
+      },
+      "train": {
+        "bucket_name": "train_dedup",
+        "counts": {
+          "exact_len3": 18,
+          "len0": 0,
+          "len1": 12,
+          "len2": 18,
+          "len4_plus": 464
+        },
+        "fractions": {
+          "exact_len3": 0.03515625,
+          "len0": 0.0,
+          "len1": 0.0234375,
+          "len2": 0.03515625,
+          "len4_plus": 0.90625
+        },
+        "full_or_sampled": "sampled_head",
+        "length_definition": "deduplicated_sequence_length",
+        "membership_hash": "aa50e9f2828fdb34ebae78b24fc5d2ac4573a318e203d9cb93774f5513e28546",
+        "size": 512,
+        "source_sequence": "item_seq_dedup"
+      }
+    },
+    "history_recall_coverage": 0.28515625,
+    "item_popularity": {
+      "max_count": 29230.0,
+      "median_count": 8.0,
+      "n_items": 14065,
+      "top_10pct_share": 0.8481586941388385,
+      "top_1pct_share": 0.43019987568632667
+    },
+    "novel_target_ratio": 0.71484375,
+    "raw_length_buckets": {
+      "test": {
+        "bucket_name": "test_raw",
+        "counts": {
+          "exact_len3": 9,
+          "len0": 46,
+          "len1": 10,
+          "len2": 8,
+          "len4_plus": 439
+        },
+        "fractions": {
+          "exact_len3": 0.017578125,
+          "len0": 0.08984375,
+          "len1": 0.01953125,
+          "len2": 0.015625,
+          "len4_plus": 0.857421875
+        },
+        "full_or_sampled": "sampled_head",
+        "length_definition": "raw_sequence_length",
+        "membership_hash": "88b50d84b6d799b7a40cede0e8b32eaf35c4db92355443ad4929cc97e40844a8",
+        "size": 512,
+        "source_sequence": "item_seq_raw"
+      },
+      "train": {
+        "bucket_name": "train_raw",
+        "counts": {
+          "exact_len3": 9,
+          "len0": 0,
+          "len1": 12,
+          "len2": 11,
+          "len4_plus": 480
+        },
+        "fractions": {
+          "exact_len3": 0.017578125,
+          "len0": 0.0,
+          "len1": 0.0234375,
+          "len2": 0.021484375,
+          "len4_plus": 0.9375
+        },
+        "full_or_sampled": "sampled_head",
+        "length_definition": "raw_sequence_length",
+        "membership_hash": "bdcfc0bc33afaeff74f4a80c47958bfac0bbf8aa49844ef47bda728668426e81",
+        "size": 512,
+        "source_sequence": "item_seq_raw"
+      }
+    },
+    "raw_vs_dedup": {
+      "test_mean_dedup_len": 11.322265625,
+      "test_mean_raw_len": 26.779296875,
+      "train_mean_dedup_len": 16.955078125,
+      "train_mean_raw_len": 45.06640625
+    },
+    "repeat_intensity_buckets": {
+      "test": {
+        "bucket_name": "test_repeat",
+        "counts": {
+          "exact_len3": 37,
+          "len0": 94,
+          "len1": 44,
+          "len2": 43,
+          "len4_plus": 294
+        },
+        "fractions": {
+          "exact_len3": 0.072265625,
+          "len0": 0.18359375,
+          "len1": 0.0859375,
+          "len2": 0.083984375,
+          "len4_plus": 0.57421875
+        },
+        "full_or_sampled": "sampled_head",
+        "length_definition": "raw_minus_dedup_count",
+        "membership_hash": "b814c0b275a4f7c9ba4080aeb387ba9c8e764ab30ff29953936f7981f4fa42a7",
+        "size": 512,
+        "source_sequence": "item_seq_raw - item_seq_dedup"
+      },
+      "train": {
+        "bucket_name": "train_repeat",
+        "counts": {
+          "exact_len3": 7,
+          "len0": 32,
+          "len1": 18,
+          "len2": 21,
+          "len4_plus": 434
+        },
+        "fractions": {
+          "exact_len3": 0.013671875,
+          "len0": 0.0625,
+          "len1": 0.03515625,
+          "len2": 0.041015625,
+          "len4_plus": 0.84765625
+        },
+        "full_or_sampled": "sampled_head",
+        "length_definition": "raw_minus_dedup_count",
+        "membership_hash": "c4196dbeeddaa600c01f1a6cce241a404c6c812e4f6757fd6237a530b520b07c",
+        "size": 512,
+        "source_sequence": "item_seq_raw - item_seq_dedup"
+      }
+    },
+    "test_length_buckets": {
+      "counts": {
+        "exact_len3": 9,
+        "len0": 46,
+        "len1": 10,
+        "len2": 8,
+        "len4_plus": 439
+      },
+      "fractions": {
+        "exact_len3": 0.017578125,
+        "len0": 0.08984375,
+        "len1": 0.01953125,
+        "len2": 0.015625,
+        "len4_plus": 0.857421875
+      }
+    },
+    "train_length_buckets": {
+      "counts": {
+        "exact_len3": 9,
+        "len0": 0,
+        "len1": 12,
+        "len2": 11,
+        "len4_plus": 480
+      },
+      "fractions": {
+        "exact_len3": 0.017578125,
+        "len0": 0.0,
+        "len1": 0.0234375,
+        "len2": 0.021484375,
+        "len4_plus": 0.9375
+      }
+    },
+    "unique_item_count_buckets": {
+      "test": {
+        "bucket_name": "test_unique",
+        "counts": {
+          "exact_len3": 17,
+          "len0": 46,
+          "len1": 10,
+          "len2": 17,
+          "len4_plus": 422
+        },
+        "fractions": {
+          "exact_len3": 0.033203125,
+          "len0": 0.08984375,
+          "len1": 0.01953125,
+          "len2": 0.033203125,
+          "len4_plus": 0.82421875
+        },
+        "full_or_sampled": "sampled_head",
+        "length_definition": "unique_item_count",
+        "membership_hash": "08ee3597c3ca1b3bd9cde796703c1f2cd6c1b159ca4ee425808f5106aa6424ff",
+        "size": 512,
+        "source_sequence": "item_seq_dedup"
+      },
+      "train": {
+        "bucket_name": "train_unique",
+        "counts": {
+          "exact_len3": 18,
+          "len0": 0,
+          "len1": 12,
+          "len2": 18,
+          "len4_plus": 464
+        },
+        "fractions": {
+          "exact_len3": 0.03515625,
+          "len0": 0.0,
+          "len1": 0.0234375,
+          "len2": 0.03515625,
+          "len4_plus": 0.90625
+        },
+        "full_or_sampled": "sampled_head",
+        "length_definition": "unique_item_count",
+        "membership_hash": "aa50e9f2828fdb34ebae78b24fc5d2ac4573a318e203d9cb93774f5513e28546",
+        "size": 512,
+        "source_sequence": "item_seq_dedup"
+      }
+    }
+  },
+  "dataset_fingerprint": {
+    "n_items": 14065,
+    "n_test_profiled": 10000,
+    "n_test_total": 10000,
+    "n_train_profiled": 40000,
+    "n_train_total": 40000,
+    "popularity_hash": "8e764012d4e8722d58b57f608c2e290f16ab99a4a68f767334545e07c12625ec",
+    "profile_scope": "sampled_head",
+    "sampling_seed": 2026
+  },
+  "errors": [],
+  "headroom_map": {
+    "history_recall": "high",
+    "popularity_prior": "medium",
+    "sequence_modeling": "medium"
+  },
+  "initial_hypotheses": [
+    {
+      "evidence_id": "7319e73a414c0ba0b62da35e074a8129b324c3a91f251b6196a88915d39d9af0",
+      "hypothesis": "novel-target discovery is the main headroom"
+    }
+  ],
+  "model_search_prior": [
+    {
+      "family": "popularity_baseline",
+      "prior": 0.7
+    },
+    {
+      "family": "sequence_model",
+      "prior": 0.6
+    },
+    {
+      "family": "fusion",
+      "prior": 0.6
+    },
+    {
+      "family": "history_recall",
+      "prior": 0.4
+    }
+  ],
+  "primary_bottleneck": {
+    "alternative_explanation": "heuristic ranking; may flip with richer features",
+    "conclusion": "primary bottleneck is candidate retrieval quality",
+    "confidence": "medium",
+    "evidence_id": "a9b702589360474da4567789c077a78ef2d389a7520aca3d693c88bb530627c3",
+    "supporting_metrics": {
+      "history_recall_coverage": 0.28515625
+    }
+  },
+  "regime_profile": {
+    "conclusions": [
+      {
+        "alternative_explanation": "propensity features are coarse; hidden covariates may drive separation",
+        "conclusion": "recommendation regimes: moderate_shift",
+        "confidence": "medium",
+        "evidence_id": "30ad13f9bbdd3f9e8f8b2844453515ebd8e2550c1808066b35736010dcb9bd60",
+        "supporting_metrics": {
+          "cold_start_frac": 0.0,
+          "separability_auc": 0.7163677215576172,
+          "top_1pct_share": 0.43019987568632667
+        }
+      }
+    ],
+    "regimes": [
+      "moderate_shift"
+    ],
+    "thresholds": {
+      "cold_start_frac": 0.3,
+      "popularity_head_share": 0.5,
+      "shift_separability_high": 0.8,
+      "shift_separability_moderate": 0.65
+    }
+  },
+  "report_version": "afac_v2_data_intelligence_v1",
+  "secondary_problems": [
+    {
+      "alternative_explanation": "duplicates may be meaningful re-consumption, not noise",
+      "conclusion": "histories contain many duplicate items",
+      "confidence": "high",
+      "evidence_id": "efc218559b0df4173c7604ee367035cce243440cce59bd1e5101fe81de9ac6f9",
+      "supporting_metrics": {
+        "dedup_ratio": 0.3762243217474213
+      }
+    },
+    {
+      "alternative_explanation": "novelty may be an artifact of short histories",
+      "conclusion": "majority of targets are novel w.r.t. user history",
+      "confidence": "medium",
+      "evidence_id": "ee51307a425652bd8c78c02b1960326d0986b9d2113ce355ff13929b1430cf0a",
+      "supporting_metrics": {
+        "novel_target_ratio": 0.71484375
+      }
+    }
+  ],
+  "shift_map": {
+    "propensity_features": [
+      "seq_len",
+      "mean_history_popularity"
+    ],
+    "raw_auc": 0.7163677215576172,
+    "separability_auc": 0.7163677215576172
+  },
+  "signal_reliability_map": {
+    "history_recall": {
+      "alternative_explanation": "history membership ignores item order and recency",
+      "conclusion": "most targets are novel w.r.t. history",
+      "confidence": "high",
+      "evidence_id": "7319e73a414c0ba0b62da35e074a8129b324c3a91f251b6196a88915d39d9af0",
+      "supporting_metrics": {
+        "history_recall_coverage": 0.28515625
+      }
+    },
+    "popularity": {
+      "alternative_explanation": "train popularity can drift toward test time",
+      "conclusion": "popularity prior is flat",
+      "confidence": "medium",
+      "evidence_id": "b87b307f573783ccb0a29f6d1b26dceb053ae5f0dde2b9b5999f24fde569b228",
+      "supporting_metrics": {
+        "top_10pct_share": 0.8481586941388385,
+        "top_1pct_share": 0.43019987568632667
+      }
+    }
+  },
+  "status": "verified",
+  "task": "recommendation",
+  "validation_protocol": {
+    "notes": "propensity separability_auc >= 0.65 suggests time-aware validation",
+    "protocol": "time_aware_split",
+    "seed": 2026
+  }
+}

@@ -1,0 +1,44 @@
+{
+  "ablation": {
+    "parent": "popularity_parent",
+    "primary_change": "operator=retrieval_union_experiment",
+    "target_panel": "B2_NOVEL_TARGET_PANEL"
+  },
+  "adapter_id": "afac_agent.v2.operators.recommendation",
+  "budget": {
+    "seconds": 450.0
+  },
+  "changed_layers": [
+    "L5"
+  ],
+  "failure_condition": "history_recall_coverage does not increase or novel_target_ratio drops below 0.50",
+  "fixed_layers": [
+    "L0",
+    "L1",
+    "L2",
+    "L3",
+    "L4",
+    "L6",
+    "L7",
+    "L8",
+    "L9"
+  ],
+  "genome_id": "4820cdf8bdbe498b7c89f24e980fe0d24715d61cc39d6a264fc9131ac526012e",
+  "layers": {
+    "L0": "b2_validation_contract",
+    "L1": "b2_train_view",
+    "L2": "popularity,history,pair_transition",
+    "L3": "source_score,source_rank,source_count,rrf,popularity,recency,transition,repeat,history_novel,seq_len_raw,seq_len_dedup",
+    "L4": "none",
+    "L5": "retrieval_union_experiment",
+    "L6": "hit_rate_maximization",
+    "L7": "rrf_union",
+    "L8": "none",
+    "L9": "no_deployment"
+  },
+  "new_information_source": "popularity",
+  "parent_genome_id": "popularity_parent",
+  "stop_condition": "budget_seconds exhausted or history_recall_coverage reaches 0.45",
+  "success_condition": "history_recall_coverage increases by at least 0.10 while novel_target_ratio remains above 0.60",
+  "target_problem_id": "a55916274f696affcda2bf07c044c2abca37bea911a02fd50aabae03c1960f8c"
+}

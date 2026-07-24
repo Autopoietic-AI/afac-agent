@@ -1,0 +1,10 @@
+{
+  "can_be_incumbent": false,
+  "can_deploy": false,
+  "can_enter_portfolio": true,
+  "candidate_id": "7c84d3bd1f9b2405fd975429",
+  "diagnostic_registry_size": 1,
+  "no_op": false,
+  "portfolio_status": "scientific_candidate_portfolio_screen_only",
+  "scientific_portfolio_size": 2
+}

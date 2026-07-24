@@ -1,0 +1,17 @@
+{
+  "candidate_ranker_experiment": {
+    "implemented": true,
+    "executed_in_run": false,
+    "reason": "M5 never admitted formal experiments because LLM proposals stayed within ALLOWED_DIAGNOSTICS and no Proposal-to-Operator Compiler enforced a formal operator"
+  },
+  "bucket_specialist_experiment": {
+    "implemented": true,
+    "executed_in_run": false,
+    "reason": "Same as candidate_ranker_experiment"
+  },
+  "retrieval_union_experiment": {
+    "executed_in_run": true,
+    "as_diagnostic": true,
+    "semantic_delta": "None: rounds 1/2/3 used different diagnostic_type names but identical retrieval sources and identical predictions"
+  }
+}

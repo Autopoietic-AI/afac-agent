@@ -1,5 +1,71 @@
 # CHANGELOG
 
+## 2026-07-24 - B2 v2.1 Scientific Execution, Data Contract, Budget and Deployment Permission Repair
+
+Root cause: the v2.0 orchestrator had no experiment-kind permission model, so
+`candidate_recall_diagnostic` (0-fold, no training) was deployed as if it were
+a confirmed scientific candidate. The fault run
+(`74ba8db66a4b8f50d9196865a611e9d78058e14d35fd8ac99c6e2426279dcd41`) ran 3
+diagnostic-only rounds, exceeded the 7200s hard budget (8340s actual), and
+generated `candidate_B2.csv` with `deployment_generated=true` while
+`scientific_attempts_used=0` and `all_rounds_diagnostic=true`.
+
+- Added `afac_agent/v2/data_contract.py`: `B2CanonicalDataContract` with
+  `ScaleValue` provenance for every count field. Cross-stage reconcile
+  (`reconcile_data_contract()`) blocks execution when Input Discovery,
+  Data Intelligence, Experiment Executor, and Deployment universes disagree.
+  Canonical B2: n_items=14065 (item.csv::iid), n_train=40000, n_test=10000,
+  n_interactions=1797067.
+- Added `afac_agent/v2/experiment_kind.py`: `ExperimentKind` enum
+  (DETERMINISTIC_DIAGNOSTIC, CACHED_REPLAY, SCREEN_EXPERIMENT,
+  CONFIRM_EXPERIMENT, FULL_CV_EXPERIMENT, DEPLOYMENT_MODEL) with static
+  `ExperimentPermission` contract. Diagnostics cannot deploy or be incumbent;
+  Screens can enter portfolio but cannot deploy; Confirms (3-fold) can deploy
+  and be incumbent.
+- Added `afac_agent/v2/proposal_compiler.py`: `compile_proposal()` maps LLM
+  `diagnostic_type` → canonical `operator_id`, rejects diagnostics in
+  formal mode, and records `experiment_kind`. `semantic_revision_delta()`
+  detects duplicates and reports which fields changed.
+- Added `afac_agent/v2/anchor_registry.py`: `B2AnchorRegistry` builds
+  popularity and history baselines on canonical 5-fold with same evaluator.
+  Used as safe fallback when no scientific candidate has deployment permission.
+- Added `afac_agent/v2/target_metric_contract.py`: same-fold, same-panel,
+  same-metric, same-K, same-evaluator comparison contract.
+- Extended `afac_agent/v2/capability_registry.py`: per-operator flags
+  (supports_diagnostic/screen/confirm/full_cv/full_train/checkpoint/warm_start),
+  deployment_ready override, new B2 v2.1 operators.
+- Repaired `afac_agent/v2/orchestrator.py`: data contract build & reconcile,
+  compiled operator pipeline replacing raw diagnostic_type, experiment
+  permission checks at every gate, monotonic hard deadline (`time.monotonic()`)
+  with `_hard_deadline` / `_research_deadline`, multi-round smoke loop
+  (runs until ≥1 scientific experiment or budget exhausted), anchor fallback
+  deployment, heartbeat transparency fields, completion contract v2.1.
+- Extended `afac_agent/v2/completion_contract.py`: data_contract_status,
+  budget_contract_status, deployment_permission_status, scientific_attempts,
+  effective_scientific_rounds, all_rounds_diagnostic, no_op_in_portfolio,
+  incumbent_can_deploy, anchor_fallback, wall_clock vs budget check.
+- Repaired `afac_agent/v2/data_intelligence.py`: n_train_total/n_test_total
+  separated from n_train_profiled/n_test_profiled; profile_scope recorded;
+  raw/dedup/unique/repeat length buckets with full metadata.
+- Extended `afac_agent/supervisor/heartbeat.py`: v2.1 transparency fields
+  (operator_id, experiment_kind, semantic_genome_hash, fidelity, target_panel,
+  permissions, deadlines, data contract fields).
+- Added `tests/test_b2_science_repair.py`: 21 tests covering data contract,
+  experiment permission, proposal compiler, no-op isolation, hard budget,
+  orchestrator integration, capability registry, and fault manifest regression.
+- Real 900s B2 science smoke: execution_id
+  `0dd92953ffdcc53f9907aa1ebada1b9912f27022604adbf9783e09cef580dda1`,
+  status `completed_smoke`, 599.5s wall clock, 12 LLM calls, 3 rounds
+  (1 diagnostic + 2 scientific), scientific_attempts_used=2,
+  all_rounds_diagnostic=false, data contract passed, completion contract
+  passed, no deployment generated.
+- Synthetic Smoke A-D: all covered by 21 pytest tests — all PASS.
+- Fault run marked `INVALID_SCIENTIFIC_DEPLOYMENT`; artifact directory
+  preserved as evidence under `artifacts/v2_runs/b2/`.
+- Frozen assets: A1 v53Q-1 (0.7800), A2 0.5093, B1 V1/V2, B2 V1 — all
+  verified unchanged. Frozen hashes match.
+- Formal B2 two-hour run: **NOT started.**
+
 ## 2026-07-23 - Adaptive Fold Validation and Budget-aware Promotion
 
 - Added `afac_agent/v2/adaptive_fold.py`: fidelity ladder F0_DETERMINISTIC
