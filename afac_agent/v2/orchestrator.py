@@ -1375,12 +1375,41 @@ class V2AutonomousResearchOrchestrator:
 
     # --------------------------------------------------------------- stage helpers
 
+    def _data_contract_heartbeat_fields(self) -> dict[str, Any]:
+        """Populate heartbeat transparency fields from the canonical data contract.
+
+        These fields let the dashboard distinguish full-dataset counts from
+        profiler samples instead of showing misleading zeros (v2.1 known gap).
+        """
+        contract = self._data_contract
+        if contract is None:
+            return {}
+        fields: dict[str, Any] = {
+            "data_contract_status": contract.status,
+            "profiler_scope": contract.profile_scope or "",
+        }
+        if contract.n_items_total is not None:
+            fields["n_items_total"] = contract.n_items_total.value
+        if contract.n_test_users_total is not None:
+            fields["n_test_total"] = contract.n_test_users_total.value
+        if contract.profiler_sample_test_users is not None:
+            fields["n_test_profiled"] = contract.profiler_sample_test_users.value
+        return fields
+
     def _beat(self, supervisor: RunSupervisor, **fields: Any) -> None:
         fields.setdefault("orchestrator_version", ORCHESTRATOR_VERSION)
         fields.setdefault("planner_mode", self.planner_mode)
         ledger = getattr(self, "_ledger", None)
         if ledger is not None:
             fields.setdefault("llm_calls_count", ledger.calls_count)
+        for key, value in self._data_contract_heartbeat_fields().items():
+            fields.setdefault(key, value)
+        fields.setdefault("scientific_attempts_used", self.scientific_attempts_used)
+        fields.setdefault("effective_scientific_rounds", self.effective_scientific_rounds)
+        fields.setdefault("diagnostics_used", self.diagnostics_used)
+        fields.setdefault("no_op_rounds_refunded", self.no_op_rounds_refunded)
+        fields.setdefault("research_deadline", self._research_deadline)
+        fields.setdefault("hard_deadline", self._hard_deadline)
         supervisor.heartbeat(**fields)
         supervisor.event("stage_transition", {"stage": fields.get("stage", ""), "status": fields.get("status", "")})
         supervisor.write_all()
@@ -2235,14 +2264,22 @@ class V2AutonomousResearchOrchestrator:
         _write_json(run_dir, "trajectory_v2.json", trajectory)
 
         if supervisor is not None:
-            supervisor.heartbeat(
-                stage=current_stage,
-                status=status,
-                execution_id=execution_id,
-                input_fingerprint=input_fingerprint,
-                llm_calls_count=llm_calls,
-                cache_status=self.cache_status,
-            )
+            final_fields: dict[str, Any] = {
+                "stage": current_stage,
+                "status": status,
+                "execution_id": execution_id,
+                "input_fingerprint": input_fingerprint,
+                "llm_calls_count": llm_calls,
+                "cache_status": self.cache_status,
+                "scientific_attempts_used": self.scientific_attempts_used,
+                "effective_scientific_rounds": self.effective_scientific_rounds,
+                "diagnostics_used": self.diagnostics_used,
+                "no_op_rounds_refunded": self.no_op_rounds_refunded,
+                "research_deadline": self._research_deadline,
+                "hard_deadline": self._hard_deadline,
+            }
+            final_fields.update(self._data_contract_heartbeat_fields())
+            supervisor.heartbeat(**final_fields)
             supervisor.write_all()
 
         report_name = "V2_SMOKE_REPORT.md" if self.smoke else "V2_RUN_REPORT.md"
