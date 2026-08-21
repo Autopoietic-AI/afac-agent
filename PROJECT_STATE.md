@@ -1,5 +1,18 @@
 # PROJECT_STATE.md
 
+## Current status (2026-07-24, post v2.1/v2.2 wrap-up)
+
+- Branch: `feat/afac-v2-full`; HEAD `00840d7` (+ merge `940e077`).
+- A1: frozen champion `v53Q-1` (0.7800); A1 closed loop done. No further safe headroom on existing signals.
+- A2: integration + evaluation foundation done (dry-run, `ready_for_experiment_design`); final real closed loop is blocked on user-supplied asset paths (V23 Top10 candidate set etc.).
+- B1: v2.2 wired into the v2 orchestrator (DI -> folds -> M6B/M6C/M5 -> experiment -> portfolio -> deployment) with a hard-deadline circuit breaker; earlier v1/v2 closed loops and submissions preserved.
+- B2: v2.1 scientific execution repair merged; 900s real-LLM smoke passed (`0dd92953`, 2 scientific rounds, data contract consistent, no diagnostic deployment); fault run `74ba8db6...` marked `INVALID_SCIENTIFIC_DEPLOYMENT`.
+- candidate_ranker real-scale benchmark: 3885s/fold, retrieval-bound; `fits_2h_formal_budget=false` — B2 two-hour formal run NOT started; needs retrieval optimization first.
+- Self-iteration capability verified: LLM proposal -> compile -> real experiment -> critic -> portfolio -> stop decision, all under monotonic hard budget.
+- Tests: 407 passed; Doctor: PASS.
+
+# PROJECT_STATE.md
+
 ## AFAC v2.0 Runtime (P0 repair + adaptive folds)
 
 - v2 orchestrator wired: `python -m afac_agent.main v2-run --task B2 ...` → `V2AutonomousResearchOrchestrator` (real state machine, LLM ledger, M5 gates, strict completion contract).

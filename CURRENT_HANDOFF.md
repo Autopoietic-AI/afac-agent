@@ -1,5 +1,28 @@
 # AFAC Agent Current Handoff
 
+## Current state (2026-07-24 wrap-up)
+
+- Branch `feat/afac-v2-full`, HEAD `00840d7` (post-merge of `fix/b2-v2-scientific-execution`).
+- All four tasks have a verified, budget-safe scientific loop:
+  - A1: frozen champion v53Q-1 (0.7800); closed loop complete.
+  - A2: integration dry-run complete (`ready_for_experiment_design`); real closed loop waits for explicit user asset paths (V23 Top10 etc.).
+  - B1: v2.2 wired into v2 orchestrator with hard-deadline circuit breaker; earlier V1/V2 submissions preserved under `artifacts/b1_runs/`.
+  - B2: v2.1 repaired (data contract, experiment permissions, budget, deployment permission, anchor fallback); 900s real-LLM smoke passed; fault run marked invalid.
+- Known limits (recorded honestly):
+  - candidate_ranker at real B2 scale: ~3885s/fold, retrieval-bound; 2h formal run needs retrieval optimization first (see `artifacts/b2_science_repair/ranker_benchmark/B2_OPERATOR_PERFORMANCE_REPORT.md`).
+  - lightgbm/torch absent: LambdaRank/DIN/SASRec registered as unavailable.
+- Full suite: 407 passed; Doctor: PASS.
+
+## Next steps (need explicit user input)
+
+1. B2 two-hour formal run — only after retrieval optimization; use `run_b2_formal_safe.sh` preflight.
+2. A2 real closed loop — only after user supplies explicit asset paths (V23 Top10 candidate set first).
+3. Platform upload of existing TO_UPLOAD candidates — manual user decision only.
+
+## Previous module: B2 v2.1 repair (merged)
+
+# AFAC Agent Current Handoff
+
 ## Current module
 
 - Module: Adaptive Fold Validation and Budget-aware Promotion

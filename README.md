@@ -1,6 +1,17 @@
-# AFAC Agent v2.0
+# AFAC Agent v2.2
 
 Current A1 champion: `v53Q-1`, online `0.7800`.
+A2 online champion: `0.5093`. B1 online best: `0.37974` (V2). B2 online V1: `0.06838`.
+
+Status (2026-07-24): A1 frozen; A2 dry-run complete (awaiting explicit asset
+paths for the real closed loop); B1 wired into the v2 orchestrator with a
+hard-deadline circuit breaker; B2 scientific execution repaired (data
+contract, experiment permissions, monotonic budget, deployment permission,
+anchor fallback) with a passing 900s real-LLM smoke. Full suite: 407 passed;
+Doctor: PASS. The B2 two-hour formal run is deliberately NOT started: a
+real-scale benchmark shows the candidate ranker is retrieval-bound at
+~3885s/fold (`artifacts/b2_science_repair/ranker_benchmark/`).
+
 A2 online champion: `0.5093`. B1 online best: `0.37974` (V2). B2 online V1: `0.06838`.
 
 This repository is the build-time codebase for a bounded AFAC2026 automated

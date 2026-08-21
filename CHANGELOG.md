@@ -1,5 +1,38 @@
 # CHANGELOG
 
+## 2026-07-24 - B1 v2.2 Orchestrator Wiring + Budget Circuit Breaker; B2 v2.1 Follow-ups
+
+B1 v2.2 (wired into the v2 orchestrator):
+- `afac_agent/v2/b1_data_contract.py`: `B1CanonicalDataContract` with
+  provenance for nodes/features/classes/edges; overlap and mismatch block.
+- `afac_agent/v2/b1_operators.py`: fold-by-fold OOF operators — feature
+  baseline (LR/MLP), graph propagation (LP/APPNP), feature-graph residual
+  blend, bucket specialist (degree routing).
+- `orchestrator._run_b1_loop`: DI -> folds -> M6B/M6C/M5 -> experiment ->
+  portfolio -> deployment for task B1 with the v2.1 permission model.
+- Hard-deadline circuit breaker: `_fold_oof(deadline_monotonic=...)` aborts
+  between folds with `budget_aborted=True` and partial results; the B1 loop
+  passes the hard deadline into every operator and stops the round loop on
+  abort. Pre-flight estimates use max(registry, last measured) after the
+  first experiment. Fixes the v2 smoke failure where one experiment ran
+  10977s against a 900s budget.
+
+B2 v2.1 follow-ups (merged from fix/b2-v2-scientific-execution):
+- Target-panel parent metric pairing fixed: bare metric-name resolution
+  (no more `parent_candidate_hit_rate@10` double prefix) and the initial
+  incumbent is seeded from the validated popularity anchor carrying the
+  canonical fold hash, so first-round target metric contracts can pass.
+- Heartbeat transparency fields (data contract counts, profiler scope,
+  scientific counters, monotonic deadlines) are now populated.
+- Real-scale candidate_ranker benchmark (`tools/b2_ranker_benchmark.py`,
+  report in `artifacts/b2_science_repair/ranker_benchmark/`): on the full
+  B2 data (40k users / 14,065 items) a 2-fold screen takes ~3885s/fold with
+  retrieval dominating (6935s); ranker improves hit_rate@10 0.066 -> 0.089;
+  `fits_2h_formal_budget=false` — the 2h formal run needs retrieval
+  optimization first and is therefore NOT started.
+
+Validation: full suite 407 passed; doctor PASS.
+
 ## 2026-07-24 - B2 v2.1 Scientific Execution, Data Contract, Budget and Deployment Permission Repair
 
 Root cause: the v2.0 orchestrator had no experiment-kind permission model, so
