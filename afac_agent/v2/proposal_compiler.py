@@ -19,6 +19,7 @@ from .experiment_kind import ExperimentKind, kind_from_operator_and_folds
 # Mapping from legacy / LLM diagnostic_type names to canonical operator_ids.
 # Only names that truly exist as implemented operators are listed.
 DIAGNOSTIC_TYPE_TO_OPERATOR: dict[str, str] = {
+    # B2 recommendation
     "candidate_recall_diagnostic": "candidate_recall_diagnostic",
     "small_retrieval_compare": "retrieval_union_experiment",
     "cached_replay": "retrieval_union_experiment",
@@ -26,6 +27,21 @@ DIAGNOSTIC_TYPE_TO_OPERATOR: dict[str, str] = {
     "bucket_specialist_experiment": "bucket_specialist_experiment",
     "protected_rerank_experiment": "protected_rerank_experiment",
     "retrieval_union_experiment": "retrieval_union_experiment",
+    # B1 node classification
+    "classification_recall_diagnostic": "classification_recall_diagnostic",
+    "feature_lr": "feature_baseline_experiment",
+    "feature_mlp": "feature_baseline_experiment",
+    "feature_baseline_screen": "feature_baseline_experiment",
+    "feature_baseline_experiment": "feature_baseline_experiment",
+    "graph_lp": "graph_propagation_experiment",
+    "graph_appnp": "graph_propagation_experiment",
+    "graph_propagation_experiment": "graph_propagation_experiment",
+    "hop_reliability": "hop_reliability_experiment",
+    "hop_reliability_experiment": "hop_reliability_experiment",
+    "feature_graph_residual": "feature_graph_residual_experiment",
+    "feature_graph_residual_experiment": "feature_graph_residual_experiment",
+    "bucket_specialist_b1": "bucket_specialist_experiment_b1",
+    "bucket_specialist_experiment_b1": "bucket_specialist_experiment_b1",
 }
 
 DEFAULT_RETRIEVAL_SOURCES = ["popularity", "history", "pair_transition"]
