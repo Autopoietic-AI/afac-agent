@@ -309,7 +309,9 @@ def test_parent_inheritance_and_fold_plan_across_rounds(tmp_path: Path) -> None:
     assert len(exec_events) >= 2
     canonical = load_json(run_dir / "canonical_folds.json")
     comparison = load_json(run_dir / "round_02" / "paired_fold_comparison.json")
-    assert comparison["parent_id"] == "popularity_parent"
+    # The incumbent is seeded from the validated popularity anchor so round-1
+    # parent comparisons carry the canonical fold hash (v2.1 repair).
+    assert comparison["parent_id"] == "anchor_popularity_b2"
     # fold plan is stable and identical to the canonical hash
     assert comparison and canonical["canonical_fold_hash"]
 
