@@ -1,331 +1,283 @@
-# AFAC Agent v2.2
+<div align="center">
 
-Current A1 champion: `v53Q-1`, online `0.7800`.
-A2 online champion: `0.5093`. B1 online best: `0.37974` (V2). B2 online V1: `0.06838`.
+# AFAC Self-Evolving Research Agent
 
-Status (2026-07-24): A1 frozen; A2 dry-run complete (awaiting explicit asset
-paths for the real closed loop); B1 wired into the v2 orchestrator with a
-hard-deadline circuit breaker; B2 scientific execution repaired (data
-contract, experiment permissions, monotonic budget, deployment permission,
-anchor fallback) with a passing 900s real-LLM smoke. Full suite: 407 passed;
-Doctor: PASS. The B2 two-hour formal run is deliberately NOT started: a
-real-scale benchmark shows the candidate ranker is retrieval-bound at
-~3885s/fold (`artifacts/b2_science_repair/ranker_benchmark/`).
+A bounded, auditable, self-iterating research agent for multi-task data-science competitions
 
-A2 online champion: `0.5093`. B1 online best: `0.37974` (V2). B2 online V1: `0.06838`.
+**AFAC2026 · Task 3 · A1 / A2 / B1 / B2**
 
-This repository is the build-time codebase for a bounded AFAC2026 automated
-research agent.  v2.0 adds the self-evolving research layer under
-`afac_agent/v2/` (metric semantics gate, no-op detector, dynamic budget
-scheduler, validation reality manager, problem hierarchy, model genome,
-capability registry, exploration controller, competition intelligence,
-memory-safe executor, classification and recommendation operator spaces),
-the Run Supervisor under `afac_agent/supervisor/` (heartbeat, dashboard,
-stall detection, resume), and knowledge packages under `knowledge/`
-(v1.6 postmortem, A2 champion architecture).  It does not change
-predictions, Fold definitions, Gates, OOF anchors, or the champion CSV.
+![Python](https://img.shields.io/badge/python-3.10%2B-blue)
+![Tests](https://img.shields.io/badge/tests-407%20passed-brightgreen)
+![Doctor](https://img.shields.io/badge/doctor-PASS-brightgreen)
+![Loop](https://img.shields.io/badge/self--iteration-verified-blueviolet)
 
-Run the four task smokes (minutes each, never a full loop):
+</div>
 
-```bash
-python -m afac_agent.v2.smokes --task all
+## Abstract
+
+This repository contains an automated research agent that does not merely
+execute fixed ML pipelines: it **proposes, runs, critiques, and promotes its
+own experiments** inside a strict scientific contract. The agent operates a
+closed self-iteration loop — LLM-driven hypothesis proposal, deterministic
+admission gates, real fold-based experiments, counterfactual criticism, and
+portfolio promotion — across four competition tasks (two graph node
+classification tasks, one sequence recommendation task, and one mixed
+recommendation task), under frozen champions, frozen folds, and a hard
+wall-clock budget.
+
+The central design lesson encoded in the codebase is that **orchestration is
+not science**. A loop that calls an LLM, writes artifacts, and produces a
+submission file can still be scientifically empty. Every stage of the loop is
+therefore guarded by an explicit, machine-checked contract: data provenance,
+experiment permissions, paired-fold metric contracts, monotonic budget
+deadlines, deployment permissions, and a completion contract that refuses to
+declare success without real scientific work.
+
+## Motivation: a run that "completed" without doing science
+
+During development, a formal two-hour run produced a perfectly formed run
+manifest — `status: completed`, a submission CSV, a full artifact tree — while
+having executed **zero** scientific experiments:
+
+- 3 rounds, all of them deterministic diagnostics;
+- `scientific_rounds_used = 0`, yet a submission was deployed;
+- wall clock 8340s against a 7200s hard budget;
+- item count reported as both 14,065 and 40,011 in different stages (user IDs
+  had been counted as items);
+- a no-op round (identical predictions) was admitted into the portfolio.
+
+That run is preserved as forensic evidence and marked
+`INVALID_SCIENTIFIC_DEPLOYMENT`. The current agent exists because of it: the
+repair is not a patch but a contract stack that makes this failure class
+unrepresentable.
+
+## The self-iteration loop
+
+Each research round executes the following pipeline. Every arrow is a real,
+logged state transition; every stage marked 🔒 is a deterministic gate an LLM
+cannot bypass.
+
+```
+       hard deadline (monotonic) ── deployment reserve ── safety margin
+  ┌───────────────────────────────────────────────────────────────────────┐
+  ▼                                                                       │
+PROBLEM SELECTION ─▶ M6B LLM PROPOSAL ─▶ PROPOSAL-TO-OPERATOR COMPILER 🔒 ─▶ M5 SAFETY GATE 🔒
+ (problem hierarchy)    (hypothesis,      (unknown operator →               (forbidden content,
+                          sources,         blocked_missing_adapter,          budget clamp,
+                          budget)          never a silent diagnostic)        diagnostic ceiling)
+                                                                                │
+                                                                                ▼
+ PORTFOLIO UPDATE 🔒 ◀─ UNIFIED EVALUATION + NO-OP AUDIT 🔒 ◀─ REAL OPERATOR EXECUTION
+  (diagnostic /         (paired panels, rescue/damage,          (retrieval union, candidate
+   scientific /          target metric contract 🔒,              ranker, bucket specialist,
+   deployment tiers,     identical predictions →                 protected rerank; B1: LP,
+   no-op quarantined)    refunded, never promoted)               APPNP, feature baselines)
+          │                                                          ▲
+          ▼                                                          │
+ M6C CRITIC + POSTMORTEM ─▶ NEXT DECISION ───────────────────────────┘
+  (revise must change the   (continue / revise / switch / stop,
+   semantic genome hash,     gated by measured runtimes and
+   not just the name)        the remaining budget)
 ```
 
-Real v2 orchestrated runs (with LLM problem synthesis, M6B proposals and
-M6C counterfactual critic, strict M5 gates and a completion contract):
+Reading the loop: **problem → proposal → compile → gate → genome → execute →
+evaluate → portfolio → critique → next decision**, all inside one monotonic
+hard budget, with the portfolio separated into diagnostic / scientific /
+deployment tiers so a diagnostic can never be promoted into a submission.
 
-```bash
-# 5-minute orchestration smoke (no deployment, no formal submission)
-python -u -m afac_agent.main v2-run --task B2 \
-  --data-root "C:/Users/李天皓/agent比赛/B推荐" \
-  --out-root "artifacts/v2_smoke_runs/b2" \
-  --max-wall-clock-seconds 300 --require-llm --force-new-execution \
-  --smoke --smoke-max-users 512 --smoke-max-items 1000 --no-deployment
+### Proposal-to-Operator Compiler
 
-# formal run (NOT started yet)
-python -u -m afac_agent.main v2-run --task B2 \
-  --data-root "C:/Users/李天皓/agent比赛/B推荐" \
-  --out-root "artifacts/v2_runs/b2" \
-  --max-wall-clock-seconds 7200 --require-llm --force-new-execution
+LLM proposals are free text; experiments are structured objects. The compiler
+(`afac_agent/v2/proposal_compiler.py`) maps a proposal to a canonical
+`operator_id` from the capability registry, together with retrieval sources,
+feature sets, model family, objective, target panel, hyperparameters, and a
+runtime estimate. A proposal that asks for an unavailable operator is
+**blocked** (`blocked_missing_adapter`) — it is never silently downgraded to a
+diagnostic. A `revise` verdict must produce a different *semantic genome
+hash*; two consecutive duplicate revisions force a family or problem switch.
+
+### Adaptive fold ladder
+
+Experiments climb a fixed ladder over one hash-stable canonical fold
+assignment (never re-randomized):
+
+| Fidelity | Folds | Role | Consumes round | Deployable |
+|----------|-------|------|----------------|------------|
+| F0 | 0 | deterministic diagnostic | no | **never** |
+| F1 | 1–2 | screen | yes | no |
+| F2 | 3 | confirm | yes | yes (if promoted) |
+| F3 | 5 | full CV (trigger-only) | yes | yes |
+| F4 | full | deployment retrain | — | yes |
+
+Promotion requires paired same-fold, same-panel, same-metric, same-evaluator
+comparison against the parent; screen evidence alone never promotes an
+incumbent.
+
+### Experiment permission model
+
+`afac_agent/v2/experiment_kind.py` assigns every execution a kind with static
+permissions. Diagnostics cannot enter the portfolio, cannot be incumbent, and
+cannot deploy. Screens enter the scientific portfolio as `screen_only`.
+No-op experiments (predictions identical to parent) are refunded and
+quarantined to the audit history. This is the contract that the forensic run
+violated.
+
+## Contracts that keep the loop honest
+
+- **Data contract** (`data_contract.py`, `b1_data_contract.py`): every count
+  carries provenance (`source_file`, `source_column`, `counting_rule`,
+  `membership_hash`); full-dataset and profiler-sampled scales are separate
+  fields; Input Discovery, Data Intelligence, Experiment Executor, and
+  Deployment universes are reconciled, and any mismatch blocks the run.
+- **Target metric contract** (`target_metric_contract.py`): every problem node
+  declares its panel (e.g. `B2_NOVEL_TARGET_PANEL`), metric, K, and direction;
+  parent and candidate must be measured on the same fold, same panel, same
+  metric, same evaluator version.
+- **Budget contract**: `time.monotonic()` hard deadline from process start,
+  a deployment reserve, and a safety margin; no experiment starts when
+  `remaining < estimate + reserve + margin`; a fold-level circuit breaker
+  aborts slow experiments between folds with partial results instead of
+  overrunning the deadline.
+- **Deployment permission contract**: format audit, scientific permission,
+  budget contract, and data contract must all pass; otherwise no submission
+  file is written. With no confirmed candidate, the run falls back to a
+  validated anchor (popularity/history baselines re-materialized on the
+  canonical folds) and reports `completed_with_anchor_fallback` — never a
+  diagnostic dressed up as a model.
+- **Completion contract**: `status=completed` requires, among other things,
+  at least one real operator execution, `effective_scientific_rounds >= 1`
+  (or a declared anchor fallback), no no-op in the portfolio, a deployable
+  incumbent, and a wall clock inside the hard budget.
+- **Frozen assets & test truth**: champions, folds, confirmed history, and
+  anchors are hash-verified before and after every run; test labels are never
+  read; test scores are never reported as offline OOF metrics.
+
+## Run supervision and auditability
+
+Every run is driven by the Run Supervisor (`afac_agent/supervisor/`):
+`heartbeat.json`, `STATUS.md`, `dashboard.html`, and `run_events.jsonl` are
+written live, with transparency fields for the current operator, experiment
+kind, semantic genome hash, scientific counters, data-contract status, and the
+monotonic deadlines. The dashboard marks non-deployable stages explicitly
+(`DIAGNOSTIC — NOT DEPLOYABLE`, `SCREEN ONLY — NOT DEPLOYABLE`). Execution
+identity (`execution_id`, includes code commit + nonce) is separated from the
+cache identity (`input_fingerprint`), and all LLM calls are recorded in an
+append-only ledger (`llm_calls.jsonl`).
+
+## Operator space and capability registry
+
+The capability registry (`afac_agent/v2/capability_registry.py`) records, per
+operator, whether it is implemented, available in this environment, and which
+fidelity levels it supports — including an honest record of what is missing
+(e.g. `lightgbm`/`torch`-based operators are registered as unavailable, and
+the registry reports the resulting availability bias rather than claiming a
+fallback is optimal).
+
+**B2 (sequence recommendation):** multi-source retrieval union (popularity /
+history / repeat / transition / item-CF / attribute / sequence / novel
+sources), a candidate-table GBDT ranker over sparse candidate rows (source
+scores, RRF, popularity, recency, history/novel, user/item attributes), bucket
+specialists (short/long history, history/novel target, long tail), and
+protected rerank (top-K set protection, position-10 admission,
+fallback-keep-parent).
+
+**B1 (node classification):** feature baselines (logistic / MLP), graph
+propagation (label propagation / APPNP over directed-out, directed-in, and
+undirected-union views), feature–graph residual blends, and degree-routed
+bucket specialists.
+
+## Verified evidence
+
+| Task | Online result | Offline anchor | Loop status |
+|------|---------------|----------------|-------------|
+| A1 (node classification) | **0.7800** champion `v53Q-1` | OOF 0.775384 | closed loop executed; fusion candidate accepted to portfolio (+0.0008 overall, macro-protected); champion frozen |
+| A2 (recommendation) | **0.5093** champion | NDCG@10 0.5925 (v42c OOF) | integration + evaluation foundation complete; real closed loop awaits explicit asset paths |
+| B1 (node classification) | **0.37974** (V2) | `B1_EVAL_ANCHOR_V2` | closed loop completed (0.4964 standard / 0.3941 macro); v2.2 wired into the v2 orchestrator with budget circuit breaker |
+| B2 (sequence recommendation) | 0.06838 (V1) | `B2_EVAL_ANCHOR_V1` | v1 loop completed; v2.1 scientific-execution repair verified by real-LLM smoke |
+
+Real-LLM self-iteration smoke (900s budget, B2): 12 provider calls
+(problem synthesis, M6B, M6C, postmortem per round), 2 real scientific
+screen experiments, data contract consistent across all stages
+(`n_items = 14,065` from `item.csv` everywhere), no-op isolation verified,
+deployment permission correctly refused in smoke mode, completion contract
+passed — 599.5s wall clock.
+
+Engineering validation: **407 tests passed**; `doctor` reports PASS;
+frozen-asset hashes verified unchanged across every run.
+
+## Repository layout
+
+```text
+afac_agent/
+├── main.py                    # CLI entry (v2-run, legacy replays, adapters)
+├── doctor.py                  # environment & contract validator
+├── v2/                        # self-evolving research layer
+│   ├── orchestrator.py        # the self-iteration state machine
+│   ├── proposal_compiler.py   # LLM proposal → canonical operator
+│   ├── experiment_kind.py     # permission model (diagnostic/screen/confirm/…)
+│   ├── data_contract.py       # B2 data contract with provenance
+│   ├── b1_data_contract.py    # B1 data contract
+│   ├── target_metric_contract.py
+│   ├── anchor_registry.py     # validated fallback anchors
+│   ├── adaptive_fold.py       # canonical folds + F0–F4 ladder + promotion
+│   ├── capability_registry.py # operator availability, honestly recorded
+│   ├── completion_contract.py
+│   ├── budget_scheduler.py    # dynamic budget & premature-stop detection
+│   ├── noop_detector.py       # identical-prediction detection & refunds
+│   ├── metric_semantics.py    # pool recall vs top-10; error decomposition
+│   ├── operators/             # recommendation & classification operators
+│   └── smokes.py              # bounded four-task smoke runner
+├── supervisor/                # heartbeat, dashboard, stall detection, resume
+├── research/                  # hierarchical research memory, method research
+├── llm/                       # provider layer (Aliyun Bailian; env-var keys)
+├── b1/  b2/  a2/              # per-task adapters, evaluators, loops
+└── evaluation/  planning/  profilers/  adapters/
 ```
-
-Legacy reproduction only (v1 deterministic runner, no LLM; refuses
-`v2_formal_runs` out-roots unless `--allow-legacy-output`):
-
-```bash
-python -m afac_agent.main legacy-b2-closed-loop --data-root <path> --out-root artifacts/b2_runs
-```
-
-`b2-closed-loop` remains as a loud legacy alias — its output is never a v2
-run.  Real LLM runs require a well-formed `DASHSCOPE_API_KEY` (raw `sk-…`
-value) and `AFAC_BAILIAN_BASE_URL` in the environment.
 
 ## Quick start
 
-The package is self-contained for history import and champion registration.
-
-From the project root:
-
 ```bash
+# environment & contract validation
 python -m afac_agent.doctor --project_root .
-python -m pytest -vv
-```
 
-Windows:
+# full test suite
+python -m pytest -p no:cacheprovider -q
 
-```text
-bootstrap_agent.bat
-```
+# bounded four-task smokes (minutes each, never a full loop)
+python -m afac_agent.v2.smokes --task all
 
-Git Bash:
-
-```bash
-bash bootstrap_agent.sh
-```
-
-The packaged champion is resolved from:
-
-```text
-artifacts/A1_v53q1_transition_stable_edge_h2_SAFE.csv
-```
-
-External datasets, OOF files and checkpoints should be configured through:
-
-```text
-config/paths.local.yaml
-```
-
-Create it from:
-
-```text
-config/paths.local.example.yaml
-```
-
-`config/paths.local.yaml` is intentionally ignored by git.
-
-If Python is not on `PATH`, set `AFAC_PYTHON` before using bootstrap scripts.
-
-## Codex development
-
-Read:
-
-1. `AGENTS.md`
-2. `AFAC_AGENT_CODEX_MASTER_EXECUTION_SPEC.md`
-3. `CODEX_MASTER_PROMPT_AFAC_AGENT.txt`
-
-Start with milestone `M0 + M1 Stabilization`.
-
-## Current M0/M1 guardrails
-
-- `python -m afac_agent.doctor` validates ProjectState, Tool Registry, Memory records, Trajectory status and champion CSV shape/hash.
-- Missing required files return `waiting_for_input`.
-- Registered but unbound tools return `waiting_for_input` with `reason=unbound_tool`.
-- Failed tools do not consume successful experiment rounds.
-- History import and champion registration are idempotent.
-- Windows Chinese and space paths are covered by tests.
-
-## M2 A1 Data Profiler
-
-M2 adds a CPU-only, read-only A1 data profiler.  It loads the canonical graph
-from the A1 NPZ adjacency CSR and treats `A1_edges.csv` only as an optional
-cross-check.  It does not train, generate predictions, create submissions,
-write Memory, mutate Project State, or consume successful experiment rounds.
-
-Dataset-only run:
-
-```bash
-python -m afac_agent.profilers.a1_data_profiler \
-  --npz_path "<path-to-A1.npz>" \
-  --edges_csv "<optional-path-to-A1_edges.csv>" \
-  --champion_csv artifacts/A1_v53q1_transition_stable_edge_h2_SAFE.csv \
-  --out_dir artifacts/data_profile/a1_m2_v1
-```
-
-The legacy registered-tool wrapper remains available:
-
-```bash
-python tools/profile_a1_dataset.py --npz_path "<path-to-A1.npz>" --out_dir artifacts/data_profile/a1_m2_v1
-```
-
-Optional higher tiers require explicit local inputs:
-
-- `--fold_file` for fold-aware structure;
-- `--anchor_oof_npz` for full anchor OOF analysis.
-
-If those optional inputs are absent, the profiler completes the lower available
-tier and records the missing inputs in warnings.  With `--require_fold` or
-`--require_oof`, missing inputs return `waiting_for_input`.
-
-Core deterministic outputs are written under:
-
-```text
-artifacts/data_profile/a1_m2_v1/
-```
-
-The dataset-only profile records Champion Test predicted-label distribution as
-prediction distribution only, never as Test truth.  Shift reporting separates
-observed feature/structure shift from OOF-proba shift that is unavailable until
-the exact v53Q-1 OOF input is supplied.
-
-## M3A Tool Adapter Foundation
-
-M3A adds the minimal Tool Adapter protocol and the first real read-only
-adapter, `A1_V53Q1_PATCH_AUDIT`.  It audits the v53Q-1 patch assets, hashes,
-4-node migration evidence and v49A meta files without running patch replay,
-training, using GPU, generating prediction CSVs, registering a champion, or
-consuming successful experiment rounds.
-
-Run with explicit local historical asset paths:
-
-```bash
-python -m afac_agent.main run-adapter \
-  --tool A1_V53Q1_PATCH_AUDIT \
-  --anchor_csv artifacts/A1_v53q1_transition_stable_edge_h2_SAFE.csv \
-  --v53q1_base_csv "<local-v46A1-base-csv>" \
-  --v49a_oof_meta_csv "<local-v49A-oof-meta-csv>" \
-  --v49a_test_meta_csv "<local-v49A-test-meta-csv>" \
-  --v53q1_audit_md artifacts/V53Q1_TRANSITION_STABLE_EDGE_H2_AUDIT.md \
-  --v53q1_patch_py artifacts/a1_v53q1_transition_stable_edge_h2_patch.py \
-  --execute
-```
-
-Adapter outputs are ignored by git under:
-
-```text
-artifacts/adapter_runs/
-```
-
-## M6A LLM Shadow Planner and Bailian provider
-
-M6A keeps the deterministic M5A planner authoritative.  LLM output is only a
-shadow proposal: it is schema-normalized, safety-filtered and compared with the
-deterministic plan, but it never executes tools, trains models, generates
-submissions, registers champions, mutates Project State, or consumes successful
-experiment rounds.
-
-The Aliyun Bailian OpenAI-compatible provider is available as:
-
-```bash
-python -m afac_agent.main llm-provider-check --provider aliyun_bailian_openai
-```
-
-and for advisory shadow planning:
-
-```bash
-python -m afac_agent.main shadow-plan --provider aliyun_bailian_openai ...
-```
-
-The default model is:
-
-```text
-qwen3.6-max-preview
-```
-
-Only `qwen3.5-*` and `qwen3.6-*` model names are allowed.  API credentials and
-the Bailian base URL are read only from environment variables named in the
-ignored local config:
-
-```text
-DASHSCOPE_API_KEY
-AFAC_BAILIAN_BASE_URL
-```
-
-`config/llm.local.json` remains git-ignored.  The committed
-`config/llm.local.example.json` contains only non-secret field names and
-defaults.  Provider usage artifacts record safe audit metadata such as provider,
-model, host, latency, token usage and finish reason; they do not record API
-keys, authorization headers, cookies, account data or full environment values.
-
-Framework inspiration / reuse: this provider borrows only the official baseline
-idea that model name, endpoint, timeout and credentials should be configurable
-and that credentials should come from environment variables.  It does not reuse
-baseline behavior where an LLM directly edits model code, chooses final
-CONTINUE/PIVOT/STOP decisions, executes unregistered commands, generates
-submissions, or treats weak/empty metrics as proof of improvement.
-
-## M6R-A v2 Research Memory Foundation
-
-M6R-A adds a deterministic, read-only research memory layer for hierarchical scientific diagnosis. It separates execution blockers, scientific problems, and evidence gaps, then materializes views from one append-only event log: `research_events.jsonl`. Runtime outputs are written under ignored directories: `artifacts/research_memory/` and `artifacts/method_research/`.
-
-The supported analysis path is Global -> Bucket -> Bucket x Class -> Error Mechanism, with a reverse Cross-Bucket Class audit. Research Queue priority and Top-K brief generation are controlled by `config/research_policy.json`; thresholds and Top-K limits are not hidden in code. This stage does not call LLMs, APIs, adapters, training, prediction, or submission paths. It does not mutate Champion, Project State, or confirmed History.
-
-Framework inspiration record: M6R-A borrows ideas from public baseline-style diagnosis, experiment-memory practices, AIDE-style branch/parent/duplicate concepts, AI-Scientist-style hypothesis/evidence/critique loops, and event-sourcing append-only/materialized-view design. AFAC implements its own Global/Bucket/Bucket-Class decomposition, Cross-Bucket Class audit, mechanism ledger, new-information-source checks, strict OOF safety, frozen Champion boundary, and hierarchical Research Queue. It does not integrate AIDE, AI Scientist, or other framework code, and does not allow LLMs to directly modify code, decide experiments, or execute experiments.
-M6R-A v2.1 correction: bucket scopes are now represented as multi-axis signatures. `connectivity_visibility` (`graph_visible`, `isolated`) is separate from `train_label_reachability` (`one_hop_available`, `exact2_only`, `exact3_4_only`, `no_visible_train_within_4_hops`) and `degree_band`; `class_id` remains an independent analysis axis. Research Queue entries expose component-level priority scores and overlap penalties from `config/research_policy.json`. LocalConflictChecker performs deterministic multi-field conflict checks instead of comparing method names only.
-
-## M6R-B1 Source-Grounded Method Research Foundation
-
-M6R-B1 adds a local, deterministic source-grounded method-research pipeline:
-Research Brief -> Local Source Pack -> Source Verification -> deterministic
-chunking -> Method Card validation -> LocalConflictChecker -> policy-weighted
-ranking. Runtime outputs are ignored under `artifacts/method_research_runs/`.
-This stage does not call LLMs, APIs, network search, Adapters, training,
-prediction, or submission paths, and it does not promote methods into a formal
-knowledge base. `network_enabled=false` describes only this local foundation
-stage, not a permanent ban on networked research. M6R-B2 will add
-`live_cached`, `cache_only`, and `disabled` modes: automated tests use
-`disabled`; real research defaults to `live_cached`; provider/network failures
-fall back to `cache_only`. M6R-B2 will handle semantic extraction from ordinary
-papers or repositories under separate approval.
-
-## B2 v2.1 Scientific Execution Repair
-
-The v2.0 orchestrator deployed diagnostics as if they were confirmed scientific
-candidates, exceeded the hard budget, and mixed `n_items=14065` with
-`n_items=40011` without provenance. v2.1 repairs every contract:
-
-### Data Contract
-
-```python
-from afac_agent.v2.data_contract import build_b2_data_contract, reconcile_data_contract
-```
-
-Every count field carries `source_file`, `source_column`, `counting_rule`,
-`deduplicated`, `sampled`, and `membership_hash`. Canonical B2: n_items=14065
-(from item.csv), n_train=40000, n_test=10000, n_interactions=1797067.
-
-`reconcile_data_contract()` cross-validates 4 stages and blocks on mismatch.
-
-### Experiment Permission
-
-| Kind | Folds | Portfolio | Incumbent | Deploy | Consumes Round |
-|------|-------|-----------|-----------|--------|---------------|
-| DETERMINISTIC_DIAGNOSTIC | 0 | ❌ | ❌ | ❌ | ❌ |
-| SCREEN_EXPERIMENT | 1-2 | ✅ | ❌ | ❌ | ✅ |
-| CONFIRM_EXPERIMENT | 3 | ✅ | ✅ | ✅ | ✅ |
-| FULL_CV_EXPERIMENT | 5 | ✅ | ✅ | ✅ | ✅ |
-
-### Available B2 Operators (v2.1)
-
-- `retrieval_union_experiment` — multi-source retrieval union (pool recall)
-- `candidate_ranker_experiment` — GBDT binary ranker over candidate table
-- `bucket_specialist_experiment` — ExpertRouter + bucket reweight
-- `protected_rerank_experiment` — top-k protection over union base
-- `candidate_recall_diagnostic` — diagnostic only, never deploys
-
-### Real Smoke
-
-```bash
+# a real, LLM-driven self-iteration smoke (B2, ~10 minutes, no deployment)
 python -u -m afac_agent.main v2-run --task B2 \
-  --data-root "C:/Users/李天皓/agent比赛/B推荐/B推荐" \
+  --data-root "<path-to-B2-data>" \
   --out-root "artifacts/v2_science_smoke/b2" \
   --max-wall-clock-seconds 900 --deployment-reserve-seconds 180 \
   --require-llm --force-new-execution --smoke --no-deployment --no-full-cv
 ```
 
-Latest smoke: `completed_smoke`, 599.5s, 12 LLM calls, 2 scientific attempts,
-data contract passed, no deployment generated.
+LLM access is configured only through environment variables
+(`DASHSCOPE_API_KEY`, `AFAC_BAILIAN_BASE_URL`); no credential is ever stored
+in the repository. Local data paths live in the git-ignored
+`config/paths.local.yaml` (see `config/paths.local.example.yaml`).
 
-### Tests
+## Limitations
 
-```bash
-python -m pytest -p no:cacheprovider -q tests/test_b2_science_repair.py
-# 21 passed (data contract, permission, compiler, no-op, budget, orchestrator, registry, fault manifest)
-```
+- **Retrieval-bound ranking at scale.** A real-scale benchmark of the
+  candidate ranker (40k users, 14,065 items) measures ~3,885s per fold, with
+  multi-source retrieval dominating; the two-hour formal B2 run is therefore
+  deliberately deferred until retrieval is optimized. The benchmark report is
+  kept in `artifacts/b2_science_repair/ranker_benchmark/`.
+- **Unavailable dependencies.** `lightgbm` and `torch` are absent in the
+  current environment; LambdaRank, DIN, and SASRec are registered as
+  unavailable rather than silently substituted.
+- **A2 real closed loop** requires explicit, user-supplied asset paths (the
+  V23 Top-10 candidate set first); the integration dry-run is complete, the
+  real loop is intentionally not started.
+- The agent never uploads to the competition platform by itself; every
+  submission decision is a human one.
 
-### Fault Run
+## License
 
-`74ba8db66a4b8f50d9196865a611e9d78058e14d35fd8ac99c6e2426279dcd41` —
-all diagnostic, wall_clock 8340s > max 7200s, falsely deployed.
-Marked `INVALID_SCIENTIFIC_DEPLOYMENT`; preserved as evidence.
-
-### Formal two-hour B2 run: NOT started.
+No license file is currently distributed with this repository; all rights are
+reserved by the authors. Competition datasets, historical model artifacts,
+and platform results referenced by the documentation remain subject to their
+original terms.
