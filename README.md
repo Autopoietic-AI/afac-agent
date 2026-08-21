@@ -10,6 +10,7 @@ A bounded, auditable, self-iterating research agent for multi-task data-science 
 ![Tests](https://img.shields.io/badge/tests-407%20passed-brightgreen)
 ![Doctor](https://img.shields.io/badge/doctor-PASS-brightgreen)
 ![Loop](https://img.shields.io/badge/self--iteration-verified-blueviolet)
+![License](https://img.shields.io/badge/license-Apache--2.0-green)
 
 </div>
 
@@ -277,7 +278,6 @@ in the repository. Local data paths live in the git-ignored
 
 ## License
 
-No license file is currently distributed with this repository; all rights are
-reserved by the authors. Competition datasets, historical model artifacts,
-and platform results referenced by the documentation remain subject to their
-original terms.
+Repository code is licensed under the [Apache License 2.0](LICENSE).
+Competition datasets, historical model artifacts, and platform results
+referenced by the documentation remain subject to their original terms.
