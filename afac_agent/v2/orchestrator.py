@@ -631,6 +631,19 @@ class V2AutonomousResearchOrchestrator:
                 )
                 self.artifacts["anchor_registry"] = _write_json(run_dir, "anchor_registry.json", self._anchor_registry.to_dict())
 
+                # Seed the initial incumbent from the validated popularity anchor so
+                # the first scientific round pairs parent and candidate on the same
+                # canonical fold hash instead of blocking on a missing parent hash.
+                pop_anchor = self._anchor_registry.anchors.get("anchor_popularity_b2")
+                if pop_anchor is not None and self._incumbent["candidate_id"] == "popularity_parent":
+                    self._incumbent = {
+                        "candidate_id": pop_anchor.candidate_id,
+                        "kind": "popularity",
+                        "metrics": {"hit_rate@10": pop_anchor.validation_metrics.get("hit_rate@10", 0.0)},
+                        "can_deploy": False,
+                        "fold_hash": pop_anchor.fold_hash,
+                    }
+
             if self.smoke:
                 # ---- smoke: multi-round loop until >=1 scientific experiment ----
                 round_records: list[dict[str, Any]] = []
@@ -811,7 +824,7 @@ class V2AutonomousResearchOrchestrator:
             formal_mode=formal_mode,
             task=self.task,
             default_target_panel="B2_NOVEL_TARGET_PANEL",
-            default_target_metric="candidate_hit_rate@10",
+            default_target_metric="hit_rate@10",
         )
         self._last_compiled = compiled
 
@@ -980,11 +993,24 @@ class V2AutonomousResearchOrchestrator:
             self._all_rounds_diagnostic = False
 
         target_panel_id = compiled.target_panel_id
+        # Resolve the side-agnostic metric name: the panel store keys metrics as
+        # "candidate_<metric>" / "parent_<metric>", so a target named
+        # "candidate_hit_rate@10" must resolve to the bare "hit_rate@10" instead
+        # of producing a double-prefixed (always missing) lookup key.
         target_metric_name = compiled.target_metric_name
         panel_metrics = fold_outcome.get("panel_metrics", {})
         panel = panel_metrics.get(target_panel_id, {})
         parent_target_metric = panel.get(f"parent_{target_metric_name}")
         candidate_target_metric = panel.get(f"candidate_{target_metric_name}")
+        if parent_target_metric is None and candidate_target_metric is None:
+            for side_prefix in ("candidate_", "parent_"):
+                if target_metric_name.startswith(side_prefix) and not target_metric_name.startswith("candidate_pool_"):
+                    bare = target_metric_name[len(side_prefix):]
+                    if f"parent_{bare}" in panel or f"candidate_{bare}" in panel:
+                        target_metric_name = bare
+                        parent_target_metric = panel.get(f"parent_{bare}")
+                        candidate_target_metric = panel.get(f"candidate_{bare}")
+                        break
         target_contract = evaluate_target_metric_contract(
             target_panel_id=target_panel_id,
             target_metric_name=target_metric_name,
@@ -1635,7 +1661,7 @@ class V2AutonomousResearchOrchestrator:
                 formal_mode=False,
                 task=self.task,
                 default_target_panel="B2_NOVEL_TARGET_PANEL",
-                default_target_metric="candidate_hit_rate@10",
+                default_target_metric="hit_rate@10",
             ),
             proposal,
             problem,
