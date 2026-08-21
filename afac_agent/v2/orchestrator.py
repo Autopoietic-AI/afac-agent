@@ -666,6 +666,19 @@ class V2AutonomousResearchOrchestrator:
                 )
                 self.artifacts["anchor_registry"] = _write_json(run_dir, "anchor_registry.json", self._anchor_registry.to_dict())
 
+                # Seed the initial incumbent from the validated popularity anchor so
+                # the first scientific round pairs parent and candidate on the same
+                # canonical fold hash instead of blocking on a missing parent hash.
+                pop_anchor = self._anchor_registry.anchors.get("anchor_popularity_b2")
+                if pop_anchor is not None and self._incumbent["candidate_id"] == "popularity_parent":
+                    self._incumbent = {
+                        "candidate_id": pop_anchor.candidate_id,
+                        "kind": "popularity",
+                        "metrics": {"hit_rate@10": pop_anchor.validation_metrics.get("hit_rate@10", 0.0)},
+                        "can_deploy": False,
+                        "fold_hash": pop_anchor.fold_hash,
+                    }
+
             if self.smoke:
                 # ---- smoke: multi-round loop until >=1 scientific experiment ----
                 round_records: list[dict[str, Any]] = []
@@ -846,7 +859,7 @@ class V2AutonomousResearchOrchestrator:
             formal_mode=formal_mode,
             task=self.task,
             default_target_panel="B2_NOVEL_TARGET_PANEL",
-            default_target_metric="candidate_hit_rate@10",
+            default_target_metric="hit_rate@10",
         )
         self._last_compiled = compiled
 
@@ -1015,11 +1028,24 @@ class V2AutonomousResearchOrchestrator:
             self._all_rounds_diagnostic = False
 
         target_panel_id = compiled.target_panel_id
+        # Resolve the side-agnostic metric name: the panel store keys metrics as
+        # "candidate_<metric>" / "parent_<metric>", so a target named
+        # "candidate_hit_rate@10" must resolve to the bare "hit_rate@10" instead
+        # of producing a double-prefixed (always missing) lookup key.
         target_metric_name = compiled.target_metric_name
         panel_metrics = fold_outcome.get("panel_metrics", {})
         panel = panel_metrics.get(target_panel_id, {})
         parent_target_metric = panel.get(f"parent_{target_metric_name}")
         candidate_target_metric = panel.get(f"candidate_{target_metric_name}")
+        if parent_target_metric is None and candidate_target_metric is None:
+            for side_prefix in ("candidate_", "parent_"):
+                if target_metric_name.startswith(side_prefix) and not target_metric_name.startswith("candidate_pool_"):
+                    bare = target_metric_name[len(side_prefix):]
+                    if f"parent_{bare}" in panel or f"candidate_{bare}" in panel:
+                        target_metric_name = bare
+                        parent_target_metric = panel.get(f"parent_{bare}")
+                        candidate_target_metric = panel.get(f"candidate_{bare}")
+                        break
         target_contract = evaluate_target_metric_contract(
             target_panel_id=target_panel_id,
             target_metric_name=target_metric_name,
@@ -1413,12 +1439,41 @@ class V2AutonomousResearchOrchestrator:
 
     # --------------------------------------------------------------- stage helpers
 
+    def _data_contract_heartbeat_fields(self) -> dict[str, Any]:
+        """Populate heartbeat transparency fields from the canonical data contract.
+
+        These fields let the dashboard distinguish full-dataset counts from
+        profiler samples instead of showing misleading zeros (v2.1 known gap).
+        """
+        contract = self._data_contract
+        if contract is None:
+            return {}
+        fields: dict[str, Any] = {
+            "data_contract_status": contract.status,
+            "profiler_scope": contract.profile_scope or "",
+        }
+        if contract.n_items_total is not None:
+            fields["n_items_total"] = contract.n_items_total.value
+        if contract.n_test_users_total is not None:
+            fields["n_test_total"] = contract.n_test_users_total.value
+        if contract.profiler_sample_test_users is not None:
+            fields["n_test_profiled"] = contract.profiler_sample_test_users.value
+        return fields
+
     def _beat(self, supervisor: RunSupervisor, **fields: Any) -> None:
         fields.setdefault("orchestrator_version", ORCHESTRATOR_VERSION)
         fields.setdefault("planner_mode", self.planner_mode)
         ledger = getattr(self, "_ledger", None)
         if ledger is not None:
             fields.setdefault("llm_calls_count", ledger.calls_count)
+        for key, value in self._data_contract_heartbeat_fields().items():
+            fields.setdefault(key, value)
+        fields.setdefault("scientific_attempts_used", self.scientific_attempts_used)
+        fields.setdefault("effective_scientific_rounds", self.effective_scientific_rounds)
+        fields.setdefault("diagnostics_used", self.diagnostics_used)
+        fields.setdefault("no_op_rounds_refunded", self.no_op_rounds_refunded)
+        fields.setdefault("research_deadline", self._research_deadline)
+        fields.setdefault("hard_deadline", self._hard_deadline)
         supervisor.heartbeat(**fields)
         supervisor.event("stage_transition", {"stage": fields.get("stage", ""), "status": fields.get("status", "")})
         supervisor.write_all()
@@ -1657,7 +1712,7 @@ class V2AutonomousResearchOrchestrator:
                 formal_mode=False,
                 task=self.task,
                 default_target_panel="B2_NOVEL_TARGET_PANEL",
-                default_target_metric="candidate_hit_rate@10",
+                default_target_metric="hit_rate@10",
             ),
             proposal,
             problem,
@@ -2588,14 +2643,22 @@ class V2AutonomousResearchOrchestrator:
         _write_json(run_dir, "trajectory_v2.json", trajectory)
 
         if supervisor is not None:
-            supervisor.heartbeat(
-                stage=current_stage,
-                status=status,
-                execution_id=execution_id,
-                input_fingerprint=input_fingerprint,
-                llm_calls_count=llm_calls,
-                cache_status=self.cache_status,
-            )
+            final_fields: dict[str, Any] = {
+                "stage": current_stage,
+                "status": status,
+                "execution_id": execution_id,
+                "input_fingerprint": input_fingerprint,
+                "llm_calls_count": llm_calls,
+                "cache_status": self.cache_status,
+                "scientific_attempts_used": self.scientific_attempts_used,
+                "effective_scientific_rounds": self.effective_scientific_rounds,
+                "diagnostics_used": self.diagnostics_used,
+                "no_op_rounds_refunded": self.no_op_rounds_refunded,
+                "research_deadline": self._research_deadline,
+                "hard_deadline": self._hard_deadline,
+            }
+            final_fields.update(self._data_contract_heartbeat_fields())
+            supervisor.heartbeat(**final_fields)
             supervisor.write_all()
 
         report_name = "V2_SMOKE_REPORT.md" if self.smoke else "V2_RUN_REPORT.md"

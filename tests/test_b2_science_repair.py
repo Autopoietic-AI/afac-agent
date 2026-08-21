@@ -356,6 +356,26 @@ def test_smoke_real_ranker_consumes_scientific_round_and_does_not_deploy(tmp_pat
     assert not (run_dir / "TO_UPLOAD" / "candidate_B2.csv").exists()
 
 
+def test_target_metric_contract_resolves_parent_panel_metric(tmp_path: Path) -> None:
+    """Regression: panel store keys are 'candidate_hit_rate@10'/'parent_hit_rate@10';
+    a target metric named 'candidate_hit_rate@10' must not be double-prefixed into
+    the always-missing 'parent_candidate_hit_rate@10', and the popularity-anchor
+    incumbent must carry the canonical fold hash so the contract can pass
+    (v2.1 smoke known gap)."""
+    data = _write_b2_dataset(tmp_path)
+    manifest = _smoke_orchestrator(tmp_path, data, RankerOnlyProvider()).run()
+    run_dir = tmp_path / "v2_smoke" / manifest["execution_id"]
+    contract = load_json(run_dir / manifest["artifacts"]["target_metric_contract"])
+    assert contract["target_panel_id"] == "B2_NOVEL_TARGET_PANEL"
+    assert not contract["target_metric_name"].startswith("candidate_candidate_")
+    assert contract["status"] == "passed", contract["reasons"]
+    assert contract["parent_target_metric"] is not None
+    assert contract["candidate_target_metric"] is not None
+    assert contract["target_metric_delta"] == pytest.approx(
+        contract["candidate_target_metric"] - contract["parent_target_metric"]
+    )
+
+
 def test_formal_run_without_confirm_falls_back_to_anchor(tmp_path: Path) -> None:
     """A formal run that only screens (no confirm) must not deploy the screen;
     it should fall back to the validated anchor."""
