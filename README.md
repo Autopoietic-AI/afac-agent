@@ -1,6 +1,6 @@
 <div align="center">
 
-# AFAC Self-Evolving Research Agent
+# AFAC Self-Evolving Autopoietic Research Agent
 
 A bounded, auditable, self-iterating research agent for multi-task data-science competitions
 
