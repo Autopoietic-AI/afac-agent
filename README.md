@@ -260,22 +260,6 @@ LLM access is configured only through environment variables
 in the repository. Local data paths live in the git-ignored
 `config/paths.local.yaml` (see `config/paths.local.example.yaml`).
 
-## Limitations
-
-- **Retrieval-bound ranking at scale.** A real-scale benchmark of the
-  candidate ranker (40k users, 14,065 items) measures ~3,885s per fold, with
-  multi-source retrieval dominating; the two-hour formal B2 run is therefore
-  deliberately deferred until retrieval is optimized. The benchmark report is
-  kept in `artifacts/b2_science_repair/ranker_benchmark/`.
-- **Unavailable dependencies.** `lightgbm` and `torch` are absent in the
-  current environment; LambdaRank, DIN, and SASRec are registered as
-  unavailable rather than silently substituted.
-- **A2 real closed loop** requires explicit, user-supplied asset paths (the
-  V23 Top-10 candidate set first); the integration dry-run is complete, the
-  real loop is intentionally not started.
-- The agent never uploads to the competition platform by itself; every
-  submission decision is a human one.
-
 ## License
 
 Repository code is licensed under the [Apache License 2.0](LICENSE).
